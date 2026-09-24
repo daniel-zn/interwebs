@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#07081a">
+  <meta name="description" content="Orbit Pond — a quiet pixel-art fishing trip on a tiny lake adrift in space.">
+  <title>Orbit Pond</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Crect width='8' height='8' fill='%2307081a'/%3E%3Crect x='1' y='4' width='6' height='2' fill='%232a74a0'/%3E%3Crect x='2' y='6' width='4' height='1' fill='%234a3e64'/%3E%3Crect x='3' y='1' width='2' height='2' fill='%23f3c252'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <canvas id="game" tabindex="0" aria-describedby="hint controls-summary"
+      aria-label="Orbit Pond: an astronaut fishing from a dock on a small lake floating in space"></canvas>
+    <p id="controls-summary" class="sr-only">
+      One button game. Hold Space, Enter, the mouse button or your finger to charge a cast, and let go to cast.
+      When the bobber plunges, press once to hook the fish. Then hold to reel and let go whenever the line strains.
+      Press J for the fish journal, M to toggle sound, H for help and settings.
+    </p>
+
+    <header class="hud">
+      <p id="stat" class="stat" aria-live="off"></p>
+      <nav class="buttons" aria-label="Game menu">
+        <button id="btn-journal" class="icon-btn" type="button" aria-label="Fish journal (J)" title="Fish journal (J)">
+          <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 2h3v1h1v6h-1v-1h-3zM9 2h-3v1h-1v6h1v-1h3z" fill="currentColor"/><path d="M2 4h2v1h-2zM6 4h2v1h-2zM2 6h2v1h-2zM6 6h2v1h-2z" fill="#10132e"/></svg>
+        </button>
+        <button id="btn-sound" class="icon-btn" type="button" aria-pressed="true" aria-label="Sound (M)" title="Sound (M)">
+          <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 4h2v2h-2zM3 3h1v4h-1zM4 2h1v6h-1z" fill="currentColor"/><path class="waves" d="M6 4h1v2h-1zM7 2h1v1h-1zM8 3h1v4h-1zM7 7h1v1h-1z" fill="currentColor"/><path class="cross" d="M6 3h1v1h-1zM7 4h1v2h-1zM8 3h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1z" fill="currentColor"/></svg>
+        </button>
+        <button id="btn-help" class="icon-btn" type="button" aria-label="Help and settings (H)" title="Help and settings (H)">
+          <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path d="M3 1h4v1h1v2h-1v1h-1v2h-2v-2h1v-1h1v-2h-2v1h-2v-1h1zM4 8h2v1h-2z" fill="currentColor"/></svg>
+        </button>
+      </nav>
+    </header>
+
+    <p id="hint" class="hint" role="status" aria-live="polite"></p>
+    <div id="sr-alert" class="sr-only" role="alert" aria-live="assertive"></div>
+
+    <section id="card" class="card" hidden aria-labelledby="card-name">
+      <p id="card-badge" class="badge" hidden></p>
+      <canvas id="card-sprite" class="sprite" aria-hidden="true"></canvas>
+      <h2 id="card-name"></h2>
+      <p class="card-meta"><span id="card-rarity" class="rarity"></span> <span id="card-size"></span></p>
+      <p id="card-desc" class="card-desc"></p>
+      <p id="card-cta" class="card-cta"></p>
+    </section>
+
+    <dialog id="journal" aria-labelledby="journal-title">
+      <form method="dialog" class="panel">
+        <div class="panel-head">
+          <h2 id="journal-title">Fish journal</h2>
+          <button class="close" value="close" aria-label="Close journal">✕</button>
+        </div>
+        <p id="journal-summary" class="summary"></p>
+        <ul id="journal-list" class="journal-list"></ul>
+      </form>
+    </dialog>
+
+    <dialog id="help" aria-labelledby="help-title">
+      <form method="dialog" class="panel">
+        <div class="panel-head">
+          <h2 id="help-title">How to fish</h2>
+          <button class="close" value="close" aria-label="Close help">✕</button>
+        </div>
+        <ol class="steps">
+          <li><strong>Hold</strong> to wind up, <strong>let go</strong> to cast. The meter swings back and forth — farther casts reach rarer fish.</li>
+          <li>Wait. Small twitches are nibbles. When the bobber <strong>plunges</strong> and a “!” pops up, <strong>press once</strong> to hook it.</li>
+          <li><strong>Hold to reel</strong>. When the line meter strains or its frame flashes orange, <strong>let go</strong> until it calms. Fill the lower bar to land your catch.</li>
+        </ol>
+        <dl class="keys">
+          <div><dt>Space / Enter / click / touch</dt><dd>Cast, hook &amp; reel</dd></div>
+          <div><dt>J</dt><dd>Fish journal</dd></div>
+          <div><dt>M</dt><dd>Sound on / off</dd></div>
+          <div><dt>H</dt><dd>This help</dd></div>
+          <div><dt>Esc</dt><dd>Close a window</dd></div>
+        </dl>
+        <fieldset class="options">
+          <legend>Settings</legend>
+          <label><input type="checkbox" id="opt-sound"> Sound and music</label>
+          <label><input type="checkbox" id="opt-gentle"> Gentle mode <span class="note">— longer bites, the line never snaps</span></label>
+          <label><input type="checkbox" id="opt-motion"> Reduce motion <span class="note">— calmer stars, no bobbing</span></label>
+        </fieldset>
+        <button type="button" id="btn-reset" class="text-btn">Clear journal…</button>
+      </form>
+    </dialog>
+  </main>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
