@@ -16,6 +16,7 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { findProjects, ROOT } from './scripts/lib.mjs';
+import { iconIco, iconPng, iconSvgDataUri } from './scripts/icons.mjs';
 import { pixelText } from './scripts/pixelfont.mjs';
 
 const OUT = join(ROOT, 'dist');
@@ -97,7 +98,9 @@ function page({ title, description, body, head = '' }) {
   <meta name="theme-color" content="#07081a">
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(description)}">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Crect width='8' height='8' fill='%2307081a'/%3E%3Crect x='1' y='1' width='6' height='6' fill='%23111335'/%3E%3Crect x='2' y='2' width='4' height='3' fill='%237ff4ff'/%3E%3Crect x='3' y='6' width='2' height='1' fill='%23f3c252'/%3E%3C/svg%3E">
+  <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="icon" type="image/svg+xml" href="${iconSvgDataUri()}">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/_home/home.css">
 ${head}</head>
 <body>
@@ -124,6 +127,10 @@ for (const { slug } of projects) {
   });
 }
 for (const f of ['home.css', 'home.js']) await cp(join(ROOT, '_site', f), join(OUT, '_home', f));
+// Root icons: browsers that skip a page's SVG icon (Safari, notably) ask for these.
+await writeFile(join(OUT, 'favicon.ico'), iconIco());
+await writeFile(join(OUT, 'apple-touch-icon.png'), iconPng(180));
+await writeFile(join(OUT, 'apple-touch-icon-precomposed.png'), iconPng(180));
 
 const cards = [];
 for (const [i, p] of projects.entries()) {

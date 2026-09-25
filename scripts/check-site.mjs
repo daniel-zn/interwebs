@@ -32,7 +32,7 @@ try {
   await rm(TEMP, { recursive: true, force: true });
 }
 
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
 const server = createServer(async (req, res) => {
   const path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   let file = normalize(join(DIST, path));
@@ -115,6 +115,11 @@ const watch = (page) => {
   const noSlash = cards[1].href.slice(0, -1);
   await page.goto(base + noSlash);
   check(page.url().endsWith(cards[1].href), 'folder without trailing slash redirects', new URL(page.url()).pathname);
+  for (const icon of ['/favicon.ico', '/apple-touch-icon.png']) {
+    const r = await page.goto(base + icon);
+    const type = r.headers()['content-type'] || '';
+    check(r.status() === 200 && !type.includes('html'), `root icon ${icon} is served`, `${r.status()} ${type}`);
+  }
   const res = await page.goto(base + '/does-not-exist');
   check(res.status() === 404 && (await page.textContent('.lost p')).includes('Nothing drifts'), 'unknown path shows the 404 page');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/404.png` });
