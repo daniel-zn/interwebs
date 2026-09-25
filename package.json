@@ -6,8 +6,8 @@
     "build": "node build.mjs",
     "check": "node scripts/check-site.mjs",
     "covers": "node scripts/capture-covers.mjs",
-    "preview": "node build.mjs && wrangler dev",
-    "deploy": "node build.mjs && wrangler deploy"
+    "preview": "wrangler dev",
+    "deploy": "wrangler deploy"
   },
   "devDependencies": {
     "playwright-core": "1.56.1",

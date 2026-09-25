@@ -51,8 +51,8 @@ npm install
 npm run build     # build dist/
 npm run check     # build, then test the site in headless Chromium
 npm run covers    # capture missing cover.png files
-npm run preview   # build and serve with wrangler at http://localhost:8787
-npm run deploy    # build and deploy from your machine (needs `npx wrangler login`)
+npm run preview   # serve with wrangler at http://localhost:8787 (builds first)
+npm run deploy    # deploy from your machine (builds first; needs `npx wrangler login`)
 ```
 
 `check` and `covers` use `playwright-core`, which needs a Chromium. Set
@@ -61,5 +61,10 @@ npm run deploy    # build and deploy from your machine (needs `npx wrangler logi
 ## Cloudflare setup (one time, already done)
 
 Workers & Pages → Import a repository → `daniel-zn/interwebber`, with project name
-`interwebs` (must match `wrangler.jsonc`), build command `npm run build`, deploy
-command `npx wrangler deploy`, and production branch `main`.
+`interwebs` (must match `wrangler.jsonc`), deploy command `npx wrangler deploy`,
+and production branch `main`.
+
+A separate build command isn't needed. `wrangler.jsonc` has
+`"build": { "command": "npm run build" }`, so `wrangler deploy` (and
+`wrangler dev`) always builds `dist/` first. Setting a build command in the
+dashboard as well is harmless; the site just builds twice.
