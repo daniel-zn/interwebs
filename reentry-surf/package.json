@@ -1,0 +1,18 @@
+{
+  "name": "reentry-surf",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Surf a heat-shield board down through a planet's atmosphere, between burning up and skipping off.",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.mjs 8080",
+    "test": "node --test tests/sim.test.mjs",
+    "play": "node tests/play.mjs",
+    "size": "node tools/size.mjs",
+    "tune": "node tools/tune.mjs",
+    "check": "npm test && npm run size && npm run play"
+  },
+  "devDependencies": {
+    "playwright-core": "1.56.1"
+  }
+}
