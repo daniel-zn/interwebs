@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#05030f">
+  <meta name="description" content="Kick back in a lawn chair on an asteroid skimming the sun, beer in hand, and fly a stunt kite on the solar wind: loops, figure 8s, orbits and combos until sunset.">
+  <meta name="interwebs:kind" content="Game">
+  <meta name="interwebs:accent" content="#ffd23f">
+  <title>Solar Kite</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Crect width='8' height='8' fill='%2305030f'/%3E%3Crect x='0' y='0' width='3' height='3' fill='%23ffd870'/%3E%3Crect x='5' y='1' width='2' height='1' fill='%23ffd23f'/%3E%3Crect x='4' y='2' width='2' height='2' fill='%23ff5a8a'/%3E%3Crect x='6' y='2' width='1' height='2' fill='%23ffd23f'/%3E%3Crect x='5' y='4' width='1' height='1' fill='%23ff5a8a'/%3E%3Crect x='0' y='7' width='8' height='1' fill='%236e5c52'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <canvas id="game" tabindex="0" aria-describedby="controls-summary"
+      aria-label="Solar Kite: an astronaut in a lawn chair on an asteroid flies a stunt kite on the solar wind"></canvas>
+    <p id="controls-summary" class="sr-only">
+      Left and right arrows, or A and D, spin the kite anticlockwise and clockwise. Hold the mouse or a finger to steer the kite towards it.
+      Space, the Up arrow, a quick tap or the A button tugs the lines for a burst of speed.
+      Turn in full circles for loops, alternate directions for figure 8s, circle around floating objects to orbit them,
+      fly through flux rings and skim low over the ground. Chain tricks into combos before the sun sets.
+      P pauses, M toggles sound, H opens help and settings, R restarts.
+    </p>
+
+    <header class="hud">
+      <nav class="buttons" aria-label="Game menu">
+        <button id="btn-pause" class="icon-btn" type="button" aria-label="Pause (P)" title="Pause (P)">
+          <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path d="M2 2h2v6h-2zM6 2h2v6h-2z" fill="currentColor"/></svg>
+        </button>
+        <button id="btn-sound" class="icon-btn" type="button" aria-pressed="true" aria-label="Sound (M)" title="Sound (M)">
+          <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 4h2v2h-2zM3 3h1v4h-1zM4 2h1v6h-1z" fill="currentColor"/><path class="waves" d="M6 4h1v2h-1zM7 2h1v1h-1zM8 3h1v4h-1zM7 7h1v1h-1z" fill="currentColor"/><path class="cross" d="M6 3h1v1h-1zM7 4h1v2h-1zM8 3h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1z" fill="currentColor"/></svg>
+        </button>
+        <button id="btn-help" class="icon-btn" type="button" aria-label="Help and settings (H)" title="Help and settings (H)">
+          <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path d="M3 1h4v1h1v2h-1v1h-1v2h-2v-2h1v-1h1v-2h-2v1h-2v-1h1zM4 8h2v1h-2z" fill="currentColor"/></svg>
+        </button>
+      </nav>
+    </header>
+
+    <p id="hint" class="hint" role="status" aria-live="polite"></p>
+    <div id="sr-alert" class="sr-only" role="alert" aria-live="assertive"></div>
+
+    <section id="result" class="result" hidden aria-labelledby="result-title">
+      <p class="kicker">The sun has set</p>
+      <h2 id="result-title">CHEERS!</h2>
+      <p id="result-sub" class="sub"></p>
+      <div class="rank-row">
+        <p class="rank" id="result-rank" aria-label=""></p>
+        <p class="score"><span class="label">Score</span> <span id="result-score"></span></p>
+      </div>
+      <dl id="result-stats" class="stats"></dl>
+      <p id="result-best" class="best"></p>
+      <button id="btn-again" class="big-btn" type="button">Fly again</button>
+      <p class="cta" id="result-cta"></p>
+    </section>
+
+    <dialog id="pause" aria-labelledby="pause-title">
+      <form method="dialog" class="panel">
+        <h2 id="pause-title">Paused</h2>
+        <p class="summary">The beer stays cold. Space is cold.</p>
+        <div class="row">
+          <button class="big-btn" value="resume" id="btn-resume">Resume</button>
+          <button class="text-btn" value="restart" id="btn-restart" type="submit">Restart session</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="help" aria-labelledby="help-title">
+      <form method="dialog" class="panel">
+        <div class="panel-head">
+          <h2 id="help-title">How to fly a solar kite</h2>
+          <button class="close" value="close" aria-label="Close help">✕</button>
+        </div>
+        <ol class="steps">
+          <li>The solar wind blows away from the sun. The kite always flies <strong>forward</strong>, so you only <strong>steer</strong> it.
+            Hold the mouse or a finger and the kite turns towards it, or spin it with <strong>← →</strong>.</li>
+          <li>It is fastest in the <span class="hot">middle of the wind window</span> and slows to a hover at the <span class="thin">dotted edge</span>.
+            Don't fly it into the ground.</li>
+          <li>Tricks: turn a full circle for a <strong>loop</strong>, then circle the other way for a <strong>figure 8</strong>.
+            Go round a floating object to <strong>orbit</strong> it (without hitting it), thread <strong>flux rings</strong>, and <strong>skim</strong> low over the dust.</li>
+          <li>Tricks chain into a <strong>combo</strong>. Every <em>different</em> trick adds 1 to the multiplier (up to x10), so mix them up: repeats score less and barely add to it.
+            The combo banks when you stop for a moment. A crash or a bonk loses it.</li>
+          <li>Loops twist the lines. Too many twists make the kite sluggish, so loop back the other way to <strong>untwist</strong> (that's a trick too).</li>
+        </ol>
+        <ul class="legend">
+          <li><b class="k-flare">*</b> <strong>Solar flare:</strong> stronger wind, and every trick scores double.</li>
+          <li><b class="k-lull">~</b> <strong>Lull:</strong> the wind drops and the kite sags. Stay low and central, and tug.</li>
+          <li><b class="k-radio">!</b> <strong>Radio:</strong> the kite club asks for a trick. Pull it off in time for a bonus.</li>
+          <li><b class="k-ring">o</b> <strong>Flux rings:</strong> fly through all of them for a ring chain.</li>
+        </ul>
+        <dl class="keys">
+          <div><dt>← / A · → / D</dt><dd>Spin anticlockwise · clockwise</dd></div>
+          <div><dt>Hold mouse or finger</dt><dd>Steer towards it</dd></div>
+          <div><dt>Space / ↑ / quick tap</dt><dd>Tug the lines (speed burst)</dd></div>
+          <div><dt>Gamepad</dt><dd>Stick aims, A tugs, bumpers spin</dd></div>
+          <div><dt>P / Esc</dt><dd>Pause</dd></div>
+          <div><dt>R</dt><dd>Restart</dd></div>
+          <div><dt>M · H</dt><dd>Sound · this help</dd></div>
+        </dl>
+        <fieldset class="options">
+          <legend>Settings</legend>
+          <label><input type="checkbox" id="opt-sound"> Sound</label>
+          <label><input type="checkbox" id="opt-gentle"> Gentle mode <span class="note">(the kite bounces off the ground, milder lulls)</span></label>
+          <label><input type="checkbox" id="opt-motion"> Reduce motion <span class="note">(no shake or flashes, calmer sun)</span></label>
+        </fieldset>
+      </form>
+    </dialog>
+  </main>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
