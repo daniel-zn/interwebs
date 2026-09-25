@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0a1f">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="A calm pixel-retro fishing trip on a tiny lake drifting through space.">
+  <title>Astro Angler</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Crect width='8' height='8' fill='%230b0a1f'/%3E%3Crect x='2' y='1' width='4' height='1' fill='%23eef1f6'/%3E%3Crect x='1' y='2' width='6' height='4' fill='%23eef1f6'/%3E%3Crect x='3' y='3' width='3' height='2' fill='%231b2240'/%3E%3Crect x='4' y='3' width='1' height='1' fill='%236fd3ff'/%3E%3Crect x='2' y='6' width='4' height='1' fill='%23b4bccb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="stage" tabindex="0" role="application" aria-roledescription="game"
+        aria-label="Astro Angler, a one-button fishing game"
+        aria-describedby="how-to">
+    <canvas id="screen" aria-hidden="true"></canvas>
+    <p id="how-to" class="sr-only">
+      Use one button: Space, Enter, a mouse click, a touch, or gamepad A.
+      Hold to charge a cast and release to throw. Longer casts reach rarer fish.
+      Wait for a bite, then press right away. Hold to reel the fish in, and let go when the line strains.
+      Press L for the star log, M to mute.
+    </p>
+  </main>
+
+  <nav class="hud" aria-label="Game menu">
+    <button id="btn-log" type="button" aria-label="Star log" title="Star log (L)" data-icon="book"></button>
+    <button id="btn-sound" type="button" aria-label="Sound" aria-pressed="true" title="Sound on/off (M)" data-icon="sound"></button>
+    <button id="btn-settings" type="button" aria-label="Settings and help" title="Settings" data-icon="gear"></button>
+  </nav>
+
+  <div id="status" class="sr-only" role="status" aria-live="polite"></div>
+  <div id="alert" class="sr-only" aria-live="assertive"></div>
+
+  <dialog id="log-dialog" aria-labelledby="log-title">
+    <header>
+      <h2 id="log-title">Star Log</h2>
+      <button type="button" class="close" data-close aria-label="Close star log">×</button>
+    </header>
+    <p id="log-summary" class="summary"></p>
+    <ul id="log-list" class="log-list"></ul>
+  </dialog>
+
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <header>
+      <h2 id="settings-title">Settings</h2>
+      <button type="button" class="close" data-close aria-label="Close settings">×</button>
+    </header>
+    <form method="dialog" class="settings">
+      <label><input type="checkbox" name="sfx"> Sound effects</label>
+      <label><input type="checkbox" name="music"> Ambient music</label>
+      <label><input type="checkbox" name="reduced"> Reduced motion</label>
+      <label><input type="checkbox" name="relaxed"> Relaxed fishing <small>(longer bites, the line never snaps)</small></label>
+      <label><input type="checkbox" name="haptics"> Vibration on touch devices</label>
+    </form>
+    <h3>How to play</h3>
+    <ul class="howto">
+      <li><b>Hold</b> Space / Enter / click / touch to charge a cast, <b>release</b> to throw. Farther casts reach stranger fish.</li>
+      <li>Watch the bobber. Nibbles are teases; when it <b>plunges</b> with a “!”, press right away.</li>
+      <li><b>Hold</b> to reel. When the line strains or the fish pulls, <b>let go</b> for a moment.</li>
+      <li>Every fish goes back. Where it swims off to, a new star appears.</li>
+      <li>Keys: <kbd>L</kbd> star log · <kbd>M</kbd> mute · <kbd>Esc</kbd> close. Gamepad <kbd>A</kbd> works too.</li>
+    </ul>
+    <button type="button" id="btn-reset" class="danger">Clear star log</button>
+  </dialog>
+
+  <noscript><p class="noscript">Astro Angler needs JavaScript to run.</p></noscript>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
