@@ -60,7 +60,7 @@ npm run deploy    # deploy from your machine (builds first; needs `npx wrangler 
 
 ## Cloudflare setup (one time, already done)
 
-Workers & Pages → Import a repository → `daniel-zn/interwebber`, with project name
+Workers & Pages → Import a repository → `daniel-zn/interwebs`, with project name
 `interwebs` (must match `wrangler.jsonc`), deploy command `npx wrangler deploy`,
 and production branch `main`.
 
