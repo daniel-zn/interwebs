@@ -13,7 +13,7 @@ export function loadStore() {
   const data = read();
   return {
     best: { runs: 0, round: 0, escaped: 0, win: 0, ...(data.best || {}) },
-    settings: { muted: false, fast: false, reducedMotion: null, ...(data.settings || {}) },
+    settings: { muted: false, music: true, fast: false, reducedMotion: null, ...(data.settings || {}) },
     run: data.run && data.run.v === 1 ? data.run : null,
     save() {
       try {
