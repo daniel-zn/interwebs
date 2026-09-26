@@ -3,9 +3,26 @@
 
 const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
 
+// Phones only let sound start inside a finished tap (touchend, pointerup,
+// click) or a key press, never on pointerdown or touchstart. So the engine
+// listens for those on the whole page, whatever the game's own handlers do.
+const GESTURES = ['pointerup', 'touchend', 'click', 'keydown'];
+function listenForGestures(engine) {
+  const wake = () => engine.unlock();
+  for (const type of GESTURES) window.addEventListener(type, wake, { capture: true, passive: true });
+  // iOS: use the media "playback" session so the ring/silent switch doesn't mute the game.
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = 'playback';
+  } catch {
+    // Not supported: nothing to do.
+  }
+}
+
 export class SoundEngine {
   constructor() {
     this.ctx = null;
+    this.held = false; // paused on purpose: gestures must not restart it
+    listenForGestures(this);
     this.muted = false;
     this.lastTick = -1;
   }
@@ -30,7 +47,24 @@ export class SoundEngine {
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
       this.startBeds();
     }
-    if (this.ctx.state === 'suspended') this.ctx.resume();
+    this.wake();
+  }
+
+  /** (Re)starts the context. Only works inside a user gesture on phones. */
+  wake() {
+    const c = this.ctx;
+    if (!c || this.held) return;
+    // iOS can also leave it 'interrupted' after a call or an app switch.
+    if (c.state !== 'running') c.resume().catch(() => {});
+    // Older iOS only truly unlocks once a sound starts inside the gesture.
+    try {
+      const s = c.createBufferSource();
+      s.buffer = c.createBuffer(1, 1, 22050);
+      s.connect(c.destination);
+      s.start(0);
+    } catch {
+      // Ignore: the context may be closing.
+    }
   }
 
   setMuted(m) {
@@ -39,11 +73,13 @@ export class SoundEngine {
   }
 
   suspend() {
+    this.held = true;
     if (this.ctx && this.ctx.state === 'running') this.ctx.suspend();
   }
 
   resume() {
-    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    this.held = false;
+    this.wake();
   }
 
   get live() {

@@ -156,6 +156,62 @@ const watch = (page) => {
   await ctx.close();
 }
 
+// ------------------------------------------------------------------ sound on phones
+// Headless Chromium lets audio start anytime, which hides a classic phone bug:
+// real phones only let an AudioContext start inside a finished tap (touchend,
+// pointerup, click) or a key press, never on pointerdown or touchstart. This
+// fakes that rule, taps every game twice and checks its sound actually starts.
+{
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await ctx.addInitScript(() => {
+    const Real = window.AudioContext || window.webkitAudioContext;
+    if (!Real) return;
+    window.__audio = [];
+    let current = null;
+    for (const type of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown', 'mousedown']) {
+      window.addEventListener(type, (e) => {
+        current = e;
+        setTimeout(() => current === e && (current = null));
+      }, true);
+    }
+    const allowed = (e) => !!e && (['pointerup', 'touchend', 'click', 'keydown', 'mousedown'].includes(e.type) || (e.type === 'pointerdown' && e.pointerType === 'mouse'));
+    class PhoneAudioContext extends Real {
+      constructor(...args) {
+        super(...args);
+        this.fakeState = 'suspended';
+        window.__audio.push(this);
+      }
+      get state() {
+        return this.fakeState;
+      }
+      resume() {
+        if (!allowed(current)) return Promise.reject(new DOMException('The AudioContext was not allowed to start.', 'NotAllowedError'));
+        this.fakeState = 'running';
+        return super.resume();
+      }
+      suspend() {
+        this.fakeState = 'suspended';
+        return super.suspend();
+      }
+    }
+    window.AudioContext = PhoneAudioContext;
+    window.webkitAudioContext = PhoneAudioContext;
+  });
+  for (const p of await findProjects()) {
+    const page = await ctx.newPage();
+    await page.goto(`${base}/${p.slug}/`);
+    await page.waitForTimeout(500);
+    await page.touchscreen.tap(195, 460);
+    await page.waitForTimeout(300);
+    await page.touchscreen.tap(195, 460);
+    await page.waitForTimeout(300);
+    const states = await page.evaluate(() => (window.__audio || []).map((c) => c.state));
+    if (states.length) check(states.includes('running'), `${p.slug}: sound starts from a phone tap`, states.join(','));
+    await page.close();
+  }
+  await ctx.close();
+}
+
 check(errors.length === 0, 'no console errors', errors.join(' | '));
 
 await browser.close();
