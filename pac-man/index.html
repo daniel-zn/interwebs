@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="The arcade classic starring Charmander: eat every dot in the maze, dodge Blinky, Pinky, Inky and Clyde, and turn the tables with an energizer. Keyboard, swipe or gamepad.">
+  <meta name="interwebs:kind" content="Game">
+  <meta name="interwebs:accent" content="#ffff00">
+  <title>Pac-Man</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Crect width='8' height='8' fill='%23000'/%3E%3Cpath d='M2 0h4v1h1v1h-3v1h-1v2h1v1h3v1h-1v1h-4v-1h-1v-1h-1v-4h1v-1h1z' fill='%23ff0'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <canvas id="game" tabindex="0" aria-describedby="controls-summary"
+      aria-label="Pac-Man starring Charmander: a maze full of dots, four ghosts and Charmander"></canvas>
+    <p id="controls-summary" class="sr-only">
+      Arrow keys or W A S D steer Charmander. On a touch screen, swipe in the direction to go.
+      Eat every dot to clear the maze. Energizers turn the ghosts blue for a few seconds so you can eat them.
+      Enter, Space or a tap starts a game. P pauses, M toggles sound, H opens help and settings.
+    </p>
+
+    <header class="hud">
+      <nav class="buttons" aria-label="Game menu">
+        <button id="btn-pause" class="icon-btn" type="button" aria-label="Pause (P)" title="Pause (P)">
+          <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path d="M2 2h2v6h-2zM6 2h2v6h-2z" fill="currentColor"/></svg>
+        </button>
+        <button id="btn-sound" class="icon-btn" type="button" aria-pressed="true" aria-label="Sound (M)" title="Sound (M)">
+          <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 4h2v2h-2zM3 3h1v4h-1zM4 2h1v6h-1z" fill="currentColor"/><path class="waves" d="M6 4h1v2h-1zM7 2h1v1h-1zM8 3h1v4h-1zM7 7h1v1h-1z" fill="currentColor"/><path class="cross" d="M6 3h1v1h-1zM7 4h1v2h-1zM8 3h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1z" fill="currentColor"/></svg>
+        </button>
+        <button id="btn-help" class="icon-btn" type="button" aria-label="Help and settings (H)" title="Help and settings (H)">
+          <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path d="M3 1h4v1h1v2h-1v1h-1v2h-2v-2h1v-1h1v-2h-2v1h-2v-1h1zM4 8h2v1h-2z" fill="currentColor"/></svg>
+        </button>
+      </nav>
+    </header>
+
+    <p id="hint" class="hint empty" role="status" aria-live="polite"></p>
+    <div id="sr-alert" class="sr-only" role="alert" aria-live="assertive"></div>
+
+    <dialog id="pause" aria-labelledby="pause-title">
+      <form method="dialog" class="panel">
+        <h2 id="pause-title">Paused</h2>
+        <p class="summary">The ghosts will wait. They're patient like that.</p>
+        <div class="row">
+          <button class="big-btn" value="resume" id="btn-resume">Resume</button>
+          <button class="text-btn" value="quit" id="btn-quit" type="submit">Quit to title</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="help" aria-labelledby="help-title">
+      <form method="dialog" class="panel">
+        <div class="panel-head">
+          <h2 id="help-title">How to play</h2>
+          <button class="close" value="close" aria-label="Close help">✕</button>
+        </div>
+        <ol class="steps">
+          <li>Steer Charmander round the maze and eat <strong>every dot</strong> to clear the level. You can press a direction early and he turns at the next gap.</li>
+          <li>Touch a ghost and you lose a life. The side tunnel wraps round, and ghosts slow down inside it.</li>
+          <li>The four big <span class="hot">energizers</span> turn the ghosts blue. Eat them for <strong>200, 400, 800 and 1600</strong> points before they flash white and recover.</li>
+          <li>Bonus fruit appears under the ghost house twice a level. You get an extra life at <strong>10,000</strong> points.</li>
+        </ol>
+        <ul class="legend">
+          <li><b style="background:#ff0000"></b> <strong>Blinky</strong> chases you directly, and speeds up when few dots are left.</li>
+          <li><b style="background:#ffb8ff"></b> <strong>Pinky</strong> aims four tiles ahead of you to cut you off.</li>
+          <li><b style="background:#00ffff"></b> <strong>Inky</strong> works with Blinky, so he's hard to predict.</li>
+          <li><b style="background:#ffb851"></b> <strong>Clyde</strong> chases until he gets close, then loses his nerve.</li>
+        </ul>
+        <dl class="keys">
+          <div><dt>Arrows / W A S D</dt><dd>Steer</dd></div>
+          <div><dt>Swipe</dt><dd>Steer (touch screens)</dd></div>
+          <div><dt>Gamepad</dt><dd>D-pad or stick steers, A starts</dd></div>
+          <div><dt>Enter / Space / tap</dt><dd>Start</dd></div>
+          <div><dt>P / Esc</dt><dd>Pause</dd></div>
+          <div><dt>M · H</dt><dd>Sound · this help</dd></div>
+        </dl>
+        <fieldset class="options">
+          <legend>Settings</legend>
+          <label><input type="checkbox" id="opt-sound"> Sound</label>
+          <label><input type="checkbox" id="opt-relaxed"> Relaxed speed <span class="note">(everything moves 20% slower, energizers last longer; from the next game)</span></label>
+          <label><input type="checkbox" id="opt-motion"> Reduce motion <span class="note">(no blinking or flashing)</span></label>
+        </fieldset>
+      </form>
+    </dialog>
+  </main>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
