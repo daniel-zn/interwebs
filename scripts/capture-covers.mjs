@@ -4,7 +4,7 @@
 //
 //   npm run covers            # only projects that have no cover yet
 //   npm run covers -- --force # recapture everything
-//   npm run covers -- astro-angler
+//   npm run covers -- reentry-surf
 //
 // Uses playwright-core. Point CHROMIUM_PATH at a Chromium binary if Playwright's
 // own browsers are not installed.

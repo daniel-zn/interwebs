@@ -7,7 +7,7 @@
   "build": { "command": "npm run build" },
   "assets": {
     "directory": "./dist",
-    // /astro-angler redirects to /astro-angler/ so relative asset paths resolve.
+    // /reentry-surf redirects to /reentry-surf/ so relative asset paths resolve.
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page"
   },

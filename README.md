@@ -5,8 +5,8 @@ Small web projects, served at **https://interwebs.danielzn.com**.
 The home page is a "select an experience" screen: one title card per project,
 generated at build time. Every top-level folder with an `index.html` gets a card
 and is published at `interwebs.danielzn.com/<folder>/`. For example,
-`astro-angler/` is served at
-[interwebs.danielzn.com/astro-angler](https://interwebs.danielzn.com/astro-angler).
+`reentry-surf/` is served at
+[interwebs.danielzn.com/reentry-surf](https://interwebs.danielzn.com/reentry-surf).
 
 You can choose with the mouse, touch, arrow keys and Enter, or a gamepad (d-pad and A).
 
