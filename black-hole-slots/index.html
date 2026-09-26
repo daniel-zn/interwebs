@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#05030f">
+  <meta name="description" content="A roguelike slot machine on the edge of a black hole. Spin for coins, stack lucky charms and gifts from the void, and pay each debt before the deadline, or get pulled past the horizon.">
+  <meta name="interwebs:kind" content="Game">
+  <meta name="interwebs:accent" content="#ff5ad1">
+  <title>Black Hole Slots</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Crect width='8' height='8' fill='%2305030f'/%3E%3Cpath d='M1 1h6v1h-6zM2 2h4v1h-1v1h-1v1h-1v2h-1v-2h1v-1h1v-1h-2z' fill='%23ff3b4e'/%3E%3Cpath d='M1 1h6v1h-6z' fill='%23ffd23f'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <canvas id="game" tabindex="0" aria-describedby="controls-summary"
+      aria-label="Black Hole Slots: a giant slot machine floating in front of a black hole"></canvas>
+    <p id="controls-summary" class="sr-only">
+      Space, Enter, the lever or the spin button spins the reels. At the pit stop and in menus,
+      arrow keys move between choices and Enter picks one; you can also click or tap.
+      M toggles sound, H opens help and settings. Results are read out as they land.
+    </p>
+
+    <header class="hud">
+      <nav class="buttons" aria-label="Game menu">
+        <button id="btn-sound" class="icon-btn" type="button" aria-pressed="true" aria-label="Sound (M)" title="Sound (M)">
+          <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 4h2v2h-2zM3 3h1v4h-1zM4 2h1v6h-1z" fill="currentColor"/><path class="waves" d="M6 4h1v2h-1zM7 2h1v1h-1zM8 3h1v4h-1zM7 7h1v1h-1z" fill="currentColor"/><path class="cross" d="M6 3h1v1h-1zM7 4h1v2h-1zM8 3h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1z" fill="currentColor"/></svg>
+        </button>
+        <button id="btn-help" class="icon-btn" type="button" aria-label="Help and settings (H)" title="Help and settings (H)">
+          <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path d="M3 1h4v1h1v2h-1v1h-1v2h-2v-2h1v-1h1v-2h-2v1h-2v-1h1zM4 8h2v1h-2z" fill="currentColor"/></svg>
+        </button>
+      </nav>
+    </header>
+
+    <p id="hint" class="hint empty" role="status" aria-live="polite"></p>
+    <div id="sr-alert" class="sr-only" role="alert" aria-live="assertive"></div>
+
+    <dialog id="help" aria-labelledby="help-title">
+      <form method="dialog" class="panel">
+        <div class="panel-head">
+          <h2 id="help-title">How to play</h2>
+          <button class="close" value="close" aria-label="Close help">✕</button>
+        </div>
+        <ol class="steps">
+          <li>Your slot machine is drifting into a black hole, and the hole wants <strong>coins</strong>. Every round there's a <span class="hot">debt</span> due in three days. Pay it or fall in.</li>
+          <li>Each day starts at the <strong>pit stop</strong>: spend <strong>tickets</strong> on charms, then pick a deal: lots of spins, or fewer spins and more tickets.</li>
+          <li>Pull the lever. Matching symbols in a <strong>row, column, diagonal or shape</strong> pay the symbol's value times the pattern's mult. All matches on screen pay.</li>
+          <li>Three or more <span class="hot">Void Eyes</span> anywhere and the void eats a quarter of your coins. They get more common every round.</li>
+          <li>Pay a debt and the void sends a <strong>transmission</strong>: pick one permanent gift. Pay all eight debts to escape, then keep going in endless mode if you dare.</li>
+        </ol>
+        <table class="pays">
+          <thead><tr><th>Pattern</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>Row of 3 · 4 · 5</td><td>×1 · ×2 · ×3</td></tr>
+            <tr><td>Column (3 down)</td><td>×1</td></tr>
+            <tr><td>Diagonal (3)</td><td>×1</td></tr>
+            <tr><td>Zig (V) · Zag (Λ) across all 5</td><td>×4</td></tr>
+            <tr><td>Orbit (8 round an empty middle)</td><td>×7</td></tr>
+            <tr><td>Jackpot (all 15)</td><td>×10, plus everything else</td></tr>
+          </tbody>
+        </table>
+        <table class="pays">
+          <thead><tr><th>Symbol</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>Comet · Moon</td><td>2</td></tr>
+            <tr><td>Planet · Rocket</td><td>3</td></tr>
+            <tr><td>Alien · Star Gem</td><td>5</td></tr>
+            <tr><td>Lucky 7</td><td>7</td></tr>
+          </tbody>
+        </table>
+        <dl class="keys">
+          <div><dt>Space / Enter / lever</dt><dd>Spin</dd></div>
+          <div><dt>Arrows + Enter</dt><dd>Choose in the pit stop and menus</dd></div>
+          <div><dt>Click / tap</dt><dd>Everything</dd></div>
+          <div><dt>Gamepad</dt><dd>D-pad moves, A picks and spins</dd></div>
+          <div><dt>M · H</dt><dd>Sound · this help</dd></div>
+        </dl>
+        <fieldset class="options">
+          <legend>Settings</legend>
+          <label><input type="checkbox" id="opt-sound"> Sound</label>
+          <label><input type="checkbox" id="opt-fast"> Fast spins <span class="note">(reels and payouts go twice as fast)</span></label>
+          <label><input type="checkbox" id="opt-motion"> Reduce motion <span class="note">(no flashing, shaking or chasing lights)</span></label>
+        </fieldset>
+        <div class="row" style="margin-top:14px">
+          <button class="text-btn danger" value="abandon" id="btn-abandon" type="submit">Abandon this run</button>
+        </div>
+      </form>
+    </dialog>
+  </main>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
