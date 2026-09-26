@@ -1,9 +1,10 @@
 // Rules tests: node --test tests/sim.test.mjs
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { ALL_ROWS, pose } from '../src/charmander.js';
 import { COLS, MAZE, POWER, ROWS, START_DOTS, isPath } from '../src/maze.js';
 import {
-  DT, EXTRA_LIFE_AT, LEFT, NONE, RIGHT, UP,
+  DOWN, DT, EXTRA_LIFE_AT, LEFT, NONE, RIGHT, UP,
   createGame, demoPilot, fruitFor, ghostTarget, modeSchedule, step,
 } from '../src/sim.js';
 
@@ -311,4 +312,22 @@ test('relaxed speed moves everything slower', () => {
   run(a, 0.5);
   run(b, 0.5);
   assert.ok(14 - b.pac.x < (14 - a.pac.x) * 0.9);
+});
+
+test('Charmander sprites are 14 x 14 in every pose, and face the way he moves', () => {
+  for (const row of ALL_ROWS) assert.equal(row.length, 14, row);
+  for (const dir of [UP, LEFT, DOWN, RIGHT]) {
+    for (const opts of [{}, { walk: 1, open: true, flame: 1 }, { flame: 3, asleep: true }]) {
+      const p = pose(dir, opts);
+      assert.equal(p.length, 14);
+      for (const r of p) assert.equal(r.length, 14);
+    }
+  }
+  // Facing right the snout is on the right; facing left it is mirrored.
+  const right = pose(RIGHT).map((r) => r.join(''));
+  const left = pose(LEFT).map((r) => r.join(''));
+  assert.equal(right[4][13], 'o');
+  assert.equal(left[4][0], 'o');
+  // The flame goes out when he faints.
+  assert.ok(!pose(DOWN, { flame: 3, asleep: true }).flat().some((c) => c === 'y' || c === 'r'));
 });

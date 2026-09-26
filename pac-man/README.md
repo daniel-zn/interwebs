@@ -1,8 +1,12 @@
 # Pac-Man
 
-The arcade classic, rebuilt from scratch for the browser. Eat all 244 dots in
-the maze, dodge Blinky, Pinky, Inky and Clyde, and use the four energizers to
-turn the tables.
+The arcade classic, rebuilt from scratch for the browser, with **Charmander**
+in Pac-Man's place. Eat all 244 dots in the maze, dodge Blinky, Pinky, Inky
+and Clyde, and use the four energizers to turn the tables.
+
+Charmander is 14 × 14 pixel art with side, front and back views, a walk
+cycle, a chomping mouth and a flickering tail flame. Losing a life makes him
+spin, faint, and his flame dwindles out in a puff of smoke.
 
 **Stack:** vanilla JS + Canvas 2D · no runtime dependencies · no build step ·
 about 24 KB gzipped in total (`npm run size`).
@@ -25,25 +29,25 @@ npm start            # zero-dependency server on http://127.0.0.1:8080/
 | Pause | **P** or **Esc** | ❚❚ button | **Start** |
 | Sound / help | **M** / **H** | Buttons, top right | – |
 
-Turns are buffered: press a direction early and Pac-Man takes the next gap that
+Turns are buffered: press a direction early and Charmander takes the next gap that
 way. He can reverse at any time.
 
 ## How it follows the arcade game
 
 - **Maze and timing.** The original 28 × 31 tile maze at its native 224 × 248
-  pixels, with the arcade's speed tables (Pac-Man 80% on level 1, ghosts 75%,
+  pixels, with the arcade's speed tables (the player 80% on level 1, ghosts 75%,
   40% in the tunnel, 50% when frightened, and so on up the levels), the pause
   after each dot, and the scatter/chase schedule (7 s scatter, 20 s chase, …).
   Ghosts reverse whenever the mode changes.
 - **Ghost personalities.** Every ghost picks, at each junction, the exit
   closest to its target tile (ties go up, left, down, right), and may not turn
-  upward at the four "red zone" junctions above the house and Pac-Man's start.
-  - **Blinky** targets Pac-Man's tile, and speeds up ("Cruise Elroy") when few dots are left.
-  - **Pinky** targets four tiles ahead of Pac-Man (and four left as well when he faces up, the arcade's overflow bug).
-  - **Inky** doubles the vector from Blinky to the tile two ahead of Pac-Man.
+  upward at the four "red zone" junctions above the house and the player's start.
+  - **Blinky** targets the player's tile, and speeds up ("Cruise Elroy") when few dots are left.
+  - **Pinky** targets four tiles ahead of the player (and four left as well when facing up, the arcade's overflow bug).
+  - **Inky** doubles the vector from Blinky to the tile two ahead of the player.
   - **Clyde** chases while more than eight tiles away, then heads for his corner.
 - **The ghost house.** Pinky leaves at once, Inky after 30 dots and Clyde after
-  60 on level 1 (fewer later). If Pac-Man stops eating for 4 seconds, the next
+  60 on level 1 (fewer later). If Charmander stops eating for 4 seconds, the next
   ghost comes out anyway. After a death, a shared dot counter takes over.
 - **Energizers** frighten the ghosts for a time that shrinks with the level
   (6 s on level 1, none from level 19). Eaten ghosts score 200, 400, 800 and
@@ -63,7 +67,8 @@ energizers to match. **Reduce motion** stops the blinking and flashing.
 | --- | --- |
 | `src/maze.js` | The maze layout and tile lookups |
 | `src/sim.js` | All the rules, with no DOM: movement, ghost AI, scoring, levels, and the attract-mode autopilot |
-| `src/render.js` | Pixel-art sprites and the maze outline, drawn at native resolution |
+| `src/charmander.js` | Charmander's sprite, drawn from strings of pixels |
+| `src/render.js` | Ghost and fruit sprites and the maze outline, drawn at native resolution |
 | `src/main.js` | Input, scaling, game flow and menus |
 | `src/audio.js` | Synthesised sound |
 

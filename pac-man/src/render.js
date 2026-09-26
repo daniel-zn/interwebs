@@ -1,8 +1,9 @@
 // Draws the game at the arcade's native resolution: 8-pixel tiles, a 224 x 248
 // maze, and 16-pixel sprites. main.js scales the canvas by whole pixels.
+import { charmanderSprite } from './charmander.js';
 import { drawText, measureText } from './font.js';
 import { CELLS, COLS, DOOR, POWER, ROWS, WALL } from './maze.js';
-import { DEATH_ANIM, DEATH_PAUSE, DX, DY, FRUIT_POS, LEFT, UP, fruitFor, flashing } from './sim.js';
+import { DEATH_ANIM, DEATH_PAUSE, DOWN, DX, DY, FRUIT_POS, LEFT, RIGHT, UP, fruitFor, flashing } from './sim.js';
 
 export const MW = COLS * 8;
 export const MH = ROWS * 8;
@@ -79,24 +80,6 @@ function paint(w, h, fn) {
     ctx.fillRect(x, y, pw, ph);
   });
   return c;
-}
-
-/** Pac-Man is a 13-pixel disc with a wedge cut out, facing dir. */
-function pacSprite(dir, half) {
-  const fx = DX[dir], fy = DY[dir];
-  return paint(13, 13, (px) => {
-    for (let y = 0; y < 13; y++) {
-      for (let x = 0; x < 13; x++) {
-        const dx = x - 6, dy = y - 6;
-        if (dx * dx + dy * dy > 42.5) continue;
-        if (half > 0 && (dx || dy)) {
-          const cos = (dx * fx + dy * fy) / Math.hypot(dx, dy);
-          if (Math.acos(Math.max(-1, Math.min(1, cos))) < half) continue;
-        }
-        px(x, y, C.pac);
-      }
-    }
-  });
 }
 
 const GHOST_BODY = [
@@ -216,8 +199,14 @@ export class Renderer {
     this.H = 0;
     this.walls = mazeArt(C.wall);
     this.wallsWhite = mazeArt(C.white);
-    this.pac = [0, 1, 2, 3].map((d) => [0, 0.5, 0.95].map((a) => pacSprite(d, a)));
-    this.dying = Array.from({ length: 12 }, (_, i) => pacSprite(UP, 0.2 + (i / 11) * (Math.PI - 0.2)));
+    // Charmander by direction, leg frame, mouth (closed, open) and flame flicker.
+    this.hero = [0, 1, 2, 3].map((dir) => [0, 1].map((walk) => [false, true].map((open) => [0, 1].map((flame) => (
+      charmanderSprite(dir, { walk, open, flame })
+    )))));
+    // Losing a life: a dizzy spin, then Charmander faints and the tail flame dwindles and goes out.
+    this.dying = [DOWN, LEFT, UP, RIGHT, DOWN, LEFT].map((dir, i) => charmanderSprite(dir, { flame: i % 2 }))
+      .concat([0, 1, 2, 2, 3, 3].map((flame) => charmanderSprite(DOWN, { flame, asleep: true })));
+    this.lifeIcon = charmanderSprite(RIGHT, {});
     this.ghosts = {};
     for (const [name, color] of Object.entries(GHOST_COLORS)) {
       this.ghosts[name] = [0, 1].map((f) => [0, 1, 2, 3].map((d) => ghostSprite(color, f, d, null)));
@@ -323,10 +312,11 @@ export class Renderer {
       if (k < 1) this.sprite(ctx, this.dying[Math.min(11, Math.floor(k * 12))], p.x, p.y);
       else if (k < 1.25) this.pop(ctx, p.x, p.y, (k - 1) / 0.25);
     } else if (g.phase !== 'over' && !g.eaten) {
-      let frame = [0, 1, 2, 1][Math.floor(p.chomp * 4) % 4];
-      if (g.phase === 'ready' || g.phase === 'clear') frame = 0;
-      else if (!p.moving && frame === 0) frame = 1;
-      this.sprite(ctx, this.pac[p.dir < 0 ? LEFT : p.dir][frame], p.x, p.y);
+      const still = g.phase === 'ready' || g.phase === 'clear';
+      const walk = still ? 0 : Math.floor(p.chomp * 2) % 2;
+      const open = !still && p.moving && Math.floor(p.chomp * 3) % 2 === 1;
+      const flame = view.reducedMotion ? 0 : Math.floor(view.time * 8) % 2;
+      this.sprite(ctx, this.hero[p.dir < 0 ? LEFT : p.dir][walk][open ? 1 : 0][flame], p.x, p.y);
     }
     if (hideGhosts) return;
     const flash = flashing(g);
@@ -341,15 +331,17 @@ export class Renderer {
     }
   }
 
-  /** The little burst at the end of the death animation. */
+  /** A puff of smoke where the flame went out, at the end of the fainting animation. */
   pop(ctx, x, y, k) {
     const c = this.toPx(x, y);
-    ctx.fillStyle = C.pac;
-    const r = 2 + Math.round(k * 4);
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2;
-      ctx.fillRect(c.x + Math.round(Math.cos(a) * r), c.y + Math.round(Math.sin(a) * r), 1, 2);
+    ctx.fillStyle = '#9a9aa8';
+    const rise = Math.round(k * 6);
+    for (const [dx, dy] of [[-1, 0], [0, -1], [1, 0], [0, 0], [2, -2], [-2, -3], [1, -4]]) {
+      ctx.fillRect(c.x + 4 + dx, c.y - 2 + dy - rise, 2, 2);
     }
+    // Charmander stays down, asleep.
+    const img = this.dying[11];
+    ctx.drawImage(img, c.x - 7, c.y - 7);
   }
 
   label(ctx, text, x, y, color) {
@@ -380,7 +372,7 @@ export class Renderer {
       drawText(ctx, high, lx, y + 35, C.text);
       if (view.mode !== 'title') drawText(ctx, `LEVEL ${g.level}`, lx, y + 52, C.text);
       const rx = ox + MW + 10;
-      for (let i = 0; i < Math.min(lives, 5); i++) ctx.drawImage(this.pac[LEFT][1], rx + i * 16, oy + 8);
+      for (let i = 0; i < Math.min(lives, 5); i++) ctx.drawImage(this.lifeIcon, rx + i * 16, oy + 8);
       fruits.forEach((kind, i) => ctx.drawImage(this.fruits[kind], rx + (i % 4) * 16, oy + MH - 16 - Math.floor(i / 4) * 16));
       return;
     }
@@ -397,7 +389,7 @@ export class Renderer {
       drawText(ctx, high, ox + (MW >> 1) + 16 - measureText(high), ty + 9, C.text);
     }
     const by = oy + MH + 2;
-    for (let i = 0; i < Math.min(lives, 5); i++) ctx.drawImage(this.pac[LEFT][1], ox + 16 + i * 16, by);
+    for (let i = 0; i < Math.min(lives, 5); i++) ctx.drawImage(this.lifeIcon, ox + 16 + i * 16, by);
     fruits.forEach((kind, i) => ctx.drawImage(this.fruits[kind], ox + MW - 28 - i * 16, by));
   }
 }
