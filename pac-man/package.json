@@ -1,0 +1,17 @@
+{
+  "name": "pac-man",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The arcade classic: eat the dots, dodge the ghosts.",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.mjs 8080",
+    "test": "node --test tests/sim.test.mjs",
+    "play": "node tests/play.mjs",
+    "size": "node tools/size.mjs",
+    "check": "npm test && npm run size && npm run play"
+  },
+  "devDependencies": {
+    "playwright-core": "1.56.1"
+  }
+}
