@@ -11,7 +11,7 @@ import { createServer } from 'node:http';
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { chromium } from 'playwright-core';
-import { ROOT } from './lib.mjs';
+import { ROOT, findProjects } from './lib.mjs';
 
 const shotsAt = process.argv.indexOf('--shots');
 const SHOTS = shotsAt > 0 ? process.argv[shotsAt + 1] : null;
@@ -71,7 +71,9 @@ const watch = (page) => {
     href: a.getAttribute('href'), title: a.querySelector('.title').textContent,
     img: a.querySelector('img').complete && a.querySelector('img').naturalWidth > 0,
   })));
-  check(cards.length === 3, 'one card per project folder', cards.map((c) => c.href).join(' '));
+  // Every real project, plus the placeholder added for this run.
+  const expected = (await findProjects()).length + 1;
+  check(cards.length === expected, 'one card per project folder', cards.map((c) => c.href).join(' '));
   check(cards.every((c) => /^\/[\w-]+\/$/.test(c.href)), 'cards link to /<folder>/');
   await page.waitForFunction(() => [...document.images].every((i) => i.complete));
   const imgs = await page.$$eval('.card img', (els) => els.map((i) => i.naturalWidth));
