@@ -16,9 +16,26 @@ const CHORDS = [
 const BASS = [0, null, 0, 12, null, 0, 7, null, 0, null, 0, 12, null, 7, 10, 12];
 const ARP = [0, 1, 2, 3, 2, 1, 2, 3, 0, 1, 2, 3, 3, 2, 1, 2];
 
+// Phones only let sound start inside a finished tap (touchend, pointerup,
+// click) or a key press, never on pointerdown or touchstart. So the engine
+// listens for those on the whole page, whatever the game's own handlers do.
+const GESTURES = ['pointerup', 'touchend', 'click', 'keydown'];
+function listenForGestures(engine) {
+  const wake = () => engine.unlock();
+  for (const type of GESTURES) window.addEventListener(type, wake, { capture: true, passive: true });
+  // iOS: use the media "playback" session so the ring/silent switch doesn't mute the game.
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = 'playback';
+  } catch {
+    // Not supported: nothing to do.
+  }
+}
+
 export class SoundEngine {
   constructor() {
     this.ctx = null;
+    this.held = false; // paused on purpose: gestures must not restart it
+    listenForGestures(this);
     this.muted = false;
     this.musicOn = true;
     this.heat = 0;
@@ -84,7 +101,24 @@ export class SoundEngine {
       this.teaseOsc.start();
       this.nextStep = c.currentTime + 0.1;
     }
-    if (this.ctx.state === 'suspended') this.ctx.resume();
+    this.wake();
+  }
+
+  /** (Re)starts the context. Only works inside a user gesture on phones. */
+  wake() {
+    const c = this.ctx;
+    if (!c || this.held) return;
+    // iOS can also leave it 'interrupted' after a call or an app switch.
+    if (c.state !== 'running') c.resume().catch(() => {});
+    // Older iOS only truly unlocks once a sound starts inside the gesture.
+    try {
+      const s = c.createBufferSource();
+      s.buffer = c.createBuffer(1, 1, 22050);
+      s.connect(c.destination);
+      s.start(0);
+    } catch {
+      // Ignore: the context may be closing.
+    }
   }
 
   setMuted(m) {

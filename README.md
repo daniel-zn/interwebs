@@ -33,6 +33,15 @@ You can choose with the mouse, touch, arrow keys and Enter, or a gamepad (d-pad 
    the project's own `<canvas>` at native pixel size, which suits pixel-art games,
    and falls back to a screenshot. Use `npm run covers -- --force` to recapture all.
 
+**Sound on phones.** Phones only let WebAudio start inside a finished tap
+(`pointerup`, `touchend`, `click`) or a key press, never on `pointerdown` or
+`touchstart`. Headless Chromium doesn't enforce this, so it's easy to miss. The
+games' `SoundEngine`s listen for those gestures on the whole page, resume the
+context (also after iOS "interrupts" it), and ask iOS for the `playback` audio
+session so the silent switch doesn't mute them. `npm run check` fakes the
+phone rule and taps every project that creates an `AudioContext` to make sure
+its sound starts.
+
 Dev-only files and folders are not published: `node_modules`, `tests`,
 `test-results`, `scripts`, `tools`, `package.json`, `package-lock.json`,
 `eslint.config.js`, `README.md`, and dotfiles. The list is in `build.mjs`.
