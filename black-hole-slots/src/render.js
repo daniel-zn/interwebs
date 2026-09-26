@@ -136,14 +136,15 @@ export class Renderer {
     const L = (this.L = {});
     L.portrait = H >= W * 1.2;
     if (L.portrait) {
-      const hudH = 50;
+      const hudH = 46;
       const stripH = 28;
       const infoH = 36;
-      const total = hudH + 6 + MH + 4 + stripH + infoH;
-      const top = Math.max(2, Math.floor((H - total) / 2));
-      L.hud = { x: 6, y: top + 4, w: W - 12, h: hudH - 4 };
-      L.mx = Math.floor((W - MW) / 2) + 8;
-      L.my = top + hudH + 6;
+      // Centre the machine itself; the HUD sits above it and charms below.
+      const spare = H - (hudH + 10 + MH + 6 + stripH + infoH);
+      const top = Math.max(2, Math.floor(spare / 2));
+      L.hud = { x: 4, y: top + 2, w: W - 8, h: hudH - 2 };
+      L.mx = Math.max(0, Math.floor((W - MW) / 2) + 4);
+      L.my = top + hudH + 10;
       L.charms = { x: Math.floor((W - (MAX_CHARMS * 22 - 2)) / 2), y: L.my + MH + 4, cols: MAX_CHARMS };
       L.info = { x: 8, y: L.charms.y + stripH, w: W - 16 };
     } else {
@@ -174,6 +175,9 @@ export class Renderer {
     this.drawBlackHole(ctx, v);
     this.drawRays(ctx, v);
 
+    this.drawShooters(ctx, v);
+    this.drawScreenBulbs(ctx, v);
+
     // Machine
     this.drawMachine(v);
     const sx = v.shake ? Math.round((Math.random() - 0.5) * v.shake * 2) : 0;
@@ -182,7 +186,7 @@ export class Renderer {
     if (v.swallow) {
       this.drawSwallowed(ctx, v);
     } else {
-      ctx.drawImage(this.mc, L.mx + sx, L.my + sy + bob);
+      this.blitMachine(ctx, v, L.mx + sx, L.my + sy + bob);
       // Machine hit areas.
       regions.push({ id: 'lever', x: L.mx + CW, y: L.my + 50, w: 28, h: 90 });
       regions.push({ id: 'machine', x: L.mx, y: L.my + 44, w: CW, h: 152 });
@@ -276,13 +280,22 @@ export class Renderer {
     const cx = L.mx + CW / 2, cy = L.my + 96;
     const win = v.bulbs === 'win' || v.bulbs === 'jackpot';
     const t = v.time;
-    if (win && !v.reducedMotion) {
-      const n = 14;
+    const heat = v.heat || 0;
+    if (heat > 0.5 && !v.reducedMotion) {
+      // The whole sky throbs with colour on a hot streak.
+      g.globalAlpha = Math.min(0.22, (heat - 0.5) * 0.25) * (0.6 + 0.4 * Math.sin(t * 20));
+      g.fillStyle = heat > 1 ? hsl(t * 300) : C.pink;
+      g.fillRect(0, 0, this.W, this.H);
+      g.globalAlpha = 1;
+    }
+    if ((win || heat > 0.15) && !v.reducedMotion) {
+      const n = 10 + Math.round(Math.min(1.4, heat) * 12);
       const reach = Math.max(this.W, this.H);
+      const spinRate = 0.6 + heat * 2.4;
       for (let i = 0; i < n; i++) {
-        const a = (i / n) * Math.PI * 2 + t * 0.9;
-        g.globalAlpha = v.bulbs === 'jackpot' ? 0.22 : 0.13;
-        g.fillStyle = v.bulbs === 'jackpot' ? hsl(i * 50 + t * 200) : i % 2 ? C.gold : C.pink;
+        const a = (i / n) * Math.PI * 2 + t * spinRate * (i % 2 ? 1 : -0.6);
+        g.globalAlpha = Math.min(0.3, (v.bulbs === 'jackpot' ? 0.2 : 0.09) + heat * 0.1);
+        g.fillStyle = v.bulbs === 'jackpot' || heat > 1 ? hsl(i * 50 + t * 200) : i % 3 === 0 ? C.cyan : i % 2 ? C.gold : C.pink;
         g.beginPath();
         g.moveTo(cx, cy);
         g.lineTo(cx + Math.cos(a - 0.07) * reach, cy + Math.sin(a - 0.07) * reach);
@@ -293,13 +306,16 @@ export class Renderer {
     }
     // Neon halo hugging the cabinet.
     const col = v.bulbs === 'void' ? C.red : win ? (v.bulbs === 'jackpot' ? hsl(t * 400) : C.gold) : v.bulbs === 'spin' || v.bulbs === 'tease' ? C.cyan : C.pink;
-    const pulse = v.reducedMotion ? 0.2 : 0.16 + 0.1 * Math.sin(t * (win ? 14 : 3));
-    const x = L.mx, y = L.my;
-    for (let i = 3; i >= 1; i--) {
-      g.globalAlpha = pulse / i;
-      g.fillStyle = col;
-      g.fillRect(x - i * 2, y + 4 - i * 2, CW + i * 4, MH - 6 + i * 4);
-    }
+    const pulse = v.reducedMotion ? 0.2 : 0.16 + heat * 0.12 + 0.1 * Math.sin(t * (win ? 14 + heat * 10 : 3));
+    const rings = 3 + Math.round(Math.min(1.4, heat) * 3);
+    // The halo rocks with the machine.
+    this.withJig(g, v, L.mx, L.my, (x, y) => {
+      for (let i = rings; i >= 1; i--) {
+        g.globalAlpha = pulse / i;
+        g.fillStyle = col;
+        g.fillRect(x - i * 2, y + 4 - i * 2, CW + i * 4, MH - 6 + i * 4);
+      }
+    });
     g.globalAlpha = 1;
   }
 
@@ -423,6 +439,10 @@ export class Renderer {
         default:
       }
       if (on) {
+        g.globalAlpha = 0.3;
+        g.fillStyle = col;
+        g.fillRect(x - 2, y - 2, 7, 7);
+        g.globalAlpha = 1;
         g.fillStyle = C.ink;
         g.fillRect(x - 1, y - 1, 5, 5);
         g.fillStyle = col;
@@ -476,6 +496,35 @@ export class Renderer {
       g.fillStyle = k % 2 ? '#fff' : C.gold;
       g.fillRect(sx + 3, 29, 2, 2);
     }
+    if (v.reducedMotion) return;
+    // A shine sweeps across the marquee glass: every few seconds, constantly when hot.
+    const heat = v.heat || 0;
+    const period = heat > 0.3 ? 0.9 : 3.2;
+    const k = (t % period) / 0.8;
+    if (k < 1) {
+      g.save();
+      g.beginPath();
+      g.rect(9, 7, CW - 18, 32);
+      g.clip();
+      g.globalAlpha = 0.35;
+      g.fillStyle = '#fff';
+      const sx = -30 + k * (CW + 60);
+      for (let y = 7; y < 39; y++) g.fillRect(Math.round(sx + (39 - y) * 0.6), y, 6, 1);
+      g.globalAlpha = 0.15;
+      for (let y = 7; y < 39; y++) g.fillRect(Math.round(sx + 9 + (39 - y) * 0.6), y, 3, 1);
+      g.restore();
+      g.globalAlpha = 1;
+    }
+    // Glints on the chrome.
+    const glints = [[20, 44], [120, 44], [40, 163], [140, 163], [RX - 4, RY + 30], [RX + RW + 3, RY + 50]];
+    glints.forEach(([gx, gy], i) => {
+      const ph = (t * (1.3 + heat * 3) + i * 0.37) % 2;
+      if (ph > 0.25) return;
+      const r = ph < 0.12 ? 2 : 1;
+      g.fillStyle = '#fff';
+      g.fillRect(gx - r, gy, r * 2 + 1, 1);
+      g.fillRect(gx, gy - r, 1, r * 2 + 1);
+    });
   }
 
   drawReels(g, v) {
@@ -580,7 +629,8 @@ export class Renderer {
     const win = Math.floor(v.led || 0);
     const digits = Math.min(99999999, win).toString().padStart(8, ' ');
     const hot = v.ledHot && Math.floor(v.time * 12) % 2 === 0;
-    for (let i = 0; i < 8; i++) this.seg(g, RX + 22 + i * 7, y + 3, digits[i], hot ? '#fff3a8' : '#ff3b4e', '#3a0d16');
+    const rainbow = (v.heat || 0) > 0.8 && !v.reducedMotion;
+    for (let i = 0; i < 8; i++) this.seg(g, RX + 22 + i * 7, y + 3, digits[i], rainbow ? hsl(v.time * 500 + i * 40, 100, 65) : hot ? '#fff3a8' : '#ff3b4e', '#3a0d16');
     const spins = v.run ? String(Math.min(99, v.shownSpins ?? v.run.spinsLeft)).padStart(2, ' ') : '  ';
     for (let i = 0; i < 2; i++) this.seg(g, RX + RW - 30 + 8 + i * 7, y + 10 - 7 + 0, spins[i], '#ffb13b', '#3a2006', true);
   }
@@ -667,6 +717,67 @@ export class Renderer {
     disc(g, ex - 2, ey - 2, 1, '#ffd0d6');
     g.fillStyle = '#fff';
     g.fillRect(ex - 2, ey - 3, 1, 1);
+  }
+
+  /**
+   * Draws the machine buffer with its jiggle: a springy tilt, a hop and a
+   * squash-and-stretch that all grow with the heat of the win.
+   */
+  blitMachine(ctx, v, x, y) {
+    this.withJig(ctx, v, x, y, (mx, my) => ctx.drawImage(this.mc, mx, my));
+  }
+
+  /** Runs draw(x, y) in the machine's jiggled frame (pivoting on its base). */
+  withJig(ctx, v, x, y, draw) {
+    const j = v.jig;
+    if (!j || v.reducedMotion || (Math.abs(j.a) < 0.002 && Math.abs(j.y) < 0.3 && Math.abs(j.x) < 0.3 && Math.abs(j.s) < 0.003)) {
+      draw(x, y);
+      return;
+    }
+    const px = x + CW / 2, py = y + MH - 4;
+    ctx.save();
+    ctx.translate(Math.round(px + j.x), Math.round(py + j.y));
+    ctx.rotate(j.a);
+    ctx.scale(1 + j.s, 1 - j.s);
+    draw(-CW / 2, -(MH - 4));
+    ctx.restore();
+  }
+
+  /** Shooting stars streak across the background now and then. */
+  drawShooters(g, v) {
+    for (const s of v.shooters || []) {
+      const k = (v.time - s.t0) / s.dur;
+      if (k < 0 || k > 1) continue;
+      const x = s.x + s.dx * k, y = s.y + s.dy * k;
+      const len = 14;
+      for (let i = 0; i < len; i++) {
+        const f = i / len;
+        g.globalAlpha = (1 - f) * (k < 0.8 ? 1 : (1 - k) * 5);
+        g.fillStyle = i < 2 ? '#fff' : i < 6 ? C.cyan : '#3fa9ff';
+        g.fillRect(Math.round(x - (s.dx / s.len) * i), Math.round(y - (s.dy / s.len) * i), 1, 1);
+      }
+      g.globalAlpha = 1;
+    }
+  }
+
+  /** Casino bulbs round the edge of the screen: they come alive as wins heat up. */
+  drawScreenBulbs(g, v) {
+    const heat = v.heat || 0;
+    if (heat < 0.2 || v.reducedMotion) return;
+    const { W, H } = this;
+    const step = 9;
+    const pts = [];
+    for (let x = 3; x < W - 3; x += step) pts.push([x, 2], [W - x, H - 4]);
+    for (let y = 3 + step; y < H - 3; y += step) pts.push([2, H - y], [W - 4, y]);
+    const speed = 10 + heat * 30;
+    const k = Math.floor(v.time * speed);
+    pts.forEach(([x, y], i) => {
+      const on = (i + k) % 4 < 1 + Math.min(2, Math.floor(heat * 2));
+      g.globalAlpha = on ? Math.min(1, heat) : 0.25;
+      g.fillStyle = heat > 1 ? hsl(i * 20 + v.time * 400) : on ? (i % 2 ? C.gold : C.pink) : '#3b2458';
+      g.fillRect(x, y, 2, 2);
+    });
+    g.globalAlpha = 1;
   }
 
   drawSwallowed(ctx, v) {
@@ -765,8 +876,8 @@ export class Renderer {
       sText(ctx, dayTxt, h.x + h.w - 5 - measureText(dayTxt), h.y + 4, C.muted);
       // Debt on the left, coins on the right.
       sText(ctx, 'DEBT', h.x + 5, h.y + 13, C.red);
+      sText(ctx, dueText, h.x + 5 + measureText('DEBT '), h.y + 13, blinkDue ? C.red : C.dim);
       sText(ctx, fmt(run.debt), h.x + 5, h.y + 21, blinkDue ? '#fff' : C.red, 2);
-      sText(ctx, dueText, h.x + 5 + measureText(fmt(run.debt), 2) + 5, h.y + 26, blinkDue ? C.red : C.dim);
       const coinTxt = fmt(v.shownCoins);
       const cw = measureText(coinTxt, 2);
       const cxr = h.x + h.w - 5 - cw;
@@ -923,17 +1034,18 @@ export class Renderer {
       wrap('3 VOID EYES EAT YOUR COINS', 10).forEach((l, i) => sText(ctx, l, px + 40, L.my + 34 + i * 8, C.pink));
     } else {
       const y = L.charms.y + 2;
-      let x = Math.floor((this.W - SYMBOLS.length * 30) / 2) + 4;
+      const gap = Math.min(30, Math.floor((this.W - 8) / SYMBOLS.length));
+      let x = Math.floor((this.W - SYMBOLS.length * gap) / 2) + Math.floor((gap - 16) / 2);
       for (const s of SYMBOLS) {
         ctx.drawImage(S.sym[s.id], x, y);
         sText(ctx, `${s.value}`, x + 5, y + 18, C.gold);
-        x += 30;
+        x += gap;
       }
       let ty = L.hud.y + 4;
       cText(ctx, 'PAY THE DEBT OR FALL IN.', this.W / 2, ty, C.red);
       ty += 12;
       if (best.runs) {
-        cText(ctx, `BEST: ${lines[1][0]}  BIGGEST WIN: ${lines[4][0]}`, this.W / 2, ty, C.gold);
+        cText(ctx, `BEST: ${lines[1][0]}  WIN: ${lines[4][0]}`, this.W / 2, ty, C.gold);
       }
     }
   }
@@ -1061,7 +1173,7 @@ export class Renderer {
       head = c.name;
       headCol = RARITY[c.rarity].color;
       lines = wrap(this.charmDesc(run, id), cols);
-      lines.push(v.sellArm === +sel.split(':')[1] ? `CONFIRM: SELL FOR ${sellValue(id)} TICKETS?` : `SELECT AGAIN TO SELL (+${sellValue(id)})`);
+      lines.push(v.sellArm === +sel.split(':')[1] ? `AGAIN = SELL FOR +${sellValue(id)}T` : `SELECT AGAIN TO SELL (+${sellValue(id)})`);
     } else if (sel === 'reroll') {
       head = 'REROLL';
       lines = wrap('Swap the four charms for new ones. Costs more each time today.', cols);
@@ -1085,8 +1197,10 @@ export class Renderer {
     const cost = rerollCost(run);
     this.button(ctx, regions, v, 'reroll', x + 8, cy, half, 16, `REROLL  ${cost}T`, { color: C.pink, disabled: run.tickets < cost });
     if (early) this.button(ctx, regions, v, 'early', x + 8 + half + 6, cy, half, 16, `PAY EARLY +${earlyBonus(run)}T`, { color: C.green });
-    else sText(ctx, run.day > 1 ? 'NOT ENOUGH TO PAY EARLY' : 'COINS SO FAR', x + 14 + half, cy + 5, C.dim);
-    if (!early && run.day === 1) sText(ctx, fmt(run.coins), x + 14 + half + measureText('COINS SO FAR') + 4, cy + 5, C.gold);
+    else {
+      sText(ctx, 'COINS', x + 14 + half, cy + 5, C.dim);
+      sText(ctx, fmt(run.coins), x + 14 + half + measureText('COINS '), cy + 5, C.gold);
+    }
     cy += 22;
 
     // The two deals.
@@ -1130,7 +1244,9 @@ export class Renderer {
     cText(ctx, 'DEBT PAID. THE VOID IS AMUSED.', cx, y + 19, C.muted);
     cText(ctx, 'IT OFFERS YOU ONE GIFT:', cx, y + 28, C.muted);
     run.offers.forEach((o, i) => {
-      this.button(ctx, regions, v, `offer:${i}`, x + 10, y + 42 + i * 26, w - 20, 22, o.text.toUpperCase(), { color: [C.gold, C.pink, C.green][i] });
+      const col = [C.gold, C.pink, C.green][i];
+      const [l1, l2] = wrap(o.text.toUpperCase(), Math.floor((w - 28) / 6));
+      this.button(ctx, regions, v, `offer:${i}`, x + 10, y + 42 + i * 26, w - 20, 22, l1, { color: col, sub: l2 || null, subColor: col });
     });
     cText(ctx, `NEXT: ${fmt(v.nextDebt)} COINS IN ${DAYS} DAYS`, cx, y + h - 14, C.red);
   }

@@ -9,7 +9,7 @@ get spaghettified past the horizon.
 Pay all eight debts to escape. Then keep going in endless mode if you dare.
 
 **Stack:** vanilla JS + Canvas 2D · no runtime dependencies · no build step ·
-all sound synthesised with WebAudio · about 43 KB gzipped (`npm run size`).
+all sound and music synthesised with WebAudio · about 49 KB gzipped (`npm run size`).
 
 ## Play
 
@@ -81,11 +81,24 @@ pull lever, an arcade SPIN button, and a coin tray whose pile grows with your
 coins. The reels slow down and glow when the last ones could land something
 big (or a third Void Eye). Wins trace their paylines, pop the symbols,
 spray sparks, fire spotlight rays and send coins flying to your counter.
-Behind it all, the black hole's accretion disk spins, and the hole grows as
-the deadline gets closer.
+Behind it all, the black hole's accretion disk spins, shooting stars streak
+past, and the hole grows as the deadline gets closer.
+
+Wins build **heat**. Every paying line heats things up (faster when the total
+is big next to the debt), and heat drives everything: the cabinet rocks,
+hops and squashes on springs harder and harder, the rays multiply and spin
+faster, casino bulbs chase round the edge of the screen, the sky throbs, the
+win display goes rainbow and the music speeds up. Big wins, mega wins and
+jackpots add sirens, coin showers, coin rain and fireworks.
+
+**Sound:** a space-lounge music loop (bass, arpeggio, drums) that gets busier
+with heat, the reel motor's whirr, lever ratchet and spring, a thunk per reel,
+a heartbeat while the last reels tease, a sting for every symbol, rising
+dings per line, sirens, coin cascades and a sad trombone when you fall in.
+Music can be turned off separately in help.
 
 **Fast spins** (in help) halves every animation. **Reduce motion** stops the
-flashing, shaking, rays and chasing lights. Runs are saved in `localStorage`,
+flashing, shaking, jiggling, rays and chasing lights. Runs are saved in `localStorage`,
 so a reload offers to continue.
 
 ## Code
@@ -101,7 +114,8 @@ so a reload offers to continue.
 
 The canvas is scaled by whole device pixels so the pixel art stays crisp.
 Landscape screens get the stats and charms beside the machine; portrait
-screens get them above and below it.
+screens get them above and below it, and scale the machine to fill the
+phone's width.
 
 ## Tests
 

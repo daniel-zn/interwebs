@@ -276,7 +276,7 @@ const LOSE = grid('mpcra', 'crmpg', 'mpcra');
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth || document.documentElement.scrollHeight > window.innerHeight);
   check(!overflow, 'no scrolling on the phone');
   const scale = (await page.snap()).scale;
-  check(scale >= 4, 'phone gets a big integer scale', `x${scale}`);
+  check(scale >= 6, 'the machine fills the phone width (6x on a 3x phone)', `x${scale}`);
   check(page.errors.length === 0, 'no console errors (phone)', page.errors.join(' | '));
   await context.close();
 }

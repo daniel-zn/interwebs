@@ -22,6 +22,7 @@ const hint = document.getElementById('hint');
 const srAlert = document.getElementById('sr-alert');
 const audio = new SoundEngine();
 audio.setMuted(store.settings.muted);
+audio.setMusic(store.settings.music);
 const renderer = new Renderer();
 const touchFirst = matchMedia('(pointer: coarse)').matches;
 
@@ -40,6 +41,11 @@ const v = {
   canSpin: false, buttonDown: 0, shownCoins: 0, shownTickets: 0, shownSpins: null, panel: null, panelT0: 0,
   focus: null, hover: null, sellArm: -1, swallow: 0, hunger: 1, voidPulse: false, best: store.best, newBest: false,
   nextDebt: 0, reducedMotion: false, charmPulse: {},
+  // Win heat: 0 calm .. ~1.4 jackpot. Drives the jiggle, rays, strobe and music.
+  heat: 0,
+  // The machine's springy wobble: tilt (a), hop (y), sway (x), squash (s) and their velocities.
+  jig: { a: 0, y: 0, x: 0, s: 0, va: 0, vy: 0, vx: 0, vs: 0 },
+  shooters: [],
 };
 for (let c = 0; c < COLS; c++) v.reels.push({ strip: [randomSym(), randomSym(), randomSym()], pos: 0, stopped: true, bounce: 0, speed: 0 });
 
@@ -68,7 +74,9 @@ function resize() {
   const dpr = window.devicePixelRatio || 1;
   const vw = Math.round(window.innerWidth * dpr), vh = Math.round(window.innerHeight * dpr);
   const fit = (w, h) => Math.floor(Math.min(vw / w, vh / h));
-  scale = Math.max(1, fit(400, 226), fit(232, 380));
+  // Landscape fits a 400 x 226 layout; portrait only needs the machine's width,
+  // so phones get the biggest machine that fits edge to edge.
+  scale = Math.max(1, fit(400, 226), fit(192, 360));
   const W = Math.ceil(vw / scale), H = Math.ceil(vh / scale);
   if (W === canvas.width && H === canvas.height && renderer.W) return;
   canvas.width = W;
@@ -133,6 +141,55 @@ function flash(amount, color = '#fff') {
 function shake(n) {
   if (!v.reducedMotion) v.shake = Math.max(v.shake, n);
 }
+/** Kicks the machine: it tilts, hops and squashes, more the harder you hit it. */
+function kick(power, sound = true) {
+  if (v.reducedMotion) return;
+  const j = v.jig;
+  const dir = Math.random() < 0.5 ? -1 : 1;
+  j.va += dir * power * 1.1;
+  j.vy -= power * 80;
+  j.vx += dir * power * 25;
+  j.vs += power * 1.2;
+  if (sound) audio.play('kick', Math.min(1, power));
+}
+function heatTo(h) {
+  v.heat = Math.max(v.heat, h);
+}
+/** Springs pull the machine back upright; heat keeps it dancing. */
+function updateJig(dt) {
+  const j = v.jig;
+  if (v.reducedMotion) {
+    Object.assign(j, { a: 0, y: 0, x: 0, s: 0, va: 0, vy: 0, vx: 0, vs: 0 });
+    return;
+  }
+  const h = v.heat;
+  const t = clock;
+  // A continuous boogie that grows with heat.
+  const aim = {
+    a: h * 0.05 * Math.sin(t * (7 + h * 9)),
+    y: -Math.abs(Math.sin(t * (4.5 + h * 5))) * h * 7,
+    x: h * 3 * Math.sin(t * (3.5 + h * 6) + 1),
+    s: h * 0.035 * Math.sin(t * (9 + h * 9) + 2),
+  };
+  // Teasing: the machine trembles.
+  if (v.bulbs === 'tease') {
+    aim.x += (Math.random() - 0.5) * 2;
+    aim.a += (Math.random() - 0.5) * 0.02;
+  }
+  const n = Math.max(1, Math.ceil(dt / 0.008));
+  const d = dt / n;
+  for (let i = 0; i < n; i++) {
+    for (const [k, stiff, damp] of [['a', 260, 9], ['y', 320, 11], ['x', 200, 10], ['s', 420, 10]]) {
+      const vk = `v${k}`;
+      j[vk] += (-(j[k] - aim[k]) * stiff - j[vk] * damp) * d;
+      j[k] += j[vk] * d;
+    }
+  }
+  j.a = Math.max(-0.2, Math.min(0.2, j.a));
+  j.x = Math.max(-6, Math.min(6, j.x));
+  j.y = Math.max(-18, Math.min(8, j.y));
+  j.s = Math.max(-0.25, Math.min(0.25, j.s));
+}
 function save() {
   if (mode !== 'run' || !run) return;
   store.run = run.phase === 'over' ? null : run;
@@ -182,9 +239,36 @@ function fireworks(n) {
       const x = 20 + Math.random() * (W - 40), y = 20 + Math.random() * (H * 0.5);
       const hue = Math.floor(Math.random() * 360);
       spray(x, y, 26, ['star', 'spark'], [`hsl(${hue} 100% 65%)`, '#fff', `hsl(${hue + 40} 100% 70%)`]);
+      audio.play('firework');
     });
   }
 }
+/** Coins pour down from the top of the screen. */
+function coinRain(n) {
+  if (v.reducedMotion) n = Math.ceil(n / 5);
+  const { W } = renderer;
+  for (let i = 0; i < n; i++) {
+    v.particles.push({
+      kind: 'coin', x: Math.random() * W, y: -10 - Math.random() * 120, vx: (Math.random() - 0.5) * 30, vy: 40 + Math.random() * 60,
+      g: 140, life: 0, max: 2.6, seed: Math.random(),
+    });
+  }
+}
+function updateShooters() {
+  v.shooters = v.shooters.filter((s) => clock - s.t0 < s.dur);
+  if (v.reducedMotion) return;
+  const rate = 0.12 + v.heat * 1.5;
+  if (Math.random() < rate / 60) {
+    const { W, H } = renderer;
+    const len = 60 + Math.random() * 80;
+    const ang = Math.PI * (0.15 + Math.random() * 0.2) * (Math.random() < 0.5 ? 1 : -1);
+    const x = Math.random() * W, y = Math.random() * H * 0.5;
+    const dx = Math.cos(ang) * len * (ang < 0 ? -1 : 1), dy = Math.abs(Math.sin(ang)) * len;
+    v.shooters.push({ x, y, dx, dy, len, t0: clock, dur: 0.5 + Math.random() * 0.4 });
+    if (mode === 'run') audio.play('shoot');
+  }
+}
+
 function updateParticles(dt) {
   for (const p of v.particles) {
     if (p.path) {
@@ -284,6 +368,7 @@ function toTitle() {
 
 const PANEL_FOCUS = { shop: 'shop:0', deadline: 'pay', transmit: 'offer:0', over: 'newrun', won: 'endless' };
 function openPanel(name) {
+  if (name !== 'transmit') audio.play('open');
   v.panel = name;
   v.panelT0 = clock;
   v.focus = PANEL_FOCUS[name];
@@ -323,6 +408,7 @@ function pullLever() {
 // ---------------------------------------------------------------- spinning
 let spinning = false;
 let lastTick = 0;
+let lastHeart = 0;
 
 function canSpinNow() {
   return mode === 'run' && run && run.phase === 'spin' && !v.panel && !spinning && !settle;
@@ -345,6 +431,9 @@ function doSpin() {
   v.buttonDown = 0.15;
   pullLever();
   audio.play('lever');
+  audio.play('button');
+  later(0.1, () => audio.play('spinStart'));
+  kick(0.15, false);
   setHint('');
 
   // Tease: slow the last reels down when something big might land.
@@ -408,7 +497,14 @@ function updateReels(dt) {
       reel.speed = 0;
       reel.stopT = clock;
       if (mode !== 'run' || !v.pending) continue;
-      audio.play('stop', c);
+      if (reel.tease) {
+        audio.play('bigstop');
+        kick(0.35, false);
+        shake(2);
+      } else {
+        audio.play('stop', c);
+        kick(0.05 + c * 0.02, false);
+      }
       const voids = v.pending.grid[c].filter((s) => s === VOID).length;
       if (voids) {
         audio.play('voidland');
@@ -437,6 +533,12 @@ function updateReels(dt) {
     }
   }
   audio.setTease(anyTease, teaseK);
+  const speedSum = v.reels.reduce((a, r) => a + (r.stopped ? 0 : Math.min(1, (r.speed || 0) / 30)), 0);
+  audio.setMotor(mode === 'run' ? speedSum / COLS : 0);
+  if (anyTease && clock - lastHeart > 0.5 - teaseK * 0.25) {
+    lastHeart = clock;
+    audio.play('heart');
+  }
   if (anyTease) v.bulbs = 'tease';
   if (spinning && moving === 0) {
     spinning = false;
@@ -475,6 +577,8 @@ function reveal(res) {
     v.voidPulse = true;
     audio.play('void');
     shake(5);
+    kick(0.9, false);
+    heatTo(0.1);
     flash(0.6, '#ff3b4e');
     banner('THE VOID FEEDS', { color: C.red, sub: res.bite ? `-${fmt(res.bite)} COINS` : 'BUT YOU HAD NOTHING', subColor: C.red, dur: D(1.8), scale: 2 });
     v.hunger = 1.35;
@@ -501,15 +605,25 @@ function reveal(res) {
       v.led = running;
       v.ledHot = true;
       audio.play('line', i);
+      audio.play('sym', l.sym);
+      // Every line heats things up; bigger totals (against the debt) heat faster.
+      const share = (running * Math.max(1, res.mult)) / Math.max(20, debt);
+      heatTo(Math.min(1.25, 0.12 + i * 0.07 + share * 0.6));
+      kick(0.18 + v.heat * 0.5, i % 2 === 0);
+      if (i >= 3) shake(Math.min(4, 1 + i * 0.3));
       const mid = l.cells[Math.floor(l.cells.length / 2)];
       const p = cellCenter(mid[0], mid[1]);
       popup(`${l.value}X${l.mult}`, p.x, p.y - 14, LINE_COLORS[l.kind]);
       if (l.kind === 'jackpot') {
         banner('JACKPOT', { rainbow: true, scale: 4, dur: D(2.4) });
         audio.play('jackpot');
-        flash(1);
-        shake(6);
-        fireworks(10);
+        audio.play('siren', 6);
+        flash(0.65);
+        shake(8);
+        heatTo(1.45);
+        kick(1.4);
+        fireworks(14);
+        coinRain(90);
       }
       for (const [c, r] of l.cells) {
         const q = cellCenter(c, r);
@@ -527,6 +641,9 @@ function reveal(res) {
       later(at, () => {
         banner(tag, { color: tag === 'EVENT HORIZON' ? C.pink : C.orange, scale: 2, dur: step * 1.8 });
         audio.play('mult');
+        if (!tag.startsWith('X')) audio.play('charm');
+        heatTo(v.heat + 0.15);
+        kick(0.3 + v.heat * 0.4);
         v.led = tag === 'TIP JAR' || tag === 'EVENT HORIZON' ? res.total : Math.round(res.base * res.mult);
         v.ledHot = true;
       });
@@ -543,16 +660,27 @@ function reveal(res) {
         // Already celebrated.
       } else if (mega) {
         banner('MEGA WIN', { rainbow: true, scale: 3, dur: D(1.8), sub: `+${fmt(res.total)}` });
-        audio.play('bigwin');
+        audio.play('megawin');
+        audio.play('siren', 4);
         flash(0.7);
-        shake(4);
-        fireworks(5);
+        shake(6);
+        heatTo(1.15);
+        kick(1.1);
+        fireworks(8);
+        coinRain(50);
       } else if (big) {
         banner('BIG WIN', { color: C.gold, scale: 3, dur: D(1.4), sub: `+${fmt(res.total)}` });
         audio.play('bigwin');
+        audio.play('siren', 2);
         flash(0.35);
-        shake(2);
+        shake(3);
+        heatTo(0.8);
+        kick(0.8);
+        coinRain(18);
+      } else {
+        kick(0.25 + v.heat * 0.3);
       }
+      audio.play('shower', mega || res.jackpot ? 2 : big ? 1 : 0);
       // Coins fly from the tray to the counter.
       const n = Math.min(res.jackpot ? 60 : 36, Math.max(1, Math.ceil(Math.log2(res.total + 1) * 2.4)));
       const from = trayAt();
@@ -564,6 +692,7 @@ function reveal(res) {
           got++;
           v.shownCoins = Math.round(start + ((finalCoins - start) * got) / n);
           if (got % 2 === 1) audio.play('coin');
+          else audio.play('count', got);
         });
       }
       if (big || mega || res.jackpot) spray(from.x, from.y - 10, big && !mega ? 30 : 70, ['coin', 'spark'], [C.gold]);
@@ -579,6 +708,7 @@ function reveal(res) {
     later(at, () => {
       banner('FREE SPIN', { color: '#b35cff', scale: 2, sub: 'WORMHOLE', dur: D(1) });
       audio.play('free');
+      kick(0.4);
       v.shownSpins = finalSpins;
     });
     at += D(0.7);
@@ -686,9 +816,11 @@ function activate(id) {
     case 'pkg':
       if (!choosePackage(run, i)) return;
       audio.play('day');
+      audio.play('ticket');
       closePanel();
       v.shownTickets = run.tickets;
       v.shownSpins = run.spinsLeft;
+      kick(0.3);
       banner(`DAY ${run.day}`, { color: C.cyan, scale: 3, sub: `${run.spinsLeft} SPINS`, dur: D(1) });
       alertSr(`Day ${run.day}. ${run.spinsLeft} spins. Press space to spin.`);
       spinHint();
@@ -697,6 +829,8 @@ function activate(id) {
     case 'offer':
       if (!pickOffer(run, i)) return;
       audio.play('bless');
+      kick(0.5);
+      heatTo(0.3);
       closePanel();
       v.shownTickets = run.tickets;
       v.shownCoins = run.coins;
@@ -746,13 +880,18 @@ function payNow(early) {
   step();
   v.hunger = 0.8;
   flash(0.3, '#8fffc0');
+  kick(0.7);
+  heatTo(0.5);
   banner('DEBT PAID', { color: C.green, scale: 3, sub: r.bonus ? `+${r.bonus} TICKETS FOR PAYING EARLY` : null, dur: D(1.6) });
   alertSr(`Debt of ${r.amount} paid. ${run.coins} coins left.${r.bonus ? ` ${r.bonus} bonus tickets.` : ''}`);
   v.shownTickets = run.tickets;
   later(D(1.7), () => {
     if (run.phase === 'won') {
       audio.play('won');
-      fireworks(14);
+      audio.play('siren', 4);
+      heatTo(1.4);
+      coinRain(80);
+      fireworks(18);
       const best = store.best;
       v.newBest = !best.escaped;
       openPanel('won');
@@ -773,6 +912,7 @@ function swallowed() {
   shake(3);
   alertSr(`You couldn't pay. The black hole swallows the machine. You reached round ${run.round}.`);
   later(2.8, () => {
+    audio.play('sad');
     openPanel('over');
   });
 }
@@ -975,6 +1115,7 @@ function openHelp() {
   if (helpDlg.open) return;
   document.getElementById('opt-sound').checked = !store.settings.muted;
   document.getElementById('opt-fast').checked = !!store.settings.fast;
+  document.getElementById('opt-music').checked = !!store.settings.music;
   document.getElementById('opt-motion').checked = !!store.settings.reducedMotion;
   document.getElementById('btn-abandon').hidden = !(mode === 'run' && run && run.phase !== 'over' && !v.swallow);
   helpDlg.showModal();
@@ -993,6 +1134,11 @@ helpDlg.addEventListener('close', () => {
 document.getElementById('btn-help').addEventListener('click', openHelp);
 document.getElementById('opt-sound').addEventListener('change', (e) => {
   if (e.target.checked === store.settings.muted) toggleSound();
+});
+document.getElementById('opt-music').addEventListener('change', (e) => {
+  store.settings.music = e.target.checked;
+  store.save();
+  audio.setMusic(store.settings.music);
 });
 document.getElementById('opt-fast').addEventListener('change', (e) => {
   store.settings.fast = e.target.checked;
@@ -1085,6 +1231,12 @@ function frame(now) {
   if (mode === 'title') updateDemo(dt);
   updateReels(dt);
   updateParticles(dt);
+  updateShooters();
+  // Heat cools off once the win has been counted.
+  v.heat = Math.max(0, v.heat - dt * (settle ? 0.05 : 0.45));
+  updateJig(dt);
+  audio.setHeat(v.heat);
+  audio.update();
   v.flash = Math.max(0, v.flash - dt * 2.5);
   v.shake = Math.max(0, v.shake - dt * 12);
   v.buttonDown = Math.max(0, v.buttonDown - dt);
