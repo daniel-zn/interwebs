@@ -420,6 +420,22 @@ function comet() {
   }, null);
 }
 
+function pulsar() {
+  // A spinning neutron star: white-hot core, a cyan halo and two magenta beams.
+  return painted(16, 16, (x, y) => {
+    const dx = x - 8, dy = y - 8;
+    const d = Math.hypot(dx, dy);
+    if (d < 1.8) return 'w';
+    if (d < 3) return 'c';
+    const beam = Math.abs(dx - dy) < 1.3 && d < 7.6;
+    if (beam) return d < 5 ? 'm' : 'M';
+    const cross = (Math.abs(dx) < 0.6 || Math.abs(dy) < 0.6) && d < 6.2;
+    if (cross) return d < 4.5 ? 'c' : 'b';
+    if (d > 4.2 && d < 5.1) return 'B';
+    return null;
+  });
+}
+
 function voidEye() {
   return painted(16, 16, (x, y) => {
     const dx = x - 8, dy = y - 8;
@@ -453,7 +469,7 @@ export const SPR = {};
 export function buildSprites() {
   if (SPR.ready) return SPR;
   SPR.sym = {
-    comet: comet(), moon: moon(), planet: planet(), void: voidEye(),
+    comet: comet(), moon: moon(), planet: planet(), void: voidEye(), pulsar: pulsar(),
     rocket: fromStrings(STR.rocket), alien: fromStrings(STR.alien), gem: fromStrings(STR.gem), seven: fromStrings(STR.seven),
   };
   // A white silhouette of each symbol, for flashes.

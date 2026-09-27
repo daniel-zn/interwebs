@@ -1,7 +1,7 @@
 // Draws everything: the black hole, the slot machine (into its own buffer so
 // it can shake and, at the end, be swallowed), the HUD, charms and panels.
 // Each frame returns the clickable regions for input and keyboard focus.
-import { CHARM_BY_ID, COLS, DAYS, FINAL_ROUND, MAX_CHARMS, PACKAGES, RARITY, ROWS, SYMBOLS, SYMBOL_BY_ID } from './data.js';
+import { CHARM_BY_ID, COLS, DAYS, EVENT_BY_ID, FINAL_ROUND, MAX_CHARMS, PACKAGES, RARITY, ROWS, SYMBOLS, SYMBOL_BY_ID, UNLOCKS, WHEEL } from './data.js';
 import { drawText, measureText, wrap } from './font.js';
 import { baseMult, canPayEarly, earlyBonus, rerollCost, sellValue, spinsFor, symbolValue } from './sim.js';
 import { buildSprites } from './sprites.js';
@@ -68,6 +68,18 @@ function line(g, x0, y0, x1, y1, w, color) {
     const x = Math.round(x0 + ((x1 - x0) * i) / n), y = Math.round(y0 + ((y1 - y0) * i) / n);
     g.fillRect(x - (w >> 1), y - (w >> 1), w, w);
   }
+}
+
+function g2(g, x, y, color) {
+  g.fillStyle = color;
+  g.fillRect(Math.round(x), Math.round(y), 2, 2);
+}
+
+/** Mixes two #rrggbb colours. */
+function mix(a, b, k) {
+  const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
+  const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
+  return `rgb(${pa.map((x, i) => Math.round(x + (pb[i] - x) * k)).join(' ')})`;
 }
 
 function disc(g, cx, cy, r, color) {
@@ -175,6 +187,7 @@ export class Renderer {
     this.drawBlackHole(ctx, v);
     this.drawRays(ctx, v);
 
+    if (v.overdriveOn && !v.reducedMotion) this.drawHyperspace(ctx, v);
     this.drawShooters(ctx, v);
     this.drawScreenBulbs(ctx, v);
 
@@ -210,6 +223,7 @@ export class Renderer {
       ctx.fillRect(0, 0, W, H);
       ctx.globalAlpha = 1;
     }
+    if (v.wheel) this.drawWheel(ctx, v);
     if (v.panel) this.drawPanel(ctx, v, regions);
     return regions;
   }
@@ -561,6 +575,17 @@ export class Renderer {
           g.drawImage(S.sym[id], x, y + 5);
           g.globalAlpha = 1;
         }
+        const golden = reel.stopped && v.gold && v.gold.has(`${c},${row}`);
+        if (golden && !hl) {
+          // A gold plate with a slow shimmer.
+          g.fillStyle = '#c4861b';
+          g.fillRect(rx + 1, y - 4 + dy, CELL - 2, CELL - 2);
+          g.fillStyle = '#ffd23f';
+          g.fillRect(rx + 2, y - 3 + dy, CELL - 4, CELL - 4);
+          g.fillStyle = '#fff3a8';
+          const sh = Math.floor((v.time * 30 + c * 7) % 40) - 8;
+          for (let k = 0; k < CELL - 4; k++) if (sh + k * 0.5 >= 0 && sh + k * 0.5 < CELL - 4) g.fillRect(rx + 2 + Math.floor(sh + k * 0.5), y - 3 + dy + k, 2, 1);
+        }
         if (hl) {
           const fc = Math.floor(v.time * 8) % 2 ? v.hotColor || C.gold : '#fff';
           g.fillStyle = fc;
@@ -569,6 +594,19 @@ export class Renderer {
           g.fillRect(rx + 2, y - 3 + dy, CELL - 4, CELL - 4);
         }
         g.drawImage(S.sym[id], x, y + dy);
+        if (golden) {
+          // Twinkles round the gold symbol, and a gold border even when it's in a line.
+          if (hl) {
+            g.fillStyle = '#ffd23f';
+            g.fillRect(rx + 1, y - 4 + dy, CELL - 2, 1);
+            g.fillRect(rx + 1, y + CELL - 7 + dy, CELL - 2, 1);
+          }
+          const tw = Math.floor(v.time * 6 + c * 3 + row * 5) % 4;
+          const sp = [[rx + 3, y - 2], [rx + CELL - 5, y + 2], [rx + 4, y + CELL - 9], [rx + CELL - 6, y + CELL - 10]][tw];
+          g.fillStyle = '#fff';
+          g.fillRect(sp[0], sp[1] + dy, 1, 3);
+          g.fillRect(sp[0] - 1, sp[1] + 1 + dy, 3, 1);
+        }
         if (hl && Math.floor(v.time * 8) % 4 === 0 && !v.reducedMotion) {
           g.globalAlpha = 0.6;
           g.drawImage(S.flash[id], x, y + dy);
@@ -609,6 +647,10 @@ export class Renderer {
         for (let i = 0; i + 1 < pts.length; i++) line(g, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], 1, col);
         if (v.hotLine.kind === 'orbit') line(g, pts[pts.length - 1][0], pts[pts.length - 1][1], pts[0][0], pts[0][1], 1, col);
       }
+      // Big lines crackle with lightning between their symbols.
+      if (v.lightning && !v.reducedMotion && Math.floor(v.time * 20) % 3 !== 0) {
+        for (let i = 0; i + 1 < pts.length; i++) this.bolt(g, pts[i], pts[i + 1], Math.random() < 0.5 ? '#fff' : C.cyan);
+      }
     }
     // Glass: a soft diagonal shine.
     g.globalAlpha = 0.1;
@@ -616,6 +658,20 @@ export class Renderer {
     for (let i = 0; i < 18; i++) g.fillRect(RX + 18 + i, RY + i * 4, 10, 4);
     g.globalAlpha = 1;
     g.restore();
+  }
+
+  /** A jagged lightning bolt from a to b. */
+  bolt(g, a, b, color) {
+    const n = 5;
+    let px = a[0], py = a[1];
+    for (let i = 1; i <= n; i++) {
+      const k = i / n;
+      const nx = i === n ? b[0] : a[0] + (b[0] - a[0]) * k + (Math.random() - 0.5) * 8;
+      const ny = i === n ? b[1] : a[1] + (b[1] - a[1]) * k + (Math.random() - 0.5) * 8;
+      line(g, Math.round(px), Math.round(py), Math.round(nx), Math.round(ny), 1, color);
+      px = nx;
+      py = ny;
+    }
   }
 
   drawLed(g, v) {
@@ -666,7 +722,8 @@ export class Renderer {
     disc(g, bx - 2, by - 4 - (pressed ? -1 : 0), 2, ready ? '#ffc0c8' : '#a36a74');
     drawText(g, 'SPIN', bx - 11, by + 12 - 1, ready ? C.gold : C.dim);
     // Coin tray.
-    const tx = 50, ty = 170, tw = CW - 62, th = 22;
+    const tx = 50, ty = 174, tw = CW - 62, th = 18;
+    this.drawMeter(g, v, tx, 167, tw);
     g.fillStyle = C.ink;
     g.fillRect(tx, ty, tw, th);
     g.fillStyle = '#0c0418';
@@ -688,6 +745,35 @@ export class Renderer {
         g.drawImage(this.S.coin[(i + row) % 4 === 1 ? 1 : 0], x0 + i * 7, y);
       }
       n -= per;
+    }
+  }
+
+  /** The overdrive meter: ten segments, or the boosted spins left while it's running. */
+  drawMeter(g, v, x, y, w) {
+    const run = v.run;
+    if (!run || run.round < 2) return;
+    const t = v.time;
+    g.fillStyle = C.ink;
+    g.fillRect(x, y, w, 6);
+    const od = v.shownOverdrive ?? run.overdrive;
+    if (od > 0) {
+      const pw = Math.floor((w - 4) / 3);
+      for (let i = 0; i < 3; i++) {
+        const on = i < od;
+        g.fillStyle = on ? (v.reducedMotion ? C.pink : hsl(t * 400 + i * 60)) : '#2a1030';
+        g.fillRect(x + 1 + i * (pw + 1), y + 1, pw, 4);
+      }
+      return;
+    }
+    const k = Math.min(1, (v.shownCharge ?? run.charge) / 100);
+    const segs = 10;
+    const sw = (w - 2 - (segs - 1)) / segs;
+    const full = k >= 1;
+    for (let i = 0; i < segs; i++) {
+      const lit = i < Math.round(k * segs);
+      const hot = lit && (full || i === Math.round(k * segs) - 1) && Math.floor(t * 8) % 2 === 0;
+      g.fillStyle = lit ? (hot ? '#fff' : i < 4 ? C.cyan : i < 8 ? '#b35cff' : C.pink) : '#241035';
+      g.fillRect(Math.round(x + 1 + i * (sw + 1)), y + 1, Math.round(sw), 4);
     }
   }
 
@@ -741,6 +827,23 @@ export class Renderer {
     ctx.scale(1 + j.s, 1 - j.s);
     draw(-CW / 2, -(MH - 4));
     ctx.restore();
+  }
+
+  /** Overdrive: stars stream past from the machine like a jump to lightspeed. */
+  drawHyperspace(g, v) {
+    const { L, W, H } = this;
+    const cx = L.mx + CW / 2, cy = L.my + 96;
+    const t = v.time;
+    const reach = Math.max(W, H) * 0.8;
+    for (let i = 0; i < 70; i++) {
+      const a = (i * 2.399) % (Math.PI * 2);
+      const k = (t * (0.6 + (i % 7) * 0.08) + i * 0.137) % 1;
+      const r0 = k * k * reach, r1 = r0 + 4 + k * 22;
+      const col = i % 3 === 0 ? C.pink : i % 3 === 1 ? C.cyan : '#fff';
+      g.globalAlpha = 0.25 + k * 0.6;
+      line(g, Math.round(cx + Math.cos(a) * r0), Math.round(cy + Math.sin(a) * r0), Math.round(cx + Math.cos(a) * r1), Math.round(cy + Math.sin(a) * r1), 1, col);
+    }
+    g.globalAlpha = 1;
   }
 
   /** Shooting stars streak across the background now and then. */
@@ -818,6 +921,23 @@ export class Renderer {
         case 'ticket':
           ctx.drawImage(this.S.ticket, x - 4, y - 3);
           break;
+        case 'ring': {
+          const k = p.life / p.max;
+          const r = Math.round(p.r0 + (p.r1 - p.r0) * (1 - (1 - k) ** 2));
+          ctx.globalAlpha = 1 - k;
+          ctx.fillStyle = p.color;
+          const n = Math.max(12, Math.round(r * 1.6));
+          for (let i = 0; i < n; i++) {
+            const a = (i / n) * Math.PI * 2;
+            ctx.fillRect(Math.round(p.x + Math.cos(a) * r), Math.round(p.y + Math.sin(a) * r * (p.squash || 1)), 2, 2);
+          }
+          ctx.globalAlpha = 1;
+          break;
+        }
+        case 'shard':
+          ctx.fillStyle = p.color;
+          ctx.fillRect(x, y, p.size || 2, p.size || 2);
+          break;
         default:
       }
     }
@@ -830,8 +950,10 @@ export class Renderer {
     const age = v.time - b.t0;
     const cx = L.mx + CW / 2;
     const cy = L.my + RY + RH / 2;
-    const scale = b.scale || 3;
-    const pop = age < 0.08 && !v.reducedMotion ? scale + 1 : scale;
+    let scale = b.scale || 3;
+    // Shrink to fit narrow screens.
+    while (scale > 1 && measureText(b.text, scale) > this.W - 8) scale--;
+    const pop = age < 0.08 && !v.reducedMotion && measureText(b.text, scale + 1) <= this.W - 8 ? scale + 1 : scale;
     const w = measureText(b.text, pop);
     const x = Math.round(cx - w / 2), y = Math.round(cy - (5 * pop) / 2 + (b.dy || 0));
     if (b.rainbow && !v.reducedMotion) {
@@ -843,8 +965,10 @@ export class Renderer {
       oText(ctx, b.text, x, y, b.color || C.gold, pop);
     }
     if (b.sub) {
-      const sw = measureText(b.sub, 1);
-      oText(ctx, b.sub, Math.round(cx - sw / 2), y + 5 * pop + 5, b.subColor || C.line, 1);
+      wrap(b.sub, Math.floor((this.W - 8) / 6)).forEach((l, i) => {
+        const sw = measureText(l, 1);
+        oText(ctx, l, Math.round(cx - sw / 2), y + 5 * pop + 5 + i * 9, b.subColor || C.line, 1);
+      });
     }
   }
 
@@ -924,6 +1048,19 @@ export class Renderer {
     sText(ctx, `LUCK ${run.luck}`, x, y, C.green);
     y += 9;
     sText(ctx, `MULT X${+mult.toFixed(2)}`, x, y, C.orange);
+    if (run.event && y + 30 < h.y + h.h + 10) {
+      const e = EVENT_BY_ID[run.event];
+      y += 13;
+      sText(ctx, 'TODAY', x, y, C.dim);
+      const nameLines = wrap(e.name, Math.floor(w / 6));
+      nameLines.forEach((l, i) => sText(ctx, l, x, y + 9 + i * 9, Math.floor(t * 3) % 2 ? C.pink : C.cyan));
+      let dy = y + 9 + nameLines.length * 9;
+      for (const l of wrap(e.desc.toUpperCase(), Math.floor(w / 6))) {
+        if (dy > this.H - 8) break;
+        sText(ctx, l, x, dy, C.dim);
+        dy += 8;
+      }
+    }
   }
 
   progress(ctx, x, y, w, v, run) {
@@ -961,6 +1098,10 @@ export class Renderer {
       const c = CHARM_BY_ID[id];
       sText(ctx, c.name, info.x, info.y, RARITY[c.rarity].color);
       wrap(this.charmDesc(run, id), cols).slice(0, 5).forEach((l, i) => sText(ctx, l, info.x, info.y + 9 + i * 8, C.line));
+    } else if (L.portrait && run.event) {
+      const e = EVENT_BY_ID[run.event];
+      sText(ctx, `TODAY: ${e.name}`, info.x, info.y, Math.floor(v.time * 3) % 2 ? C.pink : C.cyan);
+      wrap(e.desc.toUpperCase(), cols).slice(0, 3).forEach((l, i) => sText(ctx, l, info.x, info.y + 9 + i * 8, C.line));
     } else if (!L.portrait && run.charms.length === 0) {
       wrap('BUY CHARMS WITH TICKETS AT THE PIT STOP.', cols).forEach((l, i) => sText(ctx, l, info.x, info.y + i * 8, C.dim));
     } else if (!L.portrait) {
@@ -1088,6 +1229,9 @@ export class Renderer {
       case 'won':
         this.wonPanel(ctx, v, regions);
         break;
+      case 'unlock':
+        this.unlockPanel(ctx, v, regions);
+        break;
       default:
     }
   }
@@ -1187,6 +1331,12 @@ export class Renderer {
       head = `DEBT ${fmt(run.debt)} DUE IN ${DAYS - run.day + 1} DAYS`;
       headCol = C.red;
       lines = wrap('Buy charms with tickets, then pick how to play the day.', cols);
+      if (run.event) {
+        const e = EVENT_BY_ID[run.event];
+        head = `TODAY: ${e.name}`;
+        headCol = Math.floor(v.time * 3) % 2 ? C.pink : C.cyan;
+        lines = wrap(e.desc, cols);
+      }
     }
     if (head) sText(ctx, head.toUpperCase(), x + 12, cy + 4, headCol);
     lines.slice(0, 3).forEach((l, i) => sText(ctx, l.toUpperCase(), x + 12, cy + 13 + i * 8, C.line));
@@ -1203,6 +1353,11 @@ export class Renderer {
     }
     cy += 22;
 
+    if (run.event) {
+      const e = EVENT_BY_ID[run.event];
+      const txt = `TODAY: ${e.name}`;
+      cText(ctx, txt, x + w / 2, y + h - 11, Math.floor(v.time * 3) % 2 ? C.pink : C.cyan);
+    }
     // The two deals.
     PACKAGES.forEach((p, k) => {
       const n = spinsFor(run, k);
@@ -1263,6 +1418,150 @@ export class Renderer {
     cText(ctx, `${run.stats.spins} SPINS  ${run.stats.jackpots} JACKPOTS`, cx, y + 64, C.dim);
     if (v.newBest) cText(ctx, 'NEW PERSONAL BEST!', cx, y + 76, Math.floor(v.time * 4) % 2 ? C.gold : C.pink);
     this.button(ctx, regions, v, 'newrun', x + 30, y + 92, w - 60, 24, 'NEW RUN', { color: C.gold });
+  }
+
+  unlockPanel(ctx, v, regions) {
+    const u = UNLOCKS.find((x) => x.id === v.unlock) || UNLOCKS[0];
+    const w = Math.min(this.W - 6, 240);
+    const h = 150;
+    const { x, y } = this.panelBox(ctx, w, h, Math.floor(v.time * 4) % 2 ? C.pink : C.gold);
+    const cx = x + w / 2;
+    const t = v.time;
+    // Burst behind the card's title.
+    if (!v.reducedMotion) {
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2 + t;
+        g2(ctx, cx + Math.cos(a) * (40 + ((t * 40 + i * 9) % 30)), y + 26 + Math.sin(a) * 12, i % 2 ? C.gold : C.pink);
+      }
+    }
+    cText(ctx, 'NEW MECHANIC UNLOCKED', cx, y + 8, Math.floor(t * 4) % 2 ? C.pink : C.gold);
+    const scale = measureText(u.name, 3) <= w - 16 ? 3 : 2;
+    const nw = measureText(u.name, scale);
+    for (let i = 0; i < u.name.length; i++) {
+      const wave = v.reducedMotion ? 0 : Math.round(Math.sin(t * 7 + i * 0.6) * 2);
+      oText(ctx, u.name[i], Math.round(cx - nw / 2) + i * 6 * scale, y + 22 + wave, v.reducedMotion ? C.gold : hsl(t * 200 + i * 25), scale);
+    }
+    // A little picture of the mechanic.
+    const iy = y + 46;
+    const S = this.S;
+    if (u.id === 'overdrive') {
+      for (let i = 0; i < 10; i++) {
+        ctx.fillStyle = i < Math.floor((t * 6) % 11) ? (i < 4 ? C.cyan : i < 8 ? '#b35cff' : C.pink) : '#241035';
+        ctx.fillRect(cx - 45 + i * 9, iy + 6, 8, 5);
+      }
+    } else if (u.id === 'gold') {
+      ctx.fillStyle = '#c4861b';
+      ctx.fillRect(cx - 11, iy - 2, 22, 22);
+      ctx.fillStyle = '#ffd23f';
+      ctx.fillRect(cx - 10, iy - 1, 20, 20);
+      ctx.drawImage(S.sym.seven, cx - 8, iy + 1);
+    } else if (u.id === 'pulsar') {
+      for (let i = 0; i < 3; i++) ctx.drawImage(S.sym.pulsar, cx - 28 + i * 20, iy + (i === 1 && !v.reducedMotion ? Math.round(Math.sin(t * 8)) : 0));
+    } else {
+      ctx.drawImage(S.sym.comet, cx - 20, iy);
+      ctx.drawImage(S.sym.planet, cx + 4, iy);
+    }
+    wrap(u.desc.toUpperCase(), Math.floor((w - 20) / 6)).forEach((l, i) => cText(ctx, l, cx, y + 72 + i * 9, C.line));
+    this.button(ctx, regions, v, 'gotit', x + 40, y + h - 30, w - 80, 20, 'GOT IT', { color: C.gold });
+  }
+
+  /** The Bonus Wheel: eight slices, a pointer on top, spun to the prize. */
+  wheelCanvas() {
+    if (this._wheel) return this._wheel;
+    const R = 60, D = R * 2 + 1;
+    const c = mkCanvas(D, D);
+    const g = c.getContext('2d');
+    const n = WHEEL.length, step = (Math.PI * 2) / n;
+    for (let py = 0; py < D; py++) {
+      for (let px = 0; px < D; px++) {
+        const dx = px - R, dy = py - R;
+        const d = Math.hypot(dx, dy);
+        if (d > R) continue;
+        let a = Math.atan2(dx, -dy);
+        if (a < 0) a += Math.PI * 2;
+        const i = Math.floor(a / step) % n;
+        const edge = Math.min(a % step, step - (a % step)) * d;
+        let col;
+        if (d > R - 1) col = C.ink;
+        else if (d > R - 5) col = (Math.floor(a / (step / 3)) % 2) ? '#fff3a8' : '#c4861b';
+        else if (d > R - 6) col = C.ink;
+        else if (d < 9) col = d < 8 ? (d < 3 ? '#fff' : '#8a93b8') : C.ink;
+        else if (edge < 0.9) col = '#fff';
+        else col = WHEEL[i].color;
+        if (!edge || d < R - 6) {
+          // Shade each slice: lighter towards the rim.
+          if (col === WHEEL[i].color && d > R - 16) col = mix(col, '#ffffff', 0.25);
+          if (col === WHEEL[i].color && d < 20) col = mix(col, '#000000', 0.2);
+        }
+        g.fillStyle = col;
+        g.fillRect(px, py, 1, 1);
+      }
+    }
+    return (this._wheel = c);
+  }
+
+  drawWheel(ctx, v) {
+    const wv = v.wheel;
+    const { L, W, H } = this;
+    const t = v.time;
+    const k = Math.min(1, (t - wv.t0) / wv.dur);
+    const e = 1 - (1 - k) ** 3;
+    const rot = wv.target * e;
+    ctx.fillStyle = 'rgba(5,3,15,0.6)';
+    ctx.fillRect(0, 0, W, H);
+    const cx = Math.round(L.mx + CW / 2), cy = Math.round(L.my + MH / 2 - 4);
+    const R = 60;
+    // Spotlight rays behind the wheel.
+    if (!v.reducedMotion) {
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2 + t * 0.8;
+        ctx.globalAlpha = 0.14;
+        ctx.fillStyle = hsl(i * 45 + t * 120);
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(a - 0.08) * W, cy + Math.sin(a - 0.08) * W);
+        ctx.lineTo(cx + Math.cos(a + 0.08) * W, cy + Math.sin(a + 0.08) * W);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    // Chasing bulbs round the rim.
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      const on = (i + Math.floor(t * (k < 1 ? 20 : 8))) % 3 === 0;
+      const bx = Math.round(cx + Math.cos(a) * (R + 6)), by = Math.round(cy + Math.sin(a) * (R + 6));
+      ctx.fillStyle = C.ink;
+      ctx.fillRect(bx - 2, by - 2, 5, 5);
+      ctx.fillStyle = on ? (k >= 1 ? hsl(i * 30 + t * 500) : C.gold) : '#3b2458';
+      ctx.fillRect(bx - 1, by - 1, 3, 3);
+    }
+    ctx.save();
+    ctx.translate(cx + 0.5, cy + 0.5);
+    ctx.rotate(rot);
+    ctx.drawImage(this.wheelCanvas(), -R - 0.5, -R - 0.5);
+    ctx.restore();
+    // Labels stay upright, riding round with their slices.
+    const LABELS = ['$', '+3', '$$', '+4T', '$', '+1L', 'OD', '$$$'];
+    const step = (Math.PI * 2) / WHEEL.length;
+    LABELS.forEach((text, i) => {
+      const a = (i + 0.5) * step + rot;
+      const tx = cx + Math.sin(a) * 38, ty = cy - Math.cos(a) * 38;
+      oText(ctx, text, Math.round(tx - measureText(text) / 2), Math.round(ty - 2), '#fff', 1, C.ink);
+    });
+    // The pointer, bobbing as it clicks past each peg.
+    const flick = k < 1 && !v.reducedMotion ? Math.round(Math.abs(Math.sin(t * 40)) * 2) : 0;
+    const py = cy - R - 8 + flick;
+    for (let r = 0; r < 9; r++) {
+      ctx.fillStyle = C.ink;
+      ctx.fillRect(cx - 6 + Math.floor(r * 0.6) - 1, py + r, 13 - Math.floor(r * 1.2) + 2, 1);
+    }
+    for (let r = 0; r < 8; r++) {
+      ctx.fillStyle = r < 2 ? '#fff' : C.red;
+      ctx.fillRect(cx - 5 + Math.floor(r * 0.6), py + r, 11 - Math.floor(r * 1.2), 1);
+    }
+    cText(ctx, 'BONUS WHEEL', cx, cy - R - 26, Math.floor(t * 6) % 2 ? C.gold : C.pink, 2, oText);
+    const label = k >= 1 ? wv.prize : WHEEL[wv.current || 0].label;
+    cText(ctx, label, cx, cy + R + 12, k >= 1 ? (v.reducedMotion ? C.gold : hsl(t * 400)) : C.line, k >= 1 ? 2 : 1, oText);
   }
 
   wonPanel(ctx, v, regions) {

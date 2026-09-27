@@ -1,8 +1,9 @@
 import { SoundEngine } from './audio.js';
-import { CHARM_BY_ID, COLS, DAYS, PATTERNS, ROWS, SYMBOLS, SYMBOL_BY_ID, VOID, debtFor } from './data.js';
+import { CHARM_BY_ID, COLS, DAYS, EVENT_BY_ID, PATTERNS, PULSAR, ROWS, SYMBOLS, SYMBOL_BY_ID, VOID, WHEEL, debtFor, unlocked } from './data.js';
 import { COLORS as C, CELL, LINE_COLORS, RX, RY, Renderer, fmt } from './render.js';
 import {
-  buy, choosePackage, createRun, finishDay, goEndless, payDebt, pickOffer, reroll, sell, snapshot, spin,
+  buy, choosePackage, createRun, finishDay, goEndless, markSeen, payDebt, pendingUnlocks, pickOffer, reroll, sell,
+  snapshot, spin, upgradeRun,
 } from './sim.js';
 import { loadStore } from './storage.js';
 
@@ -36,6 +37,7 @@ let run = null;
 let clock = 0;
 let regions = [];
 let forcedGrid = null; // tests can pick the next grid
+let forcedGold = null;
 const perf = { frames: 0, worst: 0 };
 
 const randomSym = () => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)].id;
@@ -273,6 +275,30 @@ function updateShooters() {
   }
 }
 
+/** An expanding ring of light. */
+function shockwave(x, y, color = '#fff', r1 = 140, max = 0.7, squash = 1) {
+  if (v.reducedMotion) return;
+  v.particles.push({ kind: 'ring', x, y, r0: 4, r1, life: 0, max, color, vx: 0, vy: 0, g: 0, squash });
+}
+const SHARD_COLORS = {
+  comet: ['#7ff4ff', '#3fa9ff', '#fff'], moon: ['#c9d3ff', '#8a93b8', '#fff'], planet: ['#ffd23f', '#ff9b2f', '#c4541b'],
+  rocket: ['#fff', '#ff3b4e', '#c9d3ff'], alien: ['#3de07a', '#b6ffc4', '#178a4a'], gem: ['#7ff4ff', '#3fa9ff', '#fff'],
+  seven: ['#ff3b4e', '#ffd23f', '#fff3a8'],
+};
+/** Winning symbols burst into pixel shards. */
+function shatter(cells, grid) {
+  if (v.reducedMotion) return;
+  for (const key of cells) {
+    const [c, r] = key.split(',').map(Number);
+    const q = cellCenter(c, r);
+    const cols = SHARD_COLORS[grid[c][r]] || [C.gold, '#fff'];
+    for (let i = 0; i < 7; i++) {
+      const a = Math.random() * Math.PI * 2, sp = 40 + Math.random() * 90;
+      v.particles.push({ kind: 'shard', x: q.x, y: q.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 50, g: 220, life: 0, max: 0.5 + Math.random() * 0.5, color: cols[i % cols.length], size: 1 + (i % 2) });
+    }
+  }
+}
+
 function updateParticles(dt) {
   for (const p of v.particles) {
     if (p.path) {
@@ -306,7 +332,7 @@ function startRun(resume = false) {
   audio.unlock();
   mode = 'run';
   if (resume && store.run) {
-    run = store.run;
+    run = upgradeRun(store.run);
   } else {
     run = createRun({ seed: seed++ });
     store.run = run;
@@ -333,7 +359,7 @@ function startRun(resume = false) {
 function resumePhase() {
   switch (run.phase) {
     case 'shop':
-      openPanel('shop');
+      openShop();
       break;
     case 'spin':
       closePanel();
@@ -358,6 +384,9 @@ function resumePhase() {
 
 function toTitle() {
   mode = 'title';
+  v.gold = null;
+  v.odVisual = false;
+  v.wheel = null;
   run = null;
   v.run = null;
   v.panel = null;
@@ -370,7 +399,7 @@ function toTitle() {
   titleHint();
 }
 
-const PANEL_FOCUS = { shop: 'shop:0', deadline: 'pay', transmit: 'offer:0', over: 'newrun', won: 'endless' };
+const PANEL_FOCUS = { shop: 'shop:0', deadline: 'pay', transmit: 'offer:0', over: 'newrun', won: 'endless', unlock: 'gotit' };
 function openPanel(name) {
   if (name !== 'transmit') audio.play('open');
   v.panel = name;
@@ -389,6 +418,27 @@ function openPanel(name) {
   }
   if (name === 'deadline') alertSr(`Deadline. The hole wants ${run.debt} coins. You have ${run.coins}.`);
 }
+/** The pit stop, after any new-mechanic cards the player hasn't seen yet. */
+function openShop() {
+  const next = pendingUnlocks(run)[0];
+  if (next) {
+    v.unlock = next.id;
+    openPanel('unlock');
+    audio.play('unlock');
+    fireworks(5);
+    kick(0.6);
+    heatTo(0.5);
+    alertSr(`New mechanic unlocked: ${next.name}. ${next.desc}`);
+    return;
+  }
+  openPanel('shop');
+  if (run.event) {
+    const e = EVENT_BY_ID[run.event];
+    audio.play('event');
+    alertSr(`Cosmic event today: ${e.name}. ${e.desc}`);
+  }
+}
+
 function closePanel() {
   v.panel = null;
   v.focus = null;
@@ -423,8 +473,18 @@ function doSpin() {
   if (settle && !spinning) skipAll();
   if (!canSpinNow()) return;
   audio.unlock();
-  const result = spin(run, forcedGrid);
+  const prevCharge = run.charge;
+  const result = spin(run, forcedGrid, forcedGold);
   forcedGrid = null;
+  forcedGold = null;
+  v.gold = new Set(result.gold);
+  v.shownCharge = prevCharge;
+  v.shownOverdrive = result.overdriveStart ? 0 : run.overdrive;
+  v.odVisual = result.overdrive || v.shownOverdrive > 0;
+  if (result.overdrive) {
+    heatTo(0.6);
+    shockwave(machineAt().x + 81, machineAt().y + 96, C.pink, 160);
+  }
   save();
   spinning = true;
   clearHot();
@@ -449,6 +509,12 @@ function doSpin() {
     const sevens = flat.filter((s) => s === 'seven').length;
     const voids = flat.filter((s) => s === VOID).length;
     const rowHot = [0, 1, 2].some((r) => shown.every((col) => col[r] === shown[0][r] && col[r] !== VOID));
+    const pulsars = flat.filter((s) => s === PULSAR).length;
+    if (pulsars >= 2 && unlocked(run, 'pulsar')) {
+      teaseFrom = c;
+      teaseColor = C.cyan;
+      break;
+    }
     if (voids >= 2) {
       teaseFrom = c;
       teaseColor = C.red;
@@ -509,7 +575,20 @@ function updateReels(dt) {
         audio.play('stop', c);
         kick(0.05 + c * 0.02, false);
       }
-      const voids = v.pending.grid[c].filter((s) => s === VOID).length;
+      const col = v.pending.grid[c];
+      // Sparks where the reel slams to a stop.
+      const q = cellCenter(c, 2);
+      spray(q.x, q.y + 14, reel.tease ? 14 : 4, ['spark'], [C.gold, '#fff']);
+      if (col.includes(PULSAR)) {
+        audio.play('pulsar');
+        col.forEach((s, r) => {
+          if (s !== PULSAR) return;
+          const q = cellCenter(c, r);
+          shockwave(q.x, q.y, C.cyan, 30, 0.4);
+        });
+      }
+      if (v.gold && [0, 1, 2].some((r) => v.gold.has(`${c},${r}`))) audio.play('gold');
+      const voids = col.filter((s) => s === VOID).length;
       if (voids) {
         audio.play('voidland');
         v.voidPulse = true;
@@ -568,6 +647,11 @@ function reveal(res) {
     v.shownSpins = finalSpins;
     v.bulbs = 'idle';
     v.particles = v.particles.filter((p) => !p.path);
+    v.wheel = null;
+    v.lightning = false;
+    v.shownCharge = run.charge;
+    v.shownOverdrive = run.overdrive;
+    v.odVisual = run.overdrive > 0;
     settle = null;
     afterSpin();
   };
@@ -592,7 +676,8 @@ function reveal(res) {
     for (let i = 0; i < n; i++) coinTo(from, bh, i * 0.05, null);
     later(0.2, () => (v.shownCoins = finalCoins));
     alertSr(`Three Void Eyes! The void eats ${res.bite} coins. You have ${finalCoins}.`);
-    later(D(2.0), () => settle && settle());
+    const end = wheelStep(res, D(2.0));
+    later(end, () => settle && settle());
     return;
   }
 
@@ -618,6 +703,12 @@ function reveal(res) {
       const mid = l.cells[Math.floor(l.cells.length / 2)];
       const p = cellCenter(mid[0], mid[1]);
       popup(`${l.value}X${l.mult}`, p.x, p.y - 14, LINE_COLORS[l.kind]);
+      v.lightning = l.mult >= 4 || l.gold > 0 || v.heat > 0.7;
+      if (l.gold) {
+        popup(`GOLD X${2 ** l.gold}`, p.x, p.y - 4, C.gold, 2);
+        audio.play('gold');
+        shockwave(p.x, p.y, C.gold, 50, 0.5);
+      }
       if (l.kind === 'jackpot') {
         banner('JACKPOT', { rainbow: true, scale: 4, dur: D(2.4) });
         audio.play('jackpot');
@@ -637,6 +728,8 @@ function reveal(res) {
     at += step;
   });
 
+  at = wheelStep(res, at);
+
   if (lines.length || res.horizon || res.total > 0) {
     // Multipliers and extras.
     const tags = [...res.tags];
@@ -654,9 +747,16 @@ function reveal(res) {
       at += Math.max(step, D(0.4));
     });
     later(at, () => {
+      const winCells = new Set(res.lines.flatMap((l) => l.cells.map(([c, r]) => `${c},${r}`)));
+      shatter(winCells, res.grid);
       clearHot();
       v.led = res.total;
       v.ledHot = true;
+      v.shownCharge = res.overdriveStart ? 100 : run.charge;
+      const m = machineAt();
+      popup(`+${fmt(res.total)}`, m.x + 81, m.y + 136, C.gold, res.total >= Math.max(40, debt * 0.5) ? 3 : 2);
+      shockwave(m.x + 81, m.y + 96, res.jackpot ? '#fff' : C.gold, res.total >= Math.max(40, debt * 0.5) ? 220 : 110, 0.8, 0.8);
+      if (res.total >= Math.max(40, debt * 0.5)) audio.play('shock');
       const big = res.total >= Math.max(40, debt * 0.5);
       const mega = res.total >= Math.max(150, debt * 1.5);
       v.bulbs = res.jackpot ? 'jackpot' : 'win';
@@ -708,6 +808,10 @@ function reveal(res) {
     alertSr(`No match.${run.spinsLeft ? ` ${run.spinsLeft} spins left.` : ''}`);
     at += D(0.25);
   }
+  if (res.overdriveStart) {
+    later(at, () => overdriveBanner());
+    at += D(1.6);
+  }
   if (res.free) {
     later(at, () => {
       banner('FREE SPIN', { color: '#b35cff', scale: 2, sub: 'WORMHOLE', dur: D(1) });
@@ -718,6 +822,63 @@ function reveal(res) {
     at += D(0.7);
   }
   later(at, () => settle && settle());
+}
+
+function overdriveBanner() {
+  v.shownCharge = 0;
+  v.shownOverdrive = run.overdrive;
+  v.odVisual = true;
+  banner('OVERDRIVE', { rainbow: true, scale: 3, sub: 'NEXT 3 SPINS PAY X3', subColor: C.pink, dur: D(1.6) });
+  audio.play('overdrive');
+  flash(0.4, '#ff5ad1');
+  heatTo(1);
+  kick(1);
+  shake(4);
+  const m = machineAt();
+  shockwave(m.x + 81, m.y + 96, C.pink, 240, 0.9);
+  later(0.25, () => shockwave(m.x + 81, m.y + 96, C.cyan, 200, 0.9));
+  alertSr('Overdrive! Your next 3 spins pay triple.');
+}
+
+/** The Bonus Wheel: spins to the prize the rules already picked. Returns when it's done. */
+function wheelStep(res, at) {
+  if (!res.wheel) return at;
+  const w = res.wheel;
+  const dur = D(3.4);
+  const slice = (Math.PI * 2) / WHEEL.length;
+  const prize = w.kind === 'coins' ? `+${fmt(w.amount)} COINS` : w.kind === 'overdrive' ? 'OVERDRIVE!' : w.label;
+  later(at, () => {
+    clearHot();
+    const jitter = (Math.random() - 0.5) * slice * 0.6;
+    v.wheel = { t0: clock, dur, target: -((w.index + 0.5) * slice + jitter) - Math.PI * 2 * 5, current: 0, prize };
+    audio.play('wheelStart');
+    banner('3 PULSARS', { color: C.cyan, scale: 2, dur: D(0.8) });
+    heatTo(0.5);
+    kick(0.5);
+    alertSr('Three pulsars! The Bonus Wheel spins.');
+  });
+  later(at + dur, () => {
+    audio.play('wheelWin');
+    heatTo(0.9);
+    kick(0.9);
+    shake(3);
+    fireworks(4);
+    const m = machineAt();
+    shockwave(m.x + 81, m.y + 96, WHEEL[w.index].color, 200, 0.8);
+    spray(m.x + 81, m.y + 96, 40, ['star', 'spark'], [WHEEL[w.index].color, '#fff', C.gold]);
+    if (w.kind === 'tickets') {
+      v.shownTickets = run.tickets;
+      audio.play('ticket');
+    }
+    if (w.kind === 'spins') v.shownSpins = run.spinsLeft;
+    if (w.kind === 'coins') coinRain(30);
+    if (w.kind === 'overdrive') later(D(0.6), () => overdriveBanner());
+    alertSr(`Bonus Wheel: ${prize}.`);
+  });
+  later(at + dur + D(1.4), () => {
+    v.wheel = null;
+  });
+  return at + dur + D(1.6) + (w.kind === 'overdrive' ? D(1.4) : 0);
 }
 
 function afterSpin() {
@@ -742,7 +903,7 @@ function endDay() {
     if (run.phase === 'deadline') {
       audio.play('deadline');
       openPanel('deadline');
-    } else openPanel('shop');
+    } else openShop();
   });
 }
 
@@ -825,7 +986,12 @@ function activate(id) {
       v.shownTickets = run.tickets;
       v.shownSpins = run.spinsLeft;
       kick(0.3);
-      banner(`DAY ${run.day}`, { color: C.cyan, scale: 3, sub: `${run.spinsLeft} SPINS`, dur: D(1) });
+      if (run.event) {
+        const e = EVENT_BY_ID[run.event];
+        banner(e.name, { rainbow: true, scale: 2, sub: e.desc.toUpperCase(), subColor: C.line, dur: D(2) });
+        audio.play('event');
+        shockwave(machineAt().x + 81, machineAt().y + 96, C.cyan, 200);
+      } else banner(`DAY ${run.day}`, { color: C.cyan, scale: 3, sub: `${run.spinsLeft} SPINS`, dur: D(1) });
       alertSr(`Day ${run.day}. ${run.spinsLeft} spins. Press space to spin.`);
       spinHint();
       save();
@@ -840,7 +1006,14 @@ function activate(id) {
       v.shownCoins = run.coins;
       banner(`ROUND ${run.round}`, { color: C.gold, scale: 3, sub: `DEBT ${fmt(run.debt)}`, subColor: C.red, dur: D(1.4) });
       save();
-      later(D(1.3), () => openPanel('shop'));
+      later(D(1.3), () => openShop());
+      break;
+    case 'gotit':
+      markSeen(run, v.unlock);
+      save();
+      audio.play('buy');
+      closePanel();
+      openShop();
       break;
     case 'newrun':
       startRun(false);
@@ -1239,6 +1412,18 @@ function frame(now) {
   // Heat cools off once the win has been counted.
   v.heat = Math.max(0, v.heat - dt * (settle ? 0.05 : 0.45));
   updateJig(dt);
+  if (v.odVisual && mode === 'run') v.heat = Math.max(v.heat, 0.55);
+  if (v.wheel) {
+    const k = Math.min(1, (clock - v.wheel.t0) / v.wheel.dur);
+    const rot = v.wheel.target * (1 - (1 - k) ** 3);
+    const a = (((-rot) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    const cur = Math.floor(a / ((Math.PI * 2) / WHEEL.length)) % WHEEL.length;
+    if (cur !== v.wheel.current && k < 1) {
+      v.wheel.current = cur;
+      audio.play('wheelTick', cur);
+    }
+  }
+  v.overdriveOn = !!v.odVisual && mode === 'run';
   audio.setHeat(v.heat);
   audio.update();
   v.flash = Math.max(0, v.flash - dt * 2.5);
@@ -1278,8 +1463,9 @@ if (TEST) {
     view: () => v,
     regions: () => regions,
     act: (id) => activate(id),
-    force: (grid) => {
+    force: (grid, gold = null) => {
       forcedGrid = grid;
+      forcedGold = gold;
     },
   };
 }

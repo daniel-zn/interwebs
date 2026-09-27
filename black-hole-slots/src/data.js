@@ -21,6 +21,9 @@ export const SYMBOLS = [
 export const VOID = 'void';
 export const SYMBOL_BY_ID = Object.fromEntries(SYMBOLS.map((s, i) => [s.id, { ...s, rank: i }]));
 SYMBOL_BY_ID.void = { id: 'void', name: 'Void Eye', value: 0, weight: 0, rank: 7 };
+/** The scatter: three or more anywhere spin the Bonus Wheel. Never part of a line. */
+export const PULSAR = 'pulsar';
+SYMBOL_BY_ID.pulsar = { id: 'pulsar', name: 'Pulsar', value: 0, weight: 0, rank: 7 };
 
 // ---------------------------------------------------------------- paylines
 // Every pattern template, as lists of [col, row] cells. Rows of 3 and 4 that
@@ -62,7 +65,7 @@ export const LINES = (() => {
 })();
 
 // ---------------------------------------------------------------- debts
-const DEBTS = [20, 50, 100, 180, 320, 550, 900, 1400];
+const DEBTS = [20, 55, 115, 230, 420, 750, 1250, 2000];
 export function debtFor(round) {
   if (round <= DEBTS.length) return DEBTS[round - 1];
   return Math.round(DEBTS[DEBTS.length - 1] * 1.8 ** (round - DEBTS.length) / 100) * 100;
@@ -123,3 +126,50 @@ export const CHARM_BY_ID = Object.fromEntries(CHARMS.map((c) => [c.id, { ...c, p
 // ---------------------------------------------------------------- transmissions
 // After each debt is paid, a voice from the void offers three blessings.
 export const BLESSING_KINDS = ['symbol', 'symbol', 'symbol', 'group', 'group', 'luck', 'spins', 'tickets', 'mult', 'all'];
+
+// ---------------------------------------------------------------- mechanics that unlock as you go
+// Each one arrives with a card the first time you reach its round.
+export const UNLOCKS = [
+  { id: 'overdrive', round: 2, name: 'OVERDRIVE', desc: 'Winning spins charge the meter under the reels. When it fills, your next 3 spins pay x3.' },
+  { id: 'gold', round: 3, name: 'GOLDEN SYMBOLS', desc: 'Some symbols land gold. Every gold symbol in a paying line doubles that line.' },
+  { id: 'pulsar', round: 4, name: 'PULSARS', desc: 'A new scatter symbol. Land 3 or more anywhere to spin the Bonus Wheel.' },
+  { id: 'events', round: 5, name: 'COSMIC EVENTS', desc: 'Every day brings space weather that bends the rules. Check the pit stop.' },
+];
+export const unlocked = (run, id) => run.round >= UNLOCKS.find((u) => u.id === id).round;
+
+export const OVERDRIVE_MAX = 100;
+export const OVERDRIVE_SPINS = 3;
+export const OVERDRIVE_MULT = 3;
+/** Charge for a winning spin. */
+export const overdriveGain = (lines) => Math.min(45, 12 + lines * 6);
+
+/** Chance that a cell lands gold. */
+export const goldChance = (luck) => 0.035 + 0.004 * luck;
+export const GOLD_CAP = 3; // at most x8 per line
+
+export const pulsarWeight = 2.4;
+export const PULSAR_COUNT = 3;
+
+// The Bonus Wheel. Eight equal slices on screen; some are luckier than others.
+export const WHEEL = [
+  { kind: 'coins', k: 0.3, label: 'COINS', color: '#ffd23f', weight: 20 },
+  { kind: 'spins', n: 3, label: '+3 SPINS', color: '#7ff4ff', weight: 14 },
+  { kind: 'coins', k: 0.7, label: 'BIG COINS', color: '#ff9b2f', weight: 10 },
+  { kind: 'tickets', n: 4, label: '+4 TICKETS', color: '#ff5ad1', weight: 14 },
+  { kind: 'coins', k: 0.3, label: 'COINS', color: '#ffd23f', weight: 20 },
+  { kind: 'luck', n: 1, label: '+1 LUCK', color: '#8fffc0', weight: 9 },
+  { kind: 'overdrive', label: 'OVERDRIVE', color: '#b35cff', weight: 9 },
+  { kind: 'coins', k: 1.5, label: 'MEGA', color: '#ff3b4e', weight: 4 },
+];
+
+// Cosmic events: one per day from round 5.
+export const EVENTS = [
+  { id: 'meteors', name: 'METEOR SHOWER', desc: 'Comets and Moons are worth x3.' },
+  { id: 'flare', name: 'SOLAR FLARE', desc: 'All wins x1.5, but Void Eyes land twice as often.' },
+  { id: 'gravity', name: 'GRAVITY WELL', desc: 'Gems and 7s land twice as often.' },
+  { id: 'quiet', name: 'QUIET VOID', desc: 'No Void Eyes today.' },
+  { id: 'storm', name: 'PULSAR STORM', desc: 'Pulsars land three times as often.' },
+  { id: 'golden', name: 'GOLDEN HOUR', desc: 'Golden symbols land three times as often.' },
+  { id: 'alignment', name: 'ALIGNMENT', desc: 'Columns and diagonals get x2 mult.' },
+];
+export const EVENT_BY_ID = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
