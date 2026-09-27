@@ -42,6 +42,15 @@ session so the silent switch doesn't mute them. `npm run check` fakes the
 phone rule and taps every project that creates an `AudioContext` to make sure
 its sound starts.
 
+**Gestures on phones.** iOS Safari ignores `user-scalable=no`, so each game
+stops double-tap zoom with `touch-action: manipulation` on every element,
+blocks pinch-zoom by cancelling `gesturestart`, and turns off text selection
+and long-press callouts on the whole page (text fields excepted). Otherwise a
+double tap on a button, or a gap between buttons, zooms the page, and a long
+press highlights text, sometimes text that's only there for screen readers.
+`npm run check` reads the computed styles of every element in every project
+to make sure none of it creeps back.
+
 Dev-only files and folders are not published: `node_modules`, `tests`,
 `test-results`, `scripts`, `tools`, `package.json`, `package-lock.json`,
 `eslint.config.js`, `README.md`, and dotfiles. The list is in `build.mjs`.

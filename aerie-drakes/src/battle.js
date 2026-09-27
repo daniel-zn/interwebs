@@ -52,6 +52,7 @@ export class Battle {
 
   // ---------------------------------------------------------------- main flow
   async run() {
+    this.game.input.clearTouch?.();
     this.hud.show(true);
     this.hud.setMon('foe', null);
     this.hud.setMon('me', null);

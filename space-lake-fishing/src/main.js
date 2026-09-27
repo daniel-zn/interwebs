@@ -6,6 +6,10 @@ import { loadStore } from './storage.js';
 import { UI } from './ui.js';
 import { mulberry32 } from './util.js';
 
+// iOS ignores user-scalable=no, so block pinch-zoom here (double-tap zoom is
+// handled by touch-action in the stylesheet).
+for (const type of ['gesturestart', 'gesturechange']) document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+
 const params = new URLSearchParams(location.search);
 const seed = params.has('seed') ? Number(params.get('seed')) >>> 0 : (Date.now() ^ (Math.random() * 1e9)) >>> 0;
 const store = loadStore();

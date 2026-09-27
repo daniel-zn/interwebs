@@ -4,6 +4,10 @@ import { CALLS, OBJECTS, SESSION, createRun, demoPilot, snapshot, step, steerTow
 import { loadStore } from './storage.js';
 import { UI } from './ui.js';
 
+// iOS ignores user-scalable=no, so block pinch-zoom here (double-tap zoom is
+// handled by touch-action in the stylesheet).
+for (const type of ['gesturestart', 'gesturechange']) document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+
 const params = new URLSearchParams(location.search);
 const TEST = params.has('test');
 const SPEED = params.has('fast') ? 2.5 : 1;

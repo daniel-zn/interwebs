@@ -121,6 +121,9 @@ export class Input {
       dpad.dataset.dir = d ?? '';
       if (d) this.press(d);
     };
+    // The overlay hides while dialogs and menus are up, which can swallow the
+    // finger's pointerup; let go of the pad so the player doesn't walk on.
+    this.clearTouch = () => set(null);
     dpad.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       this.setMode('touch');
