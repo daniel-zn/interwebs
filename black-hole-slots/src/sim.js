@@ -2,8 +2,10 @@
 // charms, the shop, days, debts and transmissions. The run is plain JSON
 // (the RNG state included), so it can be saved and resumed.
 import {
-  BLESSING_KINDS, CHARMS, CHARM_BY_ID, COLS, DAYS, FINAL_ROUND, GROUP_NAMES, LINES, MAX_CHARMS, PACKAGES,
-  PATTERNS, RARITY, ROWS, SYMBOLS, SYMBOL_BY_ID, VOID, VOID_BITE, VOID_COUNT, debtFor, voidWeight,
+  BLESSING_KINDS, CHARMS, CHARM_BY_ID, COLS, DAYS, EVENTS, FINAL_ROUND, GOLD_CAP, GROUP_NAMES, LINES, MAX_CHARMS,
+  OVERDRIVE_MAX, OVERDRIVE_MULT, OVERDRIVE_SPINS, PACKAGES, PATTERNS, PULSAR, PULSAR_COUNT, RARITY, ROWS, SYMBOLS,
+  SYMBOL_BY_ID, UNLOCKS, VOID, VOID_BITE, VOID_COUNT, WHEEL, debtFor, goldChance, overdriveGain, pulsarWeight,
+  unlocked, voidWeight,
 } from './data.js';
 
 // ---------------------------------------------------------------- rng
@@ -49,6 +51,12 @@ export function createRun({ seed = 1 } = {}) {
     darkMatter: 0,
     streak: 0,
     echoUsed: false,
+    // Mechanics that unlock as rounds go by.
+    charge: 0, // overdrive meter, 0..OVERDRIVE_MAX
+    overdrive: 0, // boosted spins left
+    event: null, // today's cosmic event id
+    seen: [], // unlock cards already shown
+    seenInit: true,
     // Day state.
     phase: 'shop',
     spinsLeft: 0,
@@ -58,13 +66,36 @@ export function createRun({ seed = 1 } = {}) {
     offers: [],
     endless: false,
     // Stats for the end screen.
-    stats: { spins: 0, earned: 0, bestWin: 0, jackpots: 0, voids: 0 },
+    stats: { spins: 0, earned: 0, bestWin: 0, jackpots: 0, voids: 0, wheels: 0, overdrives: 0 },
   };
   stockShop(run);
   return run;
 }
 
+/** Fills in fields added since a saved run was made, so old saves keep working. */
+export function upgradeRun(run) {
+  const fresh = { charge: 0, overdrive: 0, event: null, seen: [] };
+  for (const [k, v] of Object.entries(fresh)) if (run[k] === undefined) run[k] = v;
+  // A save from before unlocks existed has already been through earlier rounds' cards.
+  if (!run.seenInit) {
+    run.seenInit = true;
+    if (!run.seen.length) run.seen = UNLOCKS.filter((u) => u.round < run.round).map((u) => u.id);
+  }
+  run.stats.wheels = run.stats.wheels || 0;
+  run.stats.overdrives = run.stats.overdrives || 0;
+  return run;
+}
+
 export const has = (run, id) => run.charms.includes(id);
+export const eventIs = (run, id) => run.event === id;
+
+/** Unlock cards the player hasn't seen yet, for rounds they've reached. */
+export function pendingUnlocks(run) {
+  return UNLOCKS.filter((u) => run.round >= u.round && !run.seen.includes(u.id));
+}
+export function markSeen(run, id) {
+  if (!run.seen.includes(id)) run.seen.push(id);
+}
 
 /** Spins a package gives today, after charms and blessings. */
 export function spinsFor(run, pkg) {
@@ -81,20 +112,25 @@ export function symbolWeights(run) {
     const rank = SYMBOL_BY_ID[s.id].rank;
     let x = s.weight * (1 + run.luck * 0.07 * rank);
     if (s.id === 'seven' && has(run, 'star_chart')) x *= 2;
+    if ((s.id === 'seven' || s.id === 'gem') && eventIs(run, 'gravity')) x *= 2;
     w[s.id] = x;
   }
   let v = voidWeight(run.round);
   if (has(run, 'void_ward')) v *= 0.25;
   if (has(run, 'event_horizon')) v *= 2;
+  if (eventIs(run, 'flare')) v *= 2;
+  if (eventIs(run, 'quiet')) v = 0;
   w[VOID] = v;
+  if (unlocked(run, 'pulsar')) w[PULSAR] = pulsarWeight * (eventIs(run, 'storm') ? 3 : 1);
   return w;
 }
 
 export function symbolValue(run, id) {
-  if (id === VOID) return 0;
+  if (id === VOID || id === PULSAR) return 0;
   let v = SYMBOL_BY_ID[id].value + (run.symBonus[id] || 0);
   const doubler = { comet: 'comet_tail', moon: 'moon_boots', planet: 'ring_polish', rocket: 'booster', seven: 'star_chart' }[id];
   if (doubler && has(run, doubler)) v *= 2;
+  if ((id === 'comet' || id === 'moon') && eventIs(run, 'meteors')) v *= 3;
   return v;
 }
 
@@ -106,6 +142,7 @@ export function patternMult(run, kind) {
   if (p.group === 'diagonals' && has(run, 'lens')) m += 2;
   if (p.group === 'shapes' && has(run, 'geometry')) m += 4;
   if ((kind === 'row5' || kind === 'orbit' || kind === 'jackpot') && has(run, 'supernova')) m *= 5;
+  if ((p.group === 'columns' || p.group === 'diagonals') && eventIs(run, 'alignment')) m *= 2;
   return m;
 }
 
@@ -130,6 +167,19 @@ export function rollGrid(run) {
   return grid;
 }
 
+/** Which cells land gold (from round 3). A set of "col,row" keys. */
+export function rollGold(run, grid) {
+  const gold = [];
+  if (!unlocked(run, 'gold')) return gold;
+  const p = goldChance(run.luck) * (eventIs(run, 'golden') ? 3 : 1);
+  for (let c = 0; c < COLS; c++) {
+    for (let r = 0; r < ROWS; r++) {
+      if (rand(run) < p && grid[c][r] !== VOID && grid[c][r] !== PULSAR) gold.push(`${c},${r}`);
+    }
+  }
+  return gold;
+}
+
 // ---------------------------------------------------------------- paying lines
 /** Every paying line on a grid (grid[col][row]), before multipliers. */
 export function findLines(run, grid) {
@@ -140,7 +190,7 @@ export function findLines(run, grid) {
     let ok = true;
     for (const [c, r] of line.cells) {
       const s = grid[c][r];
-      if (s === VOID) {
+      if (s === VOID || s === PULSAR) {
         ok = false;
         break;
       }
@@ -163,6 +213,12 @@ export function findLines(run, grid) {
   });
 }
 
+export function countPulsars(grid) {
+  let n = 0;
+  for (const col of grid) for (const s of col) if (s === PULSAR) n++;
+  return n;
+}
+
 export function countVoids(grid) {
   let n = 0;
   for (const col of grid) for (const s of col) if (s === VOID) n++;
@@ -173,22 +229,30 @@ export function countVoids(grid) {
  * Spins the reels once. Returns everything the presentation needs; the run is
  * already updated when this returns.
  */
-export function spin(run, forcedGrid = null) {
+export function spin(run, forcedGrid = null, forcedGold = null) {
   if (run.phase !== 'spin' || run.spinsLeft <= 0) throw new Error('cannot spin now');
   run.spinsLeft--;
   run.spinsToday++;
   run.stats.spins++;
   const last = run.spinsLeft === 0;
   const grid = forcedGrid || rollGrid(run);
+  const gold = forcedGold || (forcedGrid ? [] : rollGold(run, grid));
+  const goldSet = new Set(gold);
   const lines = findLines(run, grid);
   const voids = countVoids(grid);
-  const result = { grid, lines: [], voids, voided: false, bite: 0, horizon: 0, base: 0, mult: 1, total: 0, tags: [], free: false, last };
+  const pulsars = countPulsars(grid);
+  const result = {
+    grid, gold, lines: [], voids, pulsars, voided: false, bite: 0, horizon: 0, base: 0, mult: 1, total: 0, tags: [],
+    free: false, last, overdrive: run.overdrive > 0, overdriveStart: false, wheel: null,
+  };
 
   for (const l of lines) {
     const v = symbolValue(run, l.sym);
     const m = patternMult(run, l.kind);
-    result.lines.push({ ...l, value: v, mult: m, pay: v * m });
-    result.base += v * m;
+    const g = Math.min(GOLD_CAP, l.cells.filter(([c, r]) => goldSet.has(`${c},${r}`)).length);
+    const pay = v * m * 2 ** g;
+    result.lines.push({ ...l, value: v, mult: m, gold: g, pay });
+    result.base += pay;
   }
 
   if (voids >= VOID_COUNT) {
@@ -215,7 +279,13 @@ export function spin(run, forcedGrid = null) {
       result.tags.push('FINALE X3');
     }
     if (has(run, 'double_down')) mult *= 2;
+    if (eventIs(run, 'flare')) mult *= 1.5;
+    if (result.overdrive) {
+      mult *= OVERDRIVE_MULT;
+      result.tags.push(`OVERDRIVE X${OVERDRIVE_MULT}`);
+    }
   }
+  if (result.overdrive) run.overdrive--;
   result.mult = mult;
   result.total = Math.round(result.base * mult) + result.horizon;
 
@@ -225,6 +295,13 @@ export function spin(run, forcedGrid = null) {
   } else if (!won && !result.horizon && has(run, 'tip_jar')) {
     result.total = 3 * run.round;
     result.tags.push('TIP JAR');
+  }
+
+  // Overdrive charge (from round 2).
+  if (unlocked(run, 'overdrive')) {
+    if (result.voided) run.charge = Math.floor(run.charge / 2);
+    else if (won && !result.overdrive) run.charge += overdriveGain(result.lines.length) + (result.lines.some((l) => l.kind === 'jackpot') ? OVERDRIVE_MAX : 0);
+    if (run.charge >= OVERDRIVE_MAX && run.overdrive === 0) startOverdrive(run, result);
   }
 
   if (won) {
@@ -239,6 +316,12 @@ export function spin(run, forcedGrid = null) {
     }
   }
 
+  // The Bonus Wheel (from round 4). Its prize is decided now; the screen just spins to it.
+  if (pulsars >= PULSAR_COUNT && unlocked(run, 'pulsar')) {
+    const i = WHEEL.indexOf(pickWeighted(run, WHEEL, (s) => s.weight));
+    result.wheel = applyWheel(run, i, result);
+  }
+
   result.jackpot = result.lines.some((l) => l.kind === 'jackpot');
   if (result.jackpot) run.stats.jackpots++;
   run.coins += result.total;
@@ -246,6 +329,44 @@ export function spin(run, forcedGrid = null) {
   run.stats.bestWin = Math.max(run.stats.bestWin, result.total);
   if (run.spinsLeft === 0) run.phase = 'dayEnd';
   return result;
+}
+
+function startOverdrive(run, result) {
+  run.charge = 0;
+  run.overdrive = OVERDRIVE_SPINS;
+  run.stats.overdrives++;
+  if (result) result.overdriveStart = true;
+}
+
+/** Hands out a wheel prize. Coins are added to the spin's total. */
+export function applyWheel(run, i, result) {
+  const s = WHEEL[i];
+  const out = { index: i, kind: s.kind, label: s.label, amount: 0 };
+  run.stats.wheels++;
+  switch (s.kind) {
+    case 'coins':
+      out.amount = Math.max(5, Math.round(run.debt * s.k));
+      result.total += out.amount;
+      break;
+    case 'spins':
+      out.amount = s.n;
+      run.spinsLeft += s.n;
+      break;
+    case 'tickets':
+      out.amount = s.n;
+      run.tickets += s.n;
+      break;
+    case 'luck':
+      out.amount = s.n;
+      run.luck += s.n;
+      break;
+    case 'overdrive':
+      if (run.overdrive === 0) startOverdrive(run, null);
+      else run.overdrive += OVERDRIVE_SPINS;
+      break;
+    default:
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------- the shop
@@ -332,6 +453,7 @@ export function finishDay(run) {
 function openShop(run) {
   run.phase = 'shop';
   run.rerolls = 0;
+  run.event = unlocked(run, 'events') ? EVENTS[pickInt(run, EVENTS.length)].id : null;
   if (has(run, 'printer')) run.tickets++;
   stockShop(run);
 }
@@ -451,5 +573,6 @@ export function snapshot(run) {
   return {
     phase: run.phase, round: run.round, day: run.day, debt: run.debt, coins: run.coins, tickets: run.tickets,
     spinsLeft: run.spinsLeft, charms: [...run.charms], shop: [...run.shop], luck: run.luck, endless: run.endless,
+    charge: run.charge, overdrive: run.overdrive, event: run.event, seen: [...run.seen],
   };
 }

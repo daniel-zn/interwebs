@@ -159,6 +159,9 @@ const LOSE = grid('mpcra', 'crmpg', 'mpcra');
   check(s.panel === 'transmit', 'paying the debt brings a transmission');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
+  // Round 2 opens with the Overdrive card, then the pit stop.
+  await page.waitForFunction(() => window.__slots.snapshot().panel === 'unlock', null, { timeout: 8000 });
+  await page.keyboard.press('Enter');
   await page.waitForFunction(() => window.__slots.snapshot().panel === 'shop', null, { timeout: 8000 });
   s = await page.snap();
   check(s.round === 2 && s.day === 1, 'picking a gift starts round 2', `r${s.round} d${s.day}`);
@@ -231,6 +234,80 @@ const LOSE = grid('mpcra', 'crmpg', 'mpcra');
   s = await page.snap();
   check(s.round === 9, 'endless round 9', `r${s.round}`);
   check(page.errors.length === 0, 'no console errors (escape)', page.errors.join(' | '));
+  await context.close();
+}
+
+// ------------------------------------------------------------------ mechanics that unlock
+{
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await openGame(context, 'mechanics');
+  await page.keyboard.press('Enter');
+  // Pay round 1's debt: the round 2 pit stop opens with the Overdrive card first.
+  await page.evaluate(() => {
+    const r = window.__slots.run();
+    r.phase = 'deadline';
+    r.coins = 500;
+    window.__slots.act('pay');
+  });
+  await page.waitForFunction(() => window.__slots.snapshot().panel === 'transmit', null, { timeout: 8000 });
+  await page.evaluate(() => window.__slots.act('offer:0'));
+  await page.waitForFunction(() => window.__slots.snapshot().panel === 'unlock', null, { timeout: 8000 });
+  await sleep(300);
+  await page.shot('unlock');
+  let s = await page.snap();
+  check(s.round === 2 && s.panel === 'unlock', 'reaching round 2 shows the Overdrive card', `${s.panel}`);
+  await page.keyboard.press('Enter');
+  s = await page.snap();
+  check(s.panel === 'shop' && s.seen.includes('overdrive'), 'GOT IT goes on to the pit stop and is remembered', `${s.panel} ${s.seen}`);
+
+  // Overdrive: a full meter turns on after a win.
+  await page.evaluate(() => window.__slots.act('pkg:0'));
+  await page.idle();
+  await page.evaluate(() => (window.__slots.run().charge = 95));
+  await page.evaluate((g) => window.__slots.force(g), grid('sssmp', 'mpcra', 'crmpg'));
+  await page.keyboard.press(' ');
+  await page.idle();
+  s = await page.snap();
+  check(s.overdrive === 3 && s.charge === 0, 'a full meter starts Overdrive', `od ${s.overdrive} charge ${s.charge}`);
+  const c0 = s.coins;
+  await page.evaluate((g) => window.__slots.force(g), grid('sssmp', 'mpcra', 'crmpg'));
+  await page.keyboard.press(' ');
+  await sleep(1500);
+  await page.shot('overdrive');
+  await page.idle();
+  s = await page.snap();
+  check(s.coins - c0 === 21 && s.overdrive === 2, 'Overdrive spins pay x3', `+${s.coins - c0}`);
+
+  // Round 4: pulsars spin the Bonus Wheel, which settles back to spinning.
+  await page.evaluate(() => {
+    const r = window.__slots.run();
+    r.round = 4;
+    r.seen = ['overdrive', 'gold', 'pulsar'];
+    r.spinsLeft = Math.max(r.spinsLeft, 3);
+  });
+  await page.evaluate(() => window.__slots.force([['pulsar', 'moon', 'pulsar'], ['pulsar', 'moon', 'gem'], ['comet', 'planet', 'rocket'], ['gem', 'rocket', 'alien'], ['seven', 'rocket', 'comet']]));
+  await page.keyboard.press(' ');
+  await page.waitForFunction(() => !!window.__slots.view().wheel, null, { timeout: 8000 });
+  await sleep(1200);
+  await page.shot('wheel');
+  await page.idle();
+  s = await page.snap();
+  const wheelGone = await page.evaluate(() => window.__slots.view().wheel === null);
+  check(wheelGone && s.phase !== 'over', 'three pulsars spin the Bonus Wheel and play carries on', `${s.phase}`);
+
+  // Gold: a gold symbol doubles its line.
+  await page.evaluate(() => {
+    const r = window.__slots.run();
+    r.overdrive = 0;
+    r.spinsLeft = Math.max(r.spinsLeft, 2);
+  });
+  const c1 = (await page.snap()).coins;
+  await page.evaluate((g) => window.__slots.force(g, ['0,0']), grid('sssmp', 'mpcra', 'crmpg'));
+  await page.keyboard.press(' ');
+  await page.idle();
+  s = await page.snap();
+  check(s.coins - c1 === 14, 'a gold symbol doubles its line', `+${s.coins - c1}`);
+  check(page.errors.length === 0, 'no console errors (mechanics)', page.errors.join(' | '));
   await context.close();
 }
 

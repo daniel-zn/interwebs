@@ -469,6 +469,49 @@ export class SoundEngine {
         this.bell(1319, 0, 0.05);
         this.bell(1976, 0.08, 0.05);
         break;
+      case 'overdrive':
+        // Power-up riser, then the drop.
+        this.tone(110, 1.0, { type: 'sawtooth', vol: 0.08, slide: 1760 });
+        this.tone(116, 1.0, { type: 'square', vol: 0.04, slide: 1800 });
+        this.noise(1.0, { vol: 0.12, freq: 300, q: 0.8, slide: 9000 });
+        this.tone(55, 0.8, { type: 'sine', vol: 0.45, slide: 30, at: 1.0 });
+        this.noise(0.6, { vol: 0.25, freq: 1200, q: 0.5, at: 1.0 });
+        [523, 659, 784, 1047].forEach((f) => this.tone(f, 0.6, { type: 'sawtooth', vol: 0.035, at: 1.0 }));
+        break;
+      case 'gold':
+        for (let i = 0; i < 6; i++) this.tone(1760 + i * 220 + Math.random() * 60, 0.08, { type: 'sine', vol: 0.05, at: i * 0.03 });
+        this.bell(2637, 0.15, 0.04);
+        break;
+      case 'pulsar':
+        // A zappy radio pulse.
+        for (let i = 0; i < 3; i++) this.tone(2400 - i * 300, 0.05, { type: 'square', vol: 0.04, slide: 300, at: i * 0.07 });
+        break;
+      case 'wheelTick':
+        this.noise(0.025, { vol: 0.12, freq: 2800, q: 5 });
+        this.tone(1100 + arg * 40, 0.02, { vol: 0.03 });
+        break;
+      case 'wheelStart':
+        this.noise(0.5, { vol: 0.12, freq: 500, q: 0.7, slide: 5000 });
+        [392, 523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.08, { vol: 0.06, at: i * 0.05 }));
+        break;
+      case 'wheelWin':
+        [784, 988, 1175, 1568].forEach((f, i) => this.tone(f, 0.14, { vol: 0.07, at: i * 0.08 }));
+        [784, 988, 1175].forEach((f) => this.tone(f, 0.7, { type: 'triangle', vol: 0.07, at: 0.32, vibrato: 6 }));
+        this.bell(2093, 0.3, 0.06);
+        break;
+      case 'unlock':
+        [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, 0.12, { vol: 0.06, at: i * 0.07 }));
+        [523, 784, 1047].forEach((f) => this.tone(f, 0.9, { type: 'sine', vol: 0.06, at: 0.4, attack: 0.05, vibrato: 5 }));
+        this.noise(0.4, { vol: 0.06, freq: 7000, q: 0.6, at: 0.35 });
+        break;
+      case 'event':
+        this.noise(0.8, { vol: 0.1, freq: 200, q: 0.6, slide: 4000 });
+        [330, 415, 494, 659].forEach((f) => this.tone(f, 1.0, { type: 'triangle', vol: 0.05, at: 0.3, attack: 0.1, vibrato: 4 }));
+        break;
+      case 'shock':
+        this.tone(80, 0.5, { type: 'sine', vol: 0.35, slide: 28 });
+        this.noise(0.4, { vol: 0.2, freq: 400, q: 0.6, slide: 90 });
+        break;
       case 'shoot':
         this.tone(3000, 0.4, { type: 'sine', vol: 0.012, slide: 1200 });
         break;

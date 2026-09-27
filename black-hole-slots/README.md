@@ -9,7 +9,7 @@ get spaghettified past the horizon.
 Pay all eight debts to escape. Then keep going in endless mode if you dare.
 
 **Stack:** vanilla JS + Canvas 2D · no runtime dependencies · no build step ·
-all sound and music synthesised with WebAudio · about 49 KB gzipped (`npm run size`).
+all sound and music synthesised with WebAudio · about 59 KB gzipped (`npm run size`).
 
 ## Play
 
@@ -48,6 +48,17 @@ npm start            # zero-dependency server on http://127.0.0.1:8080/
    bigger symbol values, pattern mults, luck, extra spins, tickets, or a
    stacking ×1.5 on every win.
 
+### Deeper in: mechanics that unlock as you go
+
+Each arrives with a "new mechanic" card the first time you reach its round.
+
+| Round | Mechanic |
+| --- | --- |
+| 2 | **Overdrive.** Winning spins charge a meter under the reels (more lines, more charge; a jackpot fills it; the void drains half). When it's full, the next 3 spins pay ×3, with hyperspace streaking past. |
+| 3 | **Golden symbols.** Some cells land gold (luck and Golden Hour help). Every gold symbol in a paying line doubles that line, up to ×8. |
+| 4 | **Pulsars and the Bonus Wheel.** A scatter symbol that never pays in lines. Three or more anywhere spin a prize wheel: coins (30%, 70% or 150% of the debt), +3 spins, +4 tickets, +1 luck, or Overdrive. |
+| 5 | **Cosmic events.** Every day brings space weather: Meteor Shower (Comets and Moons ×3), Solar Flare (wins ×1.5, twice the Void Eyes), Gravity Well, Quiet Void, Pulsar Storm, Golden Hour, Alignment. |
+
 There are 25 charms in three rarities. Some highlights: **Wild Aliens**
 (aliens match anything), **Dark Matter** (every winning spin adds mult for
 good), **Hot Streak**, **Echo Chamber**, **Wormhole** (free respins),
@@ -57,7 +68,7 @@ and **Double Down** (all wins ×2, fewer spins).
 `npm run balance` plays thousands of runs with two simple bots and prints how
 far they get. The debts are tuned so a bot that buys charms at random usually
 dies around rounds 5 to 7, and a slightly smarter one escapes about one run in
-ten. A human who builds around a synergy should do better.
+six. A human who builds around a synergy should do better.
 
 ## Controls
 

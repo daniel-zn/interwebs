@@ -272,3 +272,109 @@ test('runs are repeatable from a seed and survive a JSON round trip', () => {
   a.spinsLeft = c.spinsLeft = 3;
   assert.deepEqual([spin(a).total, spin(a).total], [spin(c).total, spin(c).total]);
 });
+
+// ---------------------------------------------------------------- unlocking mechanics
+test('mechanics unlock round by round, each with one card', async () => {
+  const { pendingUnlocks, markSeen } = await import('../src/sim.js');
+  const run = createRun();
+  assert.deepEqual(pendingUnlocks(run).map((u) => u.id), []);
+  run.round = 3;
+  assert.deepEqual(pendingUnlocks(run).map((u) => u.id), ['overdrive', 'gold']);
+  markSeen(run, 'overdrive');
+  markSeen(run, 'gold');
+  run.round = 5;
+  assert.deepEqual(pendingUnlocks(run).map((u) => u.id), ['pulsar', 'events']);
+});
+
+test('overdrive: winning spins charge it, then three spins pay x3', () => {
+  const run = spinRun({ round: 2 });
+  run.spinsLeft = 20;
+  const win = grid('sssmp', 'mpcra', 'crmpg');
+  let started = null;
+  for (let i = 0; i < 10 && !started; i++) {
+    const r = spin(run, win);
+    if (r.overdriveStart) started = i;
+  }
+  assert.ok(started !== null, 'the meter fills');
+  assert.equal(run.overdrive, 3);
+  assert.equal(run.charge, 0);
+  const boosted = spin(run, win);
+  assert.equal(boosted.overdrive, true);
+  assert.equal(boosted.total, 21);
+  spin(run, win);
+  spin(run, win);
+  assert.equal(run.overdrive, 0);
+  assert.equal(spin(run, win).total, 7);
+  // No overdrive in round 1.
+  const r1 = spinRun();
+  r1.spinsLeft = 20;
+  for (let i = 0; i < 10; i++) spin(r1, win);
+  assert.equal(r1.charge, 0);
+});
+
+test('golden symbols double their line for each gold cell, up to x8', () => {
+  const run = spinRun({ round: 3 });
+  const res = spin(run, grid('sssmp', 'mpcra', 'crmpg'), ['0,0', '2,0']);
+  assert.equal(res.lines[0].gold, 2);
+  assert.equal(res.total, 7 * 4);
+  const all = spin(run, grid('ggggg', 'mpcra', 'crmpg'), ['0,0', '1,0', '2,0', '3,0', '4,0']);
+  assert.equal(all.total, 5 * 3 * 8);
+});
+
+test('three pulsars spin the bonus wheel, and pulsars never make lines', () => {
+  const run = spinRun({ round: 4, debt: 180 });
+  const before = { coins: run.coins, tickets: run.tickets, spins: run.spinsLeft, luck: run.luck };
+  const res = spin(run, [['pulsar', 'moon', 'pulsar'], ['pulsar', 'moon', 'gem'], ['comet', 'planet', 'rocket'], ['gem', 'rocket', 'alien'], ['seven', 'rocket', 'comet']]);
+  assert.ok(res.wheel, 'the wheel spins');
+  assert.equal(res.lines.length, 0, 'pulsars pay nothing on their own');
+  const w = res.wheel;
+  if (w.kind === 'coins') assert.equal(run.coins, before.coins + w.amount);
+  if (w.kind === 'tickets') assert.equal(run.tickets, before.tickets + w.amount);
+  if (w.kind === 'spins') assert.equal(run.spinsLeft, before.spins - 1 + w.amount);
+  if (w.kind === 'luck') assert.equal(run.luck, before.luck + 1);
+  if (w.kind === 'overdrive') assert.equal(run.overdrive, 3);
+  assert.equal(findLines(run, grid('mmmcr', 'rcagp', 'gprac').map((col, c) => (c === 1 ? ['pulsar', col[1], col[2]] : col))).length, 0);
+});
+
+test('every wheel slice pays what it says', async () => {
+  const { applyWheel } = await import('../src/sim.js');
+  const { WHEEL } = await import('../src/data.js');
+  WHEEL.forEach((slice, i) => {
+    const run = spinRun({ round: 4, debt: 200 });
+    const res = { total: 0 };
+    const out = applyWheel(run, i, res);
+    assert.equal(out.kind, slice.kind);
+    if (slice.kind === 'coins') assert.equal(res.total, Math.round(200 * slice.k));
+  });
+});
+
+test('cosmic events arrive from round 5 and bend the rules', async () => {
+  const run = createRun({ seed: 5 });
+  run.round = 5;
+  run.phase = 'dayEnd';
+  run.day = 1;
+  finishDay(run);
+  assert.ok(run.event, 'day 2 of round 5 has an event');
+  run.event = 'meteors';
+  choosePackage(run, 0);
+  assert.equal(spin(run, grid('cccmp', 'mpgra', 'grmpg')).total, 6);
+  run.event = 'quiet';
+  assert.equal(symbolWeights(run).void, 0);
+  run.event = 'alignment';
+  assert.equal(spin(run, grid('cmpra', 'cgsmp', 'crgap')).total, 4);
+  const early = createRun({ seed: 5 });
+  early.phase = 'dayEnd';
+  finishDay(early);
+  assert.equal(early.event, null, 'no events before round 5');
+});
+
+test('old saved runs are upgraded', async () => {
+  const { upgradeRun } = await import('../src/sim.js');
+  const old = createRun();
+  for (const k of ['charge', 'overdrive', 'event', 'seen', 'seenInit']) delete old[k];
+  delete old.stats.wheels;
+  old.round = 4;
+  upgradeRun(old);
+  assert.equal(old.charge, 0);
+  assert.deepEqual(old.seen, ['overdrive', 'gold'], 'cards for rounds already played are skipped');
+});
