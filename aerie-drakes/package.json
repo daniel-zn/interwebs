@@ -1,0 +1,20 @@
+{
+  "name": "aerie-drakes",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A cyberpunk drake-linking RPG on an island floating in the sky.",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.mjs 8080",
+    "lint": "eslint .",
+    "size": "node tools/size.mjs",
+    "test": "node tests/data.mjs && node tests/play.mjs",
+    "check": "npm run lint && npm run size && npm test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
+    "playwright": "1.56.1"
+  }
+}

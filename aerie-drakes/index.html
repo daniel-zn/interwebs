@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0a0620">
+  <meta name="description" content="A cyberpunk drake-linking RPG on an island floating in the sky. Tether wild space-dragons, battle Linkers, trade in the Neon Bazaar and wake the star-dragon at the island's heart.">
+  <meta name="interwebs:kind" content="Game">
+  <meta name="interwebs:accent" content="#ff4fd8">
+  <title>Aerie Drakes</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Crect width='8' height='8' fill='%230a0620'/%3E%3Crect x='1' y='3' width='5' height='3' fill='%23ff4fd8'/%3E%3Crect x='2' y='1' width='3' height='2' fill='%23ff4fd8'/%3E%3Crect x='3' y='2' width='1' height='1' fill='%233ff7ff'/%3E%3Crect x='5' y='1' width='2' height='2' fill='%237a2ad8'/%3E%3Crect x='6' y='5' width='1' height='1' fill='%23ffe23d'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <canvas id="game" aria-label="Aerie Drakes game view"></canvas>
+    <p class="sr-only">A turn-based creature-linking adventure. Move with the arrow keys or WASD, confirm with Z, Space or Enter, go back or open the menu with X or Escape, hold Shift to run. On touch screens use the pad and the A and B buttons. Gamepads work too.</p>
+    <div id="sr-live" class="sr-only" aria-live="polite"></div>
+
+    <div class="hud-buttons">
+      <button id="btn-menu" class="icon-btn" type="button" aria-label="Menu" title="Menu (X / Esc)">
+        <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 2h8v1h-8zM1 4.5h8v1h-8zM1 7h8v1h-8z" fill="currentColor"/></svg>
+      </button>
+      <button id="btn-sound" class="icon-btn" type="button" aria-pressed="true" aria-label="Sound" title="Sound">
+        <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 4h2v2h-2zM3 3h1v4h-1zM4 2h1v6h-1z" fill="currentColor"/><path class="waves" d="M6 4h1v2h-1zM7 2h1v1h-1zM8 3h1v4h-1zM7 7h1v1h-1z" fill="currentColor"/><path class="cross" d="M6 3h1v1h-1zM7 4h1v2h-1zM8 3h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1z" fill="currentColor"/></svg>
+      </button>
+    </div>
+
+    <p id="banner" class="banner" aria-hidden="true"></p>
+    <p id="toast" class="toast" aria-hidden="true"></p>
+
+    <div id="dialog" class="dialog" hidden>
+      <p class="speaker" hidden></p>
+      <p class="text"></p>
+      <ul class="choices"></ul>
+      <span class="more" aria-hidden="true">▼</span>
+    </div>
+
+    <section id="battle" class="battle" hidden aria-label="Battle">
+      <div class="bh bh-foe" hidden></div>
+      <div class="bh bh-me" hidden></div>
+      <div class="b-panel">
+        <p class="b-msg"></p>
+        <div class="b-cmds"></div>
+      </div>
+    </section>
+
+    <section id="panel" class="panel" hidden role="dialog" aria-modal="true" aria-labelledby="panel-title">
+      <header><h2 id="panel-title"></h2><span class="keyhint">X / Esc: back</span><button class="close" type="button" aria-label="Back">✕</button></header>
+      <div class="body"></div>
+    </section>
+
+    <section id="evolve" class="evolve" hidden aria-live="polite">
+      <canvas width="64" height="64"></canvas>
+      <p></p>
+    </section>
+
+    <section id="ending" class="ending" hidden>
+      <h2>Aerie Drakes</h2>
+      <p>The Sovereign rests. The heart beats once a minute.</p>
+      <p>Helix Dynamics lost its twelfth hearing. Director Kade was not there to argue.</p>
+      <p>Warden Volta finally got bored. Warden Ferra did not. Warden Nyx wrote it all down.</p>
+      <p>Kestrel is still two capsules down, planning a rematch.</p>
+      <p>And every Festival of Embers, when the drakes turn to face the Spire, now you know who's calling.</p>
+      <p class="fin">Thanks for playing. Press A to continue.</p>
+    </section>
+
+    <section id="title" class="title">
+      <div class="logo">
+        <p class="kicker">Neon Linker RPG</p>
+        <h1>Aerie<br><span>Drakes</span></h1>
+        <p class="tag">An island in the sky. A dragon in its heart.</p>
+      </div>
+      <div class="title-menu">
+        <button id="btn-continue" type="button" hidden>Continue</button>
+        <button id="btn-new" type="button">New game</button>
+      </div>
+      <form id="name-form" class="name-form" hidden>
+        <label for="name-field">What's your name, Linker?</label>
+        <input id="name-field" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Rook">
+        <button type="submit">Start</button>
+      </form>
+      <p class="title-keys">Arrows/WASD move · Z confirm · X back · Shift run · Pad &amp; touch supported</p>
+    </section>
+
+    <div id="touch" class="touch" aria-hidden="true">
+      <div class="dpad"><span class="u"></span><span class="d"></span><span class="l"></span><span class="r"></span></div>
+      <div class="tbtns">
+        <button type="button" class="tb run" data-act="run">RUN</button>
+        <button type="button" class="tb b" data-act="b">B</button>
+        <button type="button" class="tb a" data-act="a">A</button>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
