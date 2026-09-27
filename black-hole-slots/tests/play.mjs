@@ -218,6 +218,7 @@ const LOSE = grid('mpcra', 'crmpg', 'mpcra');
     const r = window.__slots.run();
     r.round = 8;
     r.debt = 1400;
+    r.seen = ['overdrive', 'gold', 'pulsar', 'events'];
     r.phase = 'deadline';
     r.coins = 5000;
     window.__slots.act('pay');
