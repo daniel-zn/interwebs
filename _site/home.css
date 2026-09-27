@@ -13,6 +13,10 @@
 
 * { box-sizing: border-box; }
 
+/* No double-tap zoom on phones (the page still scrolls and pinches). */
+*, *::before, *::after { touch-action: manipulation; }
+html { -webkit-tap-highlight-color: transparent; }
+
 html { background: var(--bg); }
 
 body {

@@ -157,6 +157,7 @@ export class UI {
 
   box(text, { name = null, keep = false } = {}) {
     const d = this.dialog;
+    this.input.clearTouch?.();
     d.hidden = false;
     d.classList.remove('asking');
     $('.speaker', d).textContent = name ?? '';
@@ -252,6 +253,7 @@ export class UI {
   // ---------------------------------------------------------------- panels
   openPanel(title, cls = '') {
     const p = this.panel;
+    this.input.clearTouch?.();
     p.hidden = false;
     p.className = `panel ${cls}`;
     $('h2', p).textContent = title;

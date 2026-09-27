@@ -22,6 +22,11 @@ npm start            # zero-dependency server on http://127.0.0.1:8080/
 | Back, open menu | X / Esc | B, or the ☰ button | B / Start |
 | Run | Hold Shift | RUN toggle | Hold X |
 
+On phones the pad and buttons are a see-through overlay on the full-screen game,
+and they step aside while text or a menu is up (tap those directly). Where the
+browser allows it (Android, desktop) there's a full-screen button; on an iPhone,
+add the game to the home screen to hide the browser bars.
+
 ## The world
 
 Three hundred years ago a star-dragon, the **Aether Sovereign**, fell out of

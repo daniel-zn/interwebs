@@ -5,6 +5,10 @@ import { UI } from './ui.js';
 import { makeMon } from './monster.js';
 import { mulberry32 } from './util.js';
 
+// iOS ignores user-scalable=no, so block pinch-zoom here (double-tap zoom is
+// handled by touch-action in the stylesheet).
+for (const type of ['gesturestart', 'gesturechange']) document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+
 const params = new URLSearchParams(location.search);
 const seed = params.has('seed') ? Number(params.get('seed')) >>> 0 : (Date.now() ^ (Math.random() * 1e9)) >>> 0;
 
@@ -107,6 +111,17 @@ document.getElementById('btn-sound').addEventListener('click', () => {
   game.settings.muted = !game.settings.muted;
   game.applySettings();
 });
+// Full screen where the browser allows it (Android and desktop; iPhones get
+// it by adding the game to the home screen instead).
+const btnFull = document.getElementById('btn-full');
+if (document.fullscreenEnabled) {
+  btnFull.hidden = false;
+  btnFull.addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+  });
+  document.addEventListener('fullscreenchange', () => btnFull.setAttribute('aria-pressed', String(!!document.fullscreenElement)));
+}
 document.addEventListener('visibilitychange', () => (document.hidden ? audio.suspend() : audio.resume()));
 
 // ---------------------------------------------------------------- loop

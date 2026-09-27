@@ -212,6 +212,54 @@ const watch = (page) => {
   await ctx.close();
 }
 
+// ------------------------------------------------------------------ phone gestures
+// iOS Safari ignores user-scalable=no, so double-tapping a button or a gap in
+// the controls zooms the page unless touch-action says otherwise, and a long
+// press or double tap selects text (even visually hidden text) unless
+// user-select is off. Headless Chromium doesn't zoom or select, so this reads
+// the computed styles instead: every element in every game must be covered by
+// a touch-action other than auto, and nothing but text fields may be selectable.
+{
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  for (const p of await findProjects()) {
+    const page = await ctx.newPage();
+    await page.goto(`${base}/${p.slug}/`);
+    await page.waitForTimeout(300);
+    const bad = await page.evaluate(() => {
+      const zoomable = new Set(), selectable = new Set();
+      const name = (el) => el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.classList.length ? `.${[...el.classList].join('.')}` : '');
+      const scrolls = (el) => /(auto|scroll)/.test(getComputedStyle(el).overflowY + getComputedStyle(el).overflowX) || el === document.documentElement;
+      for (const el of [document.documentElement, ...document.querySelectorAll('body, body *')]) {
+        if (['SCRIPT', 'STYLE', 'TITLE', 'META', 'LINK'].includes(el.tagName)) continue;
+        // touch-action applies as the intersection up to the nearest scroll container.
+        let covered = false;
+        for (let a = el; a; a = a.parentElement) {
+          if (getComputedStyle(a).touchAction !== 'auto') {
+            covered = true;
+            break;
+          }
+          if (a !== el && scrolls(a)) break;
+        }
+        if (!covered) zoomable.add(name(el));
+        const cs = getComputedStyle(el);
+        const text = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+        if (text && !['INPUT', 'TEXTAREA'].includes(el.tagName) && (cs.userSelect ?? cs.webkitUserSelect) !== 'none' && cs.webkitUserSelect !== 'none') selectable.add(name(el));
+      }
+      return { zoomable: [...zoomable].slice(0, 6), selectable: [...selectable].slice(0, 6) };
+    });
+    check(!bad.zoomable.length, `${p.slug}: double-tap can't zoom anywhere`, bad.zoomable.join(' '));
+    check(!bad.selectable.length, `${p.slug}: no stray text selection on long press`, bad.selectable.join(' '));
+    const pinch = await page.evaluate(() => {
+      const e = new Event('gesturestart', { cancelable: true });
+      document.dispatchEvent(e);
+      return e.defaultPrevented;
+    });
+    check(pinch, `${p.slug}: pinch-zoom is blocked on iOS`);
+    await page.close();
+  }
+  await ctx.close();
+}
+
 check(errors.length === 0, 'no console errors', errors.join(' | '));
 
 await browser.close();

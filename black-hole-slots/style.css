@@ -15,6 +15,17 @@
 }
 
 * { box-sizing: border-box; }
+/* Phones: iOS ignores user-scalable=no, so stop double-tap zoom with
+   touch-action, and keep long presses from selecting (hidden) text. */
+html {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+*, *::before, *::after { touch-action: manipulation; }
+input, textarea { -webkit-user-select: text; user-select: text; }
+
 
 html, body {
   margin: 0;
@@ -145,7 +156,7 @@ dialog {
 }
 dialog::backdrop { background: rgb(0 0 0 / 0.7); }
 #pause { width: min(360px, calc(100% - 24px)); text-align: center; }
-.panel { padding: 16px 18px 18px; user-select: text; -webkit-user-select: text; }
+.panel { padding: 16px 18px 18px; }
 .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .panel h2 { margin: 0; font-size: 20px; color: var(--hot); }
 .row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }

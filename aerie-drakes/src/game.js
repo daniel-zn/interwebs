@@ -671,7 +671,7 @@ export class Game {
     const map = this.map;
     const p = this.player;
     const touchPad = document.body.dataset.input === 'touch';
-    const focusY = touchPad ? 0.4 : 0.5;
+    const focusY = touchPad ? 0.45 : 0.5; // a little above the pad and buttons
     let camX = Math.round(p.px + 8 - W / 2), camY = Math.round(p.py + 8 - H * focusY);
     const mw = map.w * TS, mh = map.h * TS;
     if (map.indoor) {

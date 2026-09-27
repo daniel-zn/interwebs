@@ -368,6 +368,19 @@ async function walkTo(page, tx, ty, { face } = {}) {
   let s = await page.snap();
   check(s.mode === 'world' && !s.busy, 'tapping the dialog box advances the story');
   check(await page.isVisible('.dpad'), 'touch pad is shown on a phone');
+  const overlay = await page.evaluate(() => {
+    const game = document.getElementById('game').getBoundingClientRect();
+    const alpha = (el) => {
+      const m = getComputedStyle(el).backgroundColor.match(/rgba?\(([^)]+)\)/)[1].split(',').map(Number);
+      return (m[3] ?? 1) * Number(getComputedStyle(el).opacity) * Number(getComputedStyle(el.parentElement).opacity);
+    };
+    return {
+      full: game.height >= innerHeight - 1 && game.width >= innerWidth - 1,
+      see: [...document.querySelectorAll('.dpad span, .tb')].every((el) => alpha(el) < 0.5),
+    };
+  });
+  check(overlay.full, 'the game fills the whole phone screen under the controls');
+  check(overlay.see, 'touch controls are a see-through overlay');
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   check(!overflow, 'no horizontal scroll on a phone');
   const before = await page.snap();
@@ -389,6 +402,7 @@ async function walkTo(page, tx, ty, { face } = {}) {
   await page.tap('.tb.b');
   await sleep(150);
   check(await page.isVisible('#panel'), 'B button opens the menu');
+  check(!(await page.isVisible('.dpad')), 'the controls step aside while a menu is open');
   await page.shot('menu');
   await page.tap('#panel .close');
   await sleep(150);
