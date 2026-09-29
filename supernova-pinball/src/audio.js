@@ -323,6 +323,28 @@ export class SoundEngine {
         this.tone(900, 0.5, { type: 'sine', vol: 0.08, slide: 120, vibrato: 14 });
         this.tone(70, 0.2, { type: 'sine', vol: 0.35, at: 0.45, slide: 40 });
         break;
+      case 'rampIn':
+        this.noise(0.5, { vol: 0.1, freq: 300, q: 1.2, slide: 2400 });
+        this.tone(200, 0.5, { type: 'triangle', vol: 0.06, slide: 700 });
+        break;
+      case 'ramp':
+        [659, 784, 988, 1319].forEach((f, i) => this.tone(f * (1 + Math.min(4, arg - 1) * 0.12), 0.08, { vol: 0.07, at: i * 0.05 }));
+        this.bell(2093, 0.22, 0.05);
+        break;
+      case 'letter':
+        this.tone(988 + arg * 110, 0.06, { type: 'triangle', vol: 0.07 });
+        break;
+      case 'letters':
+        for (let i = 0; i < 9; i++) this.tone(523 * 2 ** (i / 6), 0.1, { vol: 0.06, at: i * 0.06 });
+        [1047, 1319, 1568].forEach((f) => this.tone(f, 0.8, { type: 'triangle', vol: 0.06, at: 0.55, vibrato: 6 }));
+        break;
+      case 'moon':
+        this.bell(1568, 0, 0.05, 0.3);
+        break;
+      case 'rollover':
+        this.tone(1760, 0.04, { vol: 0.04 });
+        this.tone(2349, 0.05, { vol: 0.04, at: 0.03 });
+        break;
       case 'kickout':
         this.noise(0.08, { vol: 0.3, freq: 700, q: 1 });
         this.tone(120, 0.12, { type: 'square', vol: 0.1, slide: 60 });

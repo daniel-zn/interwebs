@@ -4,7 +4,7 @@
 import { FINAL_SECTOR, MULTS, UNLOCKS, UPGRADE_BY_ID, sectorFor } from './data.js';
 import { drawText, measureText, wrap } from './font.js';
 import { buildSprites } from './sprites.js';
-import { ARC, BALL_R, CX, LANE_X, PLUNGER, TH, TW } from './table.js';
+import { ARC, BALL_R, CX, LETTERS, PLUNGER, STAR, TH, TW, m, rampPoint } from './table.js';
 
 export const DMD_W = 88, DMD_H = 16; // dots
 const DMD_PX = 2; // logical pixels per dot
@@ -96,6 +96,11 @@ export class Renderer {
     const spare = H - total;
     L.bottom = !L.side && spare >= 30;
     L.dy = Math.max(0, Math.floor(spare / (L.bottom ? 3 : 2)));
+    // Narrow screens: keep the display clear of the menu buttons in the corner.
+    if (!L.side && spare >= 26) {
+      L.dy = Math.max(L.dy, 26);
+      L.bottom = spare - L.dy >= 30;
+    }
     L.ty = L.dy + DMD_HEIGHT + 4;
     L.dmdX = L.tx + Math.floor((TW - DMD_W * DMD_PX) / 2);
     this.stars = mk(W, H);
@@ -152,29 +157,31 @@ export class Renderer {
     // Gravity rings round the star.
     for (let k = 1; k <= 4; k++) {
       a.globalAlpha = 0.18 - k * 0.03;
-      ring(a, CX, 190, 14 + k * 9, pal.a);
+      ring(a, STAR.x, STAR.y, 14 + k * 9, pal.a);
     }
     a.globalAlpha = 1;
     // Shooter lane.
-    a.fillStyle = '#08050f';
-    a.fillRect(LANE_X + 1, 120, 172 - LANE_X - 1, TH - 120);
-    for (let y = 150; y < 270; y += 14) {
-      a.fillStyle = pal.b;
-      a.globalAlpha = 0.35;
-      a.fillRect(164, y, 1, 1);
-      a.fillRect(165, y - 1, 2, 1);
-      a.fillRect(167, y, 1, 1);
-      a.globalAlpha = 1;
+    for (const lx of [5, 163]) {
+      a.fillStyle = '#08050f';
+      a.fillRect(lx, 116, 8, TH - 116);
+      for (let y = 150; y < 320; y += 14) {
+        a.fillStyle = pal.b;
+        a.globalAlpha = 0.35;
+        a.fillRect(lx + 2, y, 1, 1);
+        a.fillRect(lx + 3, y - 1, 2, 1);
+        a.fillRect(lx + 5, y, 1, 1);
+        a.globalAlpha = 1;
+      }
     }
     // Apron.
     a.fillStyle = '#0b0716';
     a.beginPath();
-    a.moveTo(4, 262);
-    a.lineTo(34, 300);
-    a.lineTo(130, 300);
-    a.lineTo(160, 262);
-    a.lineTo(160, TH);
-    a.lineTo(4, TH);
+    a.moveTo(14, 302);
+    a.lineTo(44, 340);
+    a.lineTo(132, 340);
+    a.lineTo(162, 302);
+    a.lineTo(162, TH);
+    a.lineTo(14, TH);
     a.fill();
     // Neon walls: dark halo, colour, hot core.
     const walls = g.table.segments.filter((q) => ['wall', 'guide', 'apron', 'laneguide', 'gate'].includes(q.kind));
@@ -186,12 +193,12 @@ export class Renderer {
     }
     // Lane letters.
     ['S', 'T', 'A', 'R'].forEach((ch, i) => {
-      drawText(a, ch, 55 + i * 18 - 2, 54, '#2a2440');
+      drawText(a, ch, 61 + i * 18 - 2, 54, '#2a2440');
     });
     // Apron title.
     a.globalAlpha = 0.6;
     const t1 = 'SUPERNOVA';
-    drawText(a, t1, Math.round(CX - measureText(t1) / 2), 292, pal.a);
+    drawText(a, t1, Math.round(CX - measureText(t1) / 2), TH - 12, pal.a);
     a.globalAlpha = 1;
     this.art[key] = c;
     return c;
@@ -295,18 +302,36 @@ export class Renderer {
     ctx.drawImage(this.tableArt(g), 0, 0);
     this.drawLamps(ctx, g, v, pal);
 
-    // Wormhole: a swirl of dots.
-    const w = tb.wormhole;
-    const held = g.balls.some((b) => b.held === 'wormhole');
-    for (let k = 0; k < 18; k++) {
-      const a = t * (held ? 12 : 4) + k * 0.7;
-      const rr = 3 + (k % 6);
-      ctx.fillStyle = k % 3 === 0 ? '#fff' : pal.b;
-      ctx.globalAlpha = held ? 1 : 0.7;
-      ctx.fillRect(Math.round(w.x + Math.cos(a) * rr), Math.round(w.y + Math.sin(a) * rr), 1, 1);
+    // Wormholes: swirls of dots, spinning opposite ways.
+    for (const w of tb.wormholes) {
+      const held = g.balls.some((b) => b.held === 'wormhole' && b.hole === w.id);
+      const dir = w.x < CX ? 1 : -1;
+      for (let k = 0; k < 20; k++) {
+        const a = dir * t * (held ? 12 : 4) + k * 0.7;
+        const rr = 3 + (k % 6);
+        ctx.fillStyle = k % 3 === 0 ? '#fff' : pal.b;
+        ctx.globalAlpha = held ? 1 : 0.75;
+        ctx.fillRect(Math.round(w.x + Math.cos(a) * rr), Math.round(w.y + Math.sin(a) * rr), 1, 1);
+      }
+      ctx.globalAlpha = 1;
+      disc(ctx, w.x, w.y, 2.5, '#000');
     }
-    ctx.globalAlpha = 1;
-    disc(ctx, w.x, w.y, 2.5, '#000');
+    // SUPERNOVA letters over the star, and the rollover stars.
+    tb.letters.forEach((q, i) => {
+      const on = q.lit || ((g.supernovaT > 0 || v.lightShow > 0) && (i + Math.floor(t * 12)) % 3 === 0);
+      ctx.fillStyle = C.ink;
+      ctx.fillRect(Math.round(q.x) - 3, Math.round(q.y) - 3, 7, 7);
+      ctx.fillStyle = on ? pal.glow : '#2e2446';
+      ctx.fillRect(Math.round(q.x) - 2, Math.round(q.y) - 2, 5, 5);
+      drawText(ctx, LETTERS[i], Math.round(q.x) - 2, Math.round(q.y) - 2, on ? C.ink : '#6a5a8a');
+    });
+    for (const r of tb.rollovers) {
+      const on = r.flash > 0;
+      ctx.fillStyle = on ? '#fff' : pal.a;
+      ctx.fillRect(r.x - 2, r.y, 5, 1);
+      ctx.fillRect(r.x, r.y - 2, 1, 5);
+      ctx.fillRect(r.x - 1, r.y - 1, 3, 3);
+    }
 
     // Black hole.
     if (tb.hole) {
@@ -353,13 +378,24 @@ export class Renderer {
       }
     }
 
-    // Spinner.
-    const spin = tb.spinnerSpin || 0;
-    const ph = Math.abs(Math.sin(t * 40 * Math.min(1, spin)));
-    ctx.fillStyle = C.ink;
-    ctx.fillRect(4, 95, 16, 3);
-    ctx.fillStyle = spin > 0 ? (Math.floor(t * 30) % 2 ? '#fff' : pal.a) : '#c9d3ff';
-    ctx.fillRect(5, 96 - Math.round(ph), 14, 1 + Math.round(ph * 2));
+    // Spinners in both orbits.
+    for (const sp of tb.spinners) {
+      const spin = sp.spin || 0;
+      const ph = Math.abs(Math.sin(t * 40 * Math.min(1, spin)));
+      ctx.fillStyle = C.ink;
+      ctx.fillRect(sp.x0, sp.y - 1, sp.x1 - sp.x0, 3);
+      ctx.fillStyle = spin > 0 ? (Math.floor(t * 30) % 2 ? '#fff' : pal.a) : '#c9d3ff';
+      ctx.fillRect(sp.x0 + 1, sp.y - Math.round(ph), sp.x1 - sp.x0 - 2, 1 + Math.round(ph * 2));
+    }
+    // The moons.
+    for (const mo of tb.moons) {
+      disc(ctx, mo.x, mo.y, mo.r + 1, C.ink);
+      disc(ctx, mo.x, mo.y, mo.r, mo.flash > 0 ? '#fff' : '#c9d3ff');
+      ctx.fillStyle = '#8a93b8';
+      ctx.fillRect(Math.round(mo.x), Math.round(mo.y), 2, 2);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(Math.round(mo.x) - 2, Math.round(mo.y) - 2, 1, 1);
+    }
 
     // Bumpers.
     tb.bumpers.forEach((b, i) => {
@@ -407,13 +443,15 @@ export class Renderer {
       ctx.fillRect(Math.round(sc.x - bw / 2), Math.round(sc.y - 9), Math.round((bw * s.hp) / s.maxHp), 1);
     }
 
-    // Plunger.
-    const py = PLUNGER.y + BALL_R + 2 + Math.round(g.plunger * 9);
-    ctx.fillStyle = '#c9d3ff';
-    ctx.fillRect(164, py, 5, 2);
-    for (let y = py + 3; y < TH; y += 2) {
-      ctx.fillStyle = (y - py) % 4 === 1 ? '#8a93b8' : '#4a4f7a';
-      ctx.fillRect(163, y, 7, 1);
+    // Plungers: the shooter on the right, the auto-launcher on the left.
+    for (const [lx, pull] of [[165, g.plunger], [5, 0]]) {
+      const py = PLUNGER.y + BALL_R + 2 + Math.round(pull * 5);
+      ctx.fillStyle = '#c9d3ff';
+      ctx.fillRect(lx + 1, py, 5, 2);
+      for (let y = py + 3; y < TH; y += 2) {
+        ctx.fillStyle = (y - py) % 4 === 1 ? '#8a93b8' : '#4a4f7a';
+        ctx.fillRect(lx, y, 7, 1);
+      }
     }
 
     // Flippers.
@@ -421,7 +459,7 @@ export class Renderer {
 
     // Balls with trails.
     for (const b of g.balls) {
-      if (b.held === 'warp') continue;
+      if (b.held === 'warp' || b.held === 'ramp') continue;
       const trail = v.trails && v.trails[b.id];
       if (trail && !v.reducedMotion) {
         trail.forEach((p, i) => {
@@ -435,6 +473,8 @@ export class Renderer {
       ctx.drawImage(g.supernovaT > 0 ? this.S.hotBall : this.S.ball, Math.round(b.x - 4), Math.round(b.y - 4));
       ctx.globalAlpha = 1;
     }
+
+    this.drawRamps(ctx, g, v, pal);
 
     // Particles and score pops, in table space.
     for (const p of v.particles) {
@@ -478,6 +518,50 @@ export class Renderer {
       ctx.fillStyle = 'rgba(0,0,0,0.45)';
       ctx.fillRect(0, 0, TW, TH);
       if (Math.floor(t * 3) % 2) cText(ctx, 'TILT', CX, 150, C.red, 4, oText);
+    }
+  }
+
+  /** Two see-through neon ramps crossing over the table, and any ball riding them. */
+  drawRamps(ctx, g, v, pal) {
+    const t = v.time;
+    for (const r of g.table.ramps) {
+      const pts = r.path;
+      // The tube: a translucent body and two rails.
+      ctx.globalAlpha = 0.14;
+      for (let i = 0; i + 1 < pts.length; i++) line(ctx, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], pal.b, 5);
+      ctx.globalAlpha = 0.8;
+      for (const off of [-2.5, 2.5]) {
+        for (let i = 0; i + 1 < pts.length; i++) {
+          const [ax, ay] = pts[i], [bx, by] = pts[i + 1];
+          const len = Math.hypot(bx - ax, by - ay) || 1;
+          const nx = (-(by - ay) / len) * off, ny = ((bx - ax) / len) * off;
+          line(ctx, ax + nx, ay + ny, bx + nx, by + ny, pal.glow);
+        }
+      }
+      ctx.globalAlpha = 1;
+      // Support struts down to the playfield.
+      for (const [sx, sy] of [pts[1], pts[pts.length - 2]]) {
+        ctx.fillStyle = '#4a4f7a';
+        ctx.fillRect(Math.round(sx), Math.round(sy), 1, 5);
+      }
+      // Lights chasing along it.
+      const n = 14;
+      for (let i = 0; i < n; i++) {
+        const k = (i / n + t * (g.rampRun > 1 ? 0.9 : 0.35) * (r.id ? 1 : 1)) % 1;
+        const p = rampPoint(r, k);
+        ctx.fillStyle = (i % 2 ? pal.a : '#fff');
+        ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
+      }
+    }
+    // Balls on the ramps ride high: bigger, with a shadow on the playfield.
+    for (const b of g.balls) {
+      if (b.held !== 'ramp') continue;
+      const lift = Math.sin(Math.min(1, b.rampK) * Math.PI);
+      ctx.globalAlpha = 0.4;
+      disc(ctx, b.x + 3 + lift * 3, b.y + 4 + lift * 4, 3, '#000');
+      ctx.globalAlpha = 1;
+      const sz = Math.round(8 + lift * 4);
+      ctx.drawImage(g.supernovaT > 0 ? this.S.hotBall : this.S.ball, Math.round(b.x - sz / 2), Math.round(b.y - sz / 2), sz, sz);
     }
   }
 
@@ -567,48 +651,56 @@ export class Renderer {
     };
     // Lane arrows and S T A R.
     g.lanes.forEach((on, i) => {
-      const x = 55 + i * 18;
+      const x = 61 + i * 18;
       lamp(x - 1, 41, 3, 4, on, pal.b, i);
       if (on || show) drawText(ctx, 'STAR'[i], x - 2, 54, show ? hsl(i * 60 + t * 300) : pal.glow);
     });
     // Multipliers.
-    MULTS.slice(1).forEach((m, i) => {
-      const x = 58 + i * 13;
-      lamp(x, 232, 10, 7, g.mult >= m, C.gold, i + 4);
-      drawText(ctx, `${m}X`, x + 0, 233, g.mult >= m ? C.ink : '#3a3055');
+    MULTS.slice(1).forEach((mm, i) => {
+      const x = CX - 19 + i * 13;
+      lamp(x, 262, 10, 7, g.mult >= mm, C.gold, i + 4);
+      drawText(ctx, `${mm}X`, x + 0, 263, g.mult >= mm ? C.ink : '#3a3055');
     });
     // Mass ring round the star: how close it is to going nova.
     const n = 16;
     const lit = Math.floor((g.mass / 100) * n);
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 - Math.PI / 2;
-      const x = Math.round(CX + Math.cos(a) * 22), y = Math.round(190 + Math.sin(a) * 22);
+      const x = Math.round(STAR.x + Math.cos(a) * 16), y = Math.round(STAR.y + Math.sin(a) * 16);
       const on = i < lit || g.supernovaT > 0;
       ctx.fillStyle = on ? (g.supernovaT > 0 ? hsl(i * 22 + t * 400) : g.mass > 70 ? C.red : C.orange) : '#231c36';
       ctx.fillRect(x - 1, y - 1, 2, 2);
     }
     // Drop target lamps.
-    g.table.drops.forEach((d, i) => lamp(30, d.ay + 3, 3, 3, !d.up, C.cyan, i + 8));
-    // Lock lamps by the wormhole (from sector 2).
+    g.table.drops.forEach((d, i) => lamp(d.bank ? d.ax + 4 : d.ax - 6, d.ay + 3, 2, 3, !d.up, C.cyan, i + 8));
+    // Lock lamps under the wormholes (from sector 2).
     if (g.sector >= 2) {
-      for (let i = 0; i < 2; i++) lamp(127 + i * 6, 172, 4, 4, g.locks > i || (g.multiball && Math.floor(t * 4) % 2), C.pink, i + 11);
-      if (!g.multiball && Math.floor(t * 2) % 2) drawText(ctx, 'LOCK', 124, 178, pal.b);
+      for (const w of g.table.wormholes) {
+        for (let i = 0; i < 2; i++) lamp(w.x - 5 + i * 7, w.y + 10, 4, 3, g.locks > i || (g.multiball && Math.floor(t * 4) % 2), C.pink, i + 11);
+      }
     }
-    // Orbit arrow.
+    // Orbit and ramp arrows.
     const blink = Math.floor(t * 3) % 2;
-    lamp(10, 176, 3, 3, blink, pal.a, 13);
-    lamp(10, 170, 3, 3, !blink, pal.a, 14);
+    for (const x of [21, m(23)]) {
+      lamp(x, 214, 3, 3, blink, pal.a, 13);
+      lamp(x, 207, 3, 3, !blink, pal.a, 14);
+    }
+    for (const r of g.table.ramps) {
+      const x = Math.round((r.mouth.x0 + r.mouth.x1) / 2);
+      lamp(x - 1, r.mouth.y + 6, 3, 3, (Math.floor(t * 5) + r.id) % 2 === 0, C.cyan, 18 + r.id);
+      lamp(x - 1, r.mouth.y + 12, 3, 3, (Math.floor(t * 5) + r.id) % 2 === 1, C.cyan, 20 + r.id);
+    }
     // Shoot again (ball save).
     const save = g.ballSaveT > 0 && (g.ballSaveT > 2 || Math.floor(t * 8) % 2);
-    lamp(CX - 12, 280, 24, 5, save, C.green, 15);
-    if (save) drawText(ctx, 'SAVE', CX - 11, 280, C.ink);
+    lamp(CX - 12, 300, 24, 5, save, C.green, 15);
+    if (save) drawText(ctx, 'SAVE', CX - 11, 300, C.ink);
     // Outlane saves.
-    if (g.upgrades.includes('kickback')) lamp(7, 238, 4, 4, !g.kickbackUsed, C.green, 16);
-    if (g.upgrades.includes('magna')) lamp(153, 238, 4, 4, !g.magnaUsed, C.green, 17);
+    if (g.upgrades.includes('kickback')) lamp(18, 280, 3, 4, !g.kickbackUsed, C.green, 16);
+    if (g.upgrades.includes('magna')) lamp(m(21), 280, 3, 4, !g.magnaUsed, C.green, 17);
     // Jackpot.
-    if (g.jackpotLit && Math.floor(t * 5) % 2) cText(ctx, 'JACKPOT', CX, 207, C.gold);
+    if (g.jackpotLit && Math.floor(t * 5) % 2) cText(ctx, 'JACKPOT', CX, STAR.y + 20, C.gold);
     // Combo counter.
-    if (g.combo >= 2) cText(ctx, `${g.combo}X COMBO`, CX, 214, C.pink);
+    if (g.combo >= 2) cText(ctx, `${g.combo}X COMBO`, CX, STAR.y + 28, C.pink);
     void ARC;
   }
 

@@ -80,10 +80,10 @@ export function stepBall(b, table, dt, gravity, hit) {
     const d = Math.sqrt(d2) || 1e-6;
     let nx = dx / d, ny = dy / d;
     if (s.oneway) {
-      // Only blocks from its upper-left side.
+      // Only blocks from its upper side (the playfield); balls from the lane pass.
       const sx = s.bx - s.ax, sy = s.by - s.ay;
       let gx = sy, gy = -sx;
-      if (gx > 0) {
+      if (gy > 0) {
         gx = -gx;
         gy = -gy;
       }
@@ -148,11 +148,30 @@ export function stepBall(b, table, dt, gravity, hit) {
     if (vIn > 60) hit('flipper', f, vIn, b);
   }
 
-  // Sensors: lines the ball crosses.
-  const sp2 = table.spinner;
-  if ((py - sp2.y) * (b.y - sp2.y) <= 0 && py !== b.y && b.x > sp2.x0 && b.x < sp2.x1) hit('spinner', sp2, Math.abs(b.vy), b);
+  // Sensors: lines the ball crosses, and rollover buttons.
+  for (const sp2 of table.spinners) {
+    if ((py - sp2.y) * (b.y - sp2.y) <= 0 && py !== b.y && b.x > sp2.x0 && b.x < sp2.x1) hit('spinner', sp2, Math.abs(b.vy), b);
+  }
   for (const l of table.lanes) {
     if (py > l.y && b.y <= l.y && b.x > l.x0 && b.x < l.x1) hit('lane', l, Math.abs(b.vy), b);
+  }
+  for (const r of table.ramps) {
+    const mo = r.mouth;
+    if (py > mo.y && b.y <= mo.y && b.x > mo.x0 && b.x < mo.x1) hit('ramp', r, -b.vy, b);
+  }
+  for (const q of table.letters) {
+    const inside = Math.abs(b.x - q.x) < 3.5 && Math.abs(b.y - q.y) < 3.5;
+    if (inside && b.letter !== q.id) {
+      b.letter = q.id;
+      hit('letter', q, 0, b);
+    } else if (!inside && b.letter === q.id) b.letter = null;
+  }
+  for (const r of table.rollovers) {
+    const inside = Math.hypot(b.x - r.x, b.y - r.y) < 4;
+    if (inside && b.rollover !== r.id) {
+      b.rollover = r.id;
+      hit('rollover', r, 0, b);
+    } else if (!inside && b.rollover === r.id) b.rollover = null;
   }
   return true;
 }

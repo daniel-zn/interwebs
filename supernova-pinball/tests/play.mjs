@@ -116,7 +116,7 @@ async function openGame(context, name, query = '?test&seed=4') {
     g.phase = 'play';
     g.ballSaveT = 0;
     g.balls = [g.balls[0]];
-    Object.assign(g.balls[0], { x: 82, y: 300, vx: 0, vy: 300, held: null });
+    Object.assign(g.balls[0], { x: 88, y: 342, vx: 0, vy: 300, held: null });
     g.score = 123456;
   });
   await page.waitForFunction(() => window.__pin.snapshot().panel === 'over', null, { timeout: 10000 });

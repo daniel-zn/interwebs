@@ -1,32 +1,64 @@
-// The table's layout, in playfield pixels (0..TW across, 0..TH down). The
-// playfield proper runs from x=4 to x=160; the shooter lane is x=160..172.
+// The table's layout, in playfield pixels (0..TW across, 0..TH down). It is
+// mirror-symmetric about x = CX: a lane on each side (the right one is the
+// shooter lane, the left one launches extra balls), orbits with spinners,
+// crossing ramps, mini flippers, twin wormholes and drop target banks, the
+// SUPERNOVA letters arching over the star and two moons orbiting it.
 // Everything the ball can touch is a segment, a circle or a flipper.
 
 export const TW = 176;
-export const TH = 304;
-export const CX = 82; // playfield centre line (mirror axis)
+export const TH = 344;
+export const CX = 88; // mirror axis
 export const BALL_R = 3.5;
 export const DRAIN_Y = TH + 6;
 
-// Where a new ball waits for the plunger.
-export const PLUNGER = { x: 166, y: 292 };
-export const LANE_X = 160; // inner wall of the shooter lane
+export const LANE_X = 162; // inner wall of the (right) shooter lane
+export const PLUNGER = { x: 168, y: 332 };
+export const LEFT_PLUNGER = { x: 8, y: 332 };
+export const STAR = { x: CX, y: 214 };
 
-const mirror = (x) => 2 * CX - x;
+export const m = (x) => 2 * CX - x;
 
 function seg(ax, ay, bx, by, extra = {}) {
   return { ax, ay, bx, by, e: 0.45, kind: 'wall', ...extra };
 }
-/** A chain of segments through the given points. */
 function chain(points, extra = {}) {
   const out = [];
   for (let i = 0; i + 1 < points.length; i++) out.push(seg(points[i][0], points[i][1], points[i + 1][0], points[i + 1][1], extra));
   return out;
 }
 
-export const ARC = { x: 88, y: 92, r: 84 };
+export const ARC = { x: CX, y: 92, r: 84 };
 
-/** Builds a fresh table. Things that change during play (drop targets, the star) live on it. */
+// The ramps: a bridge the ball rides over the bumpers. The left mouth
+// carries it across and drops it into the right orbit (which feeds the right
+// inlane), and the mirror image.
+const RAMP_L = [[39, 112], [40, 86], [52, 68], [88, 58], [124, 68], [142, 86], [154, 104]];
+export const RAMPS = [
+  { id: 0, mouth: { x0: 32, x1: 47, y: 114 }, path: RAMP_L },
+  { id: 1, mouth: { x0: m(47), x1: m(32), y: 114 }, path: RAMP_L.map(([x, y]) => [m(x), y]) },
+];
+for (const r of RAMPS) {
+  let len = 0;
+  r.lens = [0];
+  for (let i = 1; i < r.path.length; i++) {
+    len += Math.hypot(r.path[i][0] - r.path[i - 1][0], r.path[i][1] - r.path[i - 1][1]);
+    r.lens.push(len);
+  }
+  r.len = len;
+}
+/** A point along a ramp, 0..1. */
+export function rampPoint(r, k) {
+  const d = Math.max(0, Math.min(1, k)) * r.len;
+  let i = 1;
+  while (i < r.lens.length - 1 && r.lens[i] < d) i++;
+  const a = r.path[i - 1], b = r.path[i];
+  const u = (d - r.lens[i - 1]) / (r.lens[i] - r.lens[i - 1] || 1);
+  return { x: a[0] + (b[0] - a[0]) * u, y: a[1] + (b[1] - a[1]) * u };
+}
+
+export const LETTERS = 'SUPERNOVA';
+
+/** Builds a fresh table. Things that change during play live on it. */
 export function buildTable() {
   const segments = [];
   const circles = [];
@@ -41,72 +73,93 @@ export function buildTable() {
   segments.push(...chain(arcPts));
   segments.push(seg(172, ARC.y, 172, TH + 20));
 
-  // Shooter lane: its inner wall, the stopper under the ball, and a one-way gate.
-  segments.push(seg(LANE_X, TH + 20, LANE_X, 126));
-  segments.push(seg(LANE_X, PLUNGER.y + BALL_R + 0.5, 172, PLUNGER.y + BALL_R + 0.5, { kind: 'stopper', e: 0.1 }));
-  segments.push(seg(LANE_X, 126, 172, 112, { kind: 'gate', oneway: true }));
-
-  // Lower playfield, left side then mirrored: inlane guide, slingshot, apron.
   for (const side of [1, -1]) {
-    const X = (x) => (side === 1 ? x : mirror(x));
-    segments.push(...chain([[X(14), 206], [X(14), 250], [X(46.5), 269.2]], { kind: 'guide' }));
-    // Slingshot: the long face kicks, the other two are plain rubber.
-    const A = [X(26), 218], B = [X(26), 244], C = [X(41), 257];
+    const X = (x) => (side === 1 ? x : m(x));
+    // The side lane: inner wall, stopper, one-way gate out to the orbit.
+    segments.push(seg(X(14), TH + 20, X(14), 126));
+    segments.push(seg(X(4), 336, X(14), 336, { kind: 'stopper', e: 0.1 }));
+    segments.push(seg(X(14), 126, X(4), 112, { kind: 'gate', oneway: true, side }));
+    // Orbit guide, with a steer at its foot into the inlane.
+    segments.push(seg(X(30), 102, X(30), 230, { kind: 'guide' }));
+    circles.push({ x: X(30), y: 102, r: 2, kind: 'post', e: 0.4 });
+    segments.push(seg(X(14), 228, X(22), 240, { kind: 'guide' }));
+    // Inlane guide and outlane post.
+    segments.push(...chain([[X(25), 246], [X(25), 290], [X(57.5), 309.2]], { kind: 'guide' }));
+    circles.push({ x: X(25), y: 246, r: 2.2, kind: 'post', e: 0.5 });
+    // Slingshot.
+    const A = [X(37), 258], B = [X(37), 284], C = [X(52), 297];
     segments.push(seg(A[0], A[1], C[0], C[1], { kind: 'sling', side, e: 0.6 }));
     segments.push(seg(A[0], A[1], B[0], B[1], { kind: 'rubber', e: 0.5 }));
     segments.push(seg(B[0], B[1], C[0], C[1], { kind: 'rubber', e: 0.5 }));
-    circles.push({ x: X(14), y: 206, r: 2.2, kind: 'post', e: 0.5 });
-    // At the foot of the side channel, steer wall-huggers into the inlane.
-    segments.push(seg(X(4), 186, X(11), 198, { kind: 'guide' }));
-    // Apron walls below the flippers, down to the drain.
-    segments.push(seg(X(4), 262, X(34), 300, { kind: 'apron' }));
+    // Apron.
+    segments.push(seg(X(14), 302, X(44), 340, { kind: 'apron' }));
   }
 
-  // Top lanes (S T A R): three short guides make four lanes.
-  for (const x of [64, 82, 100]) {
+  // Top lanes (S T A R).
+  for (const x of [70, 88, 106]) {
     segments.push(seg(x, 34, x, 50, { kind: 'laneguide', e: 0.3 }));
     circles.push({ x, y: 34, r: 1.6, kind: 'post', e: 0.3 });
   }
 
   // Pop bumpers.
   const bumpers = [
-    { x: 62, y: 108, r: 9, kind: 'bumper', id: 0, e: 0.6, kick: 360 },
-    { x: 102, y: 108, r: 9, kind: 'bumper', id: 1, e: 0.6, kick: 360 },
-    { x: 82, y: 136, r: 9, kind: 'bumper', id: 2, e: 0.6, kick: 360 },
+    { x: 70, y: 94, r: 9, kind: 'bumper', id: 0, e: 0.6, kick: 360 },
+    { x: 106, y: 94, r: 9, kind: 'bumper', id: 1, e: 0.6, kick: 360 },
+    { x: 88, y: 120, r: 9, kind: 'bumper', id: 2, e: 0.6, kick: 360 },
   ];
   circles.push(...bumpers);
 
-  // Drop targets: a bank of three on the left, facing right.
-  const drops = [150, 163, 176].map((y, i) => ({ ...seg(24, y - 5, 24, y + 5, { kind: 'drop', id: i, e: 0.35 }), up: true }));
+  // Two drop target banks facing the middle.
+  const drops = [];
+  for (const side of [1, -1]) {
+    [168, 181, 194].forEach((y, i) => {
+      const x = side === 1 ? 36 : m(36);
+      drops.push({ ...seg(x, y - 5, x, y + 5, { kind: 'drop', id: drops.length, bank: side === 1 ? 0 : 1, e: 0.35 }), up: true, row: i });
+    });
+  }
   segments.push(...drops);
-  // A backstop behind them so a dropped bank doesn't open a hole to the outlane.
-  segments.push(seg(20, 142, 20, 184, { kind: 'wall' }));
 
-  // The dying star, dead centre. Its radius grows with its mass.
-  const star = { x: CX, y: 190, r: 6, kind: 'star', e: 0.55, kick: 160 };
+  // SUPERNOVA: nine rollover inserts arching over the star. Roll over them to light them.
+  const letters = [];
+  for (let i = 0; i < 9; i++) {
+    const a = Math.PI + 0.35 + (i / 8) * (Math.PI - 0.7);
+    letters.push({ x: STAR.x + Math.cos(a) * 36, y: STAR.y + Math.sin(a) * 30, id: i, lit: false });
+  }
+
+  // The dying star, and two moons orbiting it.
+  const star = { x: STAR.x, y: STAR.y, r: 6, kind: 'star', e: 0.55, kick: 160 };
   circles.push(star);
+  const moons = [0, Math.PI].map((a, i) => ({ x: STAR.x, y: STAR.y, r: 3.4, kind: 'moon', id: i, e: 0.6, a }));
+  circles.push(...moons);
 
-  // The wormhole: a saucer that catches slow balls.
-  const wormhole = { x: 142, y: 160, r: 6 };
-  // Lane sensors, the spinner and orbit checkpoints.
-  const lanes = [[46, 64], [64, 82], [82, 100], [100, 118]].map(([a, b], i) => ({ x0: a, x1: b, y: 42, id: i }));
-  const spinner = { x0: 4, x1: 20, y: 96 };
-  const flippers = [makeFlipper(48, 274, 1), makeFlipper(mirror(48), 274, -1)];
+  // Mini flippers up top and the main flippers.
+  const flippers = [
+    makeFlipper(58, 314, 1), makeFlipper(m(58), 314, -1),
+    makeFlipper(34, 64, 1, 17, 3.2, 2), makeFlipper(m(34), 64, -1, 17, 3.2, 2),
+  ];
+
+  const wormholes = [{ x: 52, y: 146, r: 6, id: 0 }, { x: m(52), y: 146, r: 6, id: 1 }];
+  const lanes = [[52, 70], [70, 88], [88, 106], [106, 124]].map(([a, b], i) => ({ x0: a, x1: b, y: 42, id: i }));
+  const spinners = [{ x0: 14, x1: 30, y: 140, id: 0 }, { x0: m(30), x1: m(14), y: 140, id: 1 }];
+  // Rollover stars in the inlanes.
+  const rollovers = [{ x: 31, y: 272, id: 0 }, { x: m(31), y: 272, id: 1 }];
 
   return {
-    segments, circles, bumpers, drops, star, wormhole, lanes, spinner, flippers,
-    // Moving targets that some stages add. Null when absent.
-    comet: null, ship: null, hole: null, centerPost: false,
+    segments, circles, bumpers, drops, letters, star, moons, wormholes, lanes, spinners, rollovers, flippers,
+    ramps: RAMPS,
+    comet: null, ship: null, hole: null,
   };
 }
 
 // Flippers: a tapered capsule from pivot to tip. `side` is 1 for left, -1 for right.
-export const FLIP = { len: 30, r0: 4.5, r1: 2.4, rest: 0.52, up: -0.46, speed: 30, e: 0.25 };
+export const FLIP = { len: 27, r0: 4.5, r1: 2.4, rest: 0.52, up: -0.46, speed: 30, e: 0.25 };
 
-export function makeFlipper(px, py, side) {
-  const rest = side === 1 ? FLIP.rest : Math.PI - FLIP.rest;
-  const up = side === 1 ? FLIP.up : Math.PI - FLIP.up;
-  return { px, py, side, len: FLIP.len, r0: FLIP.r0, r1: FLIP.r1, rest, upAngle: up, angle: rest, omega: 0, held: false };
+export function makeFlipper(px, py, side, len = FLIP.len, r0 = FLIP.r0, r1 = FLIP.r1) {
+  const mini = len < FLIP.len;
+  const restA = mini ? 0.62 : FLIP.rest, upA = mini ? -0.3 : FLIP.up;
+  const rest = side === 1 ? restA : Math.PI - restA;
+  const up = side === 1 ? upA : Math.PI - upA;
+  return { px, py, side, len, baseLen: len, mini, r0, r1, rest, upAngle: up, angle: rest, omega: 0, held: false };
 }
 
 export function flipperTip(f) {
