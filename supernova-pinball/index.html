@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#05030f">
+  <meta name="description" content="A roguelike neon pinball table built around a dying star. Clear each star system's score target to warp onward, pick upgrades, unlock multiball, comets, black holes and an alien mothership, and feed the star until it goes supernova.">
+  <meta name="interwebs:kind" content="Game">
+  <meta name="interwebs:accent" content="#ff9b2f">
+  <title>Supernova Pinball</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Crect width='8' height='8' fill='%2305030f'/%3E%3Cpath d='M3 1h2v1h1v1h1v2h-1v1h-1v1h-2v-1h-1v-1h-1v-2h1v-1h1z' fill='%23ff9b2f'/%3E%3Cpath d='M3 2h2v1h1v2h-1v1h-2v-1h-1v-2h1z' fill='%23ffd23f'/%3E%3Cpath d='M3 3h1v1h-1z' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <canvas id="game" tabindex="0" aria-describedby="controls-summary"
+      aria-label="Supernova Pinball: a neon pinball table with a dying star at its centre"></canvas>
+    <p id="controls-summary" class="sr-only">
+      Z or the left arrow flips the left flipper, slash or the right arrow flips the right one.
+      Hold Space to pull the plunger and let go to launch. Up arrow nudges the table; nudge too much and it tilts.
+      On a touch screen, touch the left or right half of the screen to flip, hold to pull the plunger, and swipe up to nudge.
+      P pauses, M toggles sound, H opens help and settings. Big moments are read out as they happen.
+    </p>
+
+    <header class="hud">
+      <nav class="buttons" aria-label="Game menu">
+        <button id="btn-pause" class="icon-btn" type="button" aria-label="Pause (P)" title="Pause (P)">
+          <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path d="M2 2h2v6h-2zM6 2h2v6h-2z" fill="currentColor"/></svg>
+        </button>
+        <button id="btn-sound" class="icon-btn" type="button" aria-pressed="true" aria-label="Sound (M)" title="Sound (M)">
+          <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 4h2v2h-2zM3 3h1v4h-1zM4 2h1v6h-1z" fill="currentColor"/><path class="waves" d="M6 4h1v2h-1zM7 2h1v1h-1zM8 3h1v4h-1zM7 7h1v1h-1z" fill="currentColor"/><path class="cross" d="M6 3h1v1h-1zM7 4h1v2h-1zM8 3h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1z" fill="currentColor"/></svg>
+        </button>
+        <button id="btn-help" class="icon-btn" type="button" aria-label="Help and settings (H)" title="Help and settings (H)">
+          <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path d="M3 1h4v1h1v2h-1v1h-1v2h-2v-2h1v-1h1v-2h-2v1h-2v-1h1zM4 8h2v1h-2z" fill="currentColor"/></svg>
+        </button>
+      </nav>
+    </header>
+
+    <p id="hint" class="hint empty" role="status" aria-live="polite"></p>
+    <div id="sr-alert" class="sr-only" role="alert" aria-live="assertive"></div>
+
+    <dialog id="pause" aria-labelledby="pause-title">
+      <form method="dialog" class="panel">
+        <h2 id="pause-title">Paused</h2>
+        <p class="summary">The star can wait. It has been burning for ten billion years.</p>
+        <div class="row">
+          <button class="big-btn" value="resume">Resume</button>
+          <button class="text-btn" value="quit" type="submit">Quit to title</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="help" aria-labelledby="help-title">
+      <form method="dialog" class="panel">
+        <div class="panel-head">
+          <h2 id="help-title">How to play</h2>
+          <button class="close" value="close" aria-label="Close help">✕</button>
+        </div>
+        <ol class="steps">
+          <li>Each <strong>sector</strong> is a star system with a <span class="hot">score target</span>. Reach it and the ball warps to the next one, and you pick one of three <strong>upgrades</strong>. Run out of balls and it's over. Clearing a sector gives you a ball back.</li>
+          <li>Hit the pop bumpers, slingshots, drop targets, the <strong>S T A R</strong> lanes (flip to move the lit lanes) and the spinning left orbit.</li>
+          <li>Light all four lanes to raise the <strong>playfield multiplier</strong> (up to ×5). Knock down all three targets for a big bonus.</li>
+          <li>Everything you hit feeds the <strong>dying star</strong> in the middle. When its mass meter is full it goes <span class="hot">SUPERNOVA</span>: extra balls and double scoring for 20 seconds.</li>
+          <li>New things arrive as you go deeper: <strong>wormhole locks and multiball</strong> (sector 2, hit the star for jackpots), <strong>comets</strong> (3), a roaming <strong>black hole</strong> (4) and an alien <strong>mothership</strong> (5).</li>
+          <li>Nudge the table to save a ball, but nudge too hard and it <strong>tilts</strong>: dead flippers until the ball drains.</li>
+        </ol>
+        <dl class="keys">
+          <div><dt>Z / ← / Left Shift</dt><dd>Left flipper</dd></div>
+          <div><dt>/ / → / Right Shift</dt><dd>Right flipper</dd></div>
+          <div><dt>Space (hold)</dt><dd>Pull the plunger, release to launch</dd></div>
+          <div><dt>↑</dt><dd>Nudge</dd></div>
+          <div><dt>Touch</dt><dd>Left or right half flips; hold to plunge; swipe up to nudge</dd></div>
+          <div><dt>Gamepad</dt><dd>Bumpers or triggers flip, A launches, Y nudges</dd></div>
+          <div><dt>P · M · H</dt><dd>Pause · sound · this help</dd></div>
+        </dl>
+        <fieldset class="options">
+          <legend>Settings</legend>
+          <label><input type="checkbox" id="opt-sound"> Sound</label>
+          <label><input type="checkbox" id="opt-music"> Music</label>
+          <label><input type="checkbox" id="opt-relaxed"> Relaxed gravity <span class="note">(the ball floats 20% slower; from the next game)</span></label>
+          <label><input type="checkbox" id="opt-motion"> Reduce motion <span class="note">(no flashing, shaking or slow motion)</span></label>
+        </fieldset>
+      </form>
+    </dialog>
+  </main>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
