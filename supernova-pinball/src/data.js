@@ -2,13 +2,13 @@
 
 export const START_BALLS = 3;
 export const MAX_BALLS = 6;
-export const BALL_SAVE = 6; // seconds after launch
+export const BALL_SAVE = 8; // seconds after launch
 export const GRAVITY = 520;
 export const MULTS = [1, 2, 3, 5];
 
 // Base points for everything the ball can do.
 export const POINTS = {
-  bumper: 1000, sling: 110, drop: 2500, dropsAll: 25000, lane: 5000, lanesAll: 25000, spin: 150, star: 2500,
+  bumper: 1000, sling: 110, drop: 2500, dropsAll: 40000, lane: 5000, lanesAll: 25000, spin: 150, star: 2500,
   wormhole: 30000, orbit: 20000, comet: 50000, ship: 10000, shipKill: 500000, hole: 40000, jackpot: 100000,
   supernova: 250000, combo: 10000, rubber: 10, post: 10, ramp: 25000,
 };
@@ -16,13 +16,13 @@ export const POINTS = {
 // Each sector is a star system with its own palette, target and new trick.
 export const SECTORS = [
   { name: 'RED DWARF', target: 400000, pal: { a: '#ff3b4e', b: '#ff9b2f', bg: '#1a0510', glow: '#ff6b4a' } },
-  { name: 'YELLOW SUN', target: 2500000, pal: { a: '#ffd23f', b: '#ff9b2f', bg: '#1a1205', glow: '#fff3a8' }, unlock: 'lock' },
-  { name: 'BLUE GIANT', target: 12000000, pal: { a: '#3fa9ff', b: '#7ff4ff', bg: '#050d1f', glow: '#7ff4ff' }, unlock: 'comet' },
-  { name: 'PULSAR', target: 35000000, pal: { a: '#ff5ad1', b: '#7ff4ff', bg: '#12051a', glow: '#ff5ad1' }, unlock: 'hole' },
-  { name: 'NEUTRON STAR', target: 90000000, pal: { a: '#c9d3ff', b: '#b35cff', bg: '#0c0a1e', glow: '#ffffff' }, unlock: 'ship' },
-  { name: 'MAGNETAR', target: 200000000, pal: { a: '#3de07a', b: '#b35cff', bg: '#04140c', glow: '#8fffc0' } },
-  { name: 'QUASAR', target: 450000000, pal: { a: '#ff9b2f', b: '#ff5ad1', bg: '#170816', glow: '#ffd23f' } },
-  { name: 'SUPERNOVA', target: 900000000, pal: { a: '#ffffff', b: '#ffd23f', bg: '#1c0b05', glow: '#ffffff' } },
+  { name: 'YELLOW SUN', target: 2000000, pal: { a: '#ffd23f', b: '#ff9b2f', bg: '#1a1205', glow: '#fff3a8' }, unlock: 'lock' },
+  { name: 'BLUE GIANT', target: 8000000, pal: { a: '#3fa9ff', b: '#7ff4ff', bg: '#050d1f', glow: '#7ff4ff' }, unlock: 'comet' },
+  { name: 'PULSAR', target: 25000000, pal: { a: '#ff5ad1', b: '#7ff4ff', bg: '#12051a', glow: '#ff5ad1' }, unlock: 'hole' },
+  { name: 'NEUTRON STAR', target: 70000000, pal: { a: '#c9d3ff', b: '#b35cff', bg: '#0c0a1e', glow: '#ffffff' }, unlock: 'ship' },
+  { name: 'MAGNETAR', target: 160000000, pal: { a: '#3de07a', b: '#b35cff', bg: '#04140c', glow: '#8fffc0' } },
+  { name: 'QUASAR', target: 360000000, pal: { a: '#ff9b2f', b: '#ff5ad1', bg: '#170816', glow: '#ffd23f' } },
+  { name: 'SUPERNOVA', target: 750000000, pal: { a: '#ffffff', b: '#ffd23f', bg: '#1c0b05', glow: '#ffffff' } },
 ];
 export const FINAL_SECTOR = SECTORS.length;
 

@@ -1,6 +1,6 @@
 // Ball physics: gravity, walls, bumpers, flippers and ball-on-ball, stepped
 // in small fixed substeps so a fast ball never skips through a wall. No DOM.
-import { BALL_R, FLIP } from './table.js';
+import { BALL_R, CAPTIVE, FLIP } from './table.js';
 
 export const SUBSTEPS = 10;
 export const MAX_SPEED = 1000;
@@ -59,6 +59,19 @@ export function stepBall(b, table, dt, gravity, hit) {
       const f = Math.min(450, 26000 / (d2 + 150));
       b.vx += (dx / d) * f * dt;
       b.vy += (dy / d) * f * dt;
+    }
+  }
+  // The vortex round the wormhole swirls the ball and draws it in.
+  const vo = table.vortex;
+  if (vo) {
+    const dx = vo.x - b.x, dy = vo.y - b.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < vo.r * vo.r) {
+      const d = Math.sqrt(d2) || 1;
+      const k = 1 - d / vo.r;
+      const pull = 620 * Math.sqrt(k), swirl = 380 * k * vo.spin;
+      b.vx += ((-dy / d) * swirl + (dx / d) * pull) * dt;
+      b.vy += ((dx / d) * swirl + (dy / d) * pull) * dt;
     }
   }
   const sp = Math.hypot(b.vx, b.vy);
@@ -128,6 +141,29 @@ export function stepBall(b, table, dt, gravity, hit) {
     if (vIn > 10 || c.kick) hit(c.kind, c, vIn, b);
   }
 
+  // The captive ball: slides up and down its chamber, knocked by the real one.
+  const cb = table.captive;
+  if (cb) {
+    const dx = b.x - cb.x, dy = b.y - cb.y;
+    const rr = BALL_R * 2;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < rr * rr) {
+      const d = Math.sqrt(d2) || 1e-6;
+      const nx = dx / d, ny = dy / d;
+      b.x = cb.x + nx * rr;
+      b.y = cb.y + ny * rr;
+      // Equal masses, but the captive ball can only move up and down.
+      const vn = b.vx * nx + (b.vy - cb.vy) * ny;
+      if (vn < 0) {
+        const j = (-(1 + 0.8) * vn) / (1 + ny * ny);
+        b.vx += j * nx;
+        b.vy += j * ny;
+        cb.vy -= j * ny;
+        if (-vn > 40) hit('captive', cb, -vn, b);
+      }
+    }
+  }
+
   // Flippers.
   for (const f of table.flippers) {
     const tx = f.px + Math.cos(f.angle) * f.len, ty = f.py + Math.sin(f.angle) * f.len;
@@ -174,6 +210,21 @@ export function stepBall(b, table, dt, gravity, hit) {
     } else if (!inside && b.rollover === r.id) b.rollover = null;
   }
   return true;
+}
+
+/** The captive ball rolls back down its chamber; reaching the top scores. */
+export function stepCaptive(cb, dt, gravity, hit) {
+  cb.vy += gravity * 0.6 * dt;
+  cb.y += cb.vy * dt;
+  if (cb.y < CAPTIVE.top) {
+    cb.y = CAPTIVE.top;
+    if (cb.vy < -60) hit('captiveTop', cb, -cb.vy, null);
+    cb.vy = -cb.vy * 0.3;
+  }
+  if (cb.y > CAPTIVE.rest) {
+    cb.y = CAPTIVE.rest;
+    cb.vy = cb.vy > 30 ? -cb.vy * 0.2 : 0;
+  }
 }
 
 /** Balls bounce off each other (multiball). */

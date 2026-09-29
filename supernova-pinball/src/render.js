@@ -4,11 +4,13 @@
 import { FINAL_SECTOR, MULTS, UNLOCKS, UPGRADE_BY_ID, sectorFor } from './data.js';
 import { drawText, measureText, wrap } from './font.js';
 import { buildSprites } from './sprites.js';
-import { ARC, BALL_R, CX, LETTERS, PLUNGER, STAR, TH, TW, m, rampPoint } from './table.js';
+import {
+  ARC, BALL_R, CAPTIVE, CX, LANE_XS, LETTERS, PLUNGER, SHOTS, STAR, TH, TW, VORTEX, WHITE_HOLE, m, rampPoint,
+} from './table.js';
 
-export const DMD_W = 88, DMD_H = 16; // dots
+export const DMD_W = 96, DMD_H = 16; // dots
 const DMD_PX = 2; // logical pixels per dot
-const DMD_HEIGHT = DMD_H * DMD_PX + 4;
+export const DMD_HEIGHT = DMD_H * DMD_PX + 4;
 
 const C = {
   ink: '#05030f', panel: '#10132e', panel2: '#181c42', line: '#eef1f6', muted: '#aeb8e2', dim: '#5d6690',
@@ -98,7 +100,7 @@ export class Renderer {
     L.dy = Math.max(0, Math.floor(spare / (L.bottom ? 3 : 2)));
     // Narrow screens: keep the display clear of the menu buttons in the corner.
     if (!L.side && spare >= 26) {
-      L.dy = Math.max(L.dy, 26);
+      L.dy = Math.max(L.dy, Math.min(30, spare));
       L.bottom = spare - L.dy >= 30;
     }
     L.ty = L.dy + DMD_HEIGHT + 4;
@@ -115,8 +117,7 @@ export class Renderer {
   }
 
   // ---------------------------------------------------------------- playfield art
-  tableArt(g) {
-    const key = g.sector;
+  tableArt(g, key = g.sector) {
     if (this.art[key]) return this.art[key];
     const pal = sectorFor(key).pal;
     const c = mk(TW, TH);
@@ -127,7 +128,7 @@ export class Renderer {
     let s = key * 97 + 3;
     const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
     // Dithered nebula, written straight into pixels (fast enough to build on a warp).
-    const blobs = [[40, 80, 50], [130, 200, 60], [70, 250, 40]];
+    const blobs = [[50, 90, 56], [150, 220, 64], [70, 290, 44]];
     const img = a.getImageData(0, 0, TW, TH);
     const px = img.data;
     const rgb = (col) => {
@@ -137,10 +138,19 @@ export class Renderer {
       return [d[0], d[1], d[2]];
     };
     const ca = rgb(pal.a), cb = rgb(pal.b);
+    const field = new Float32Array(TW * TH);
+    for (const [bx, by, br] of blobs) {
+      for (let y = Math.max(0, by - br); y < Math.min(TH, by + br); y++) {
+        for (let x = Math.max(0, bx - br); x < Math.min(TW, bx + br); x++) {
+          const d = Math.hypot(x - bx, y - by);
+          if (d < br) field[y * TW + x] += 1 - d / br;
+        }
+      }
+    }
     for (let y = 0; y < TH; y++) {
       for (let x = 0; x < TW; x++) {
-        let v = 0;
-        for (const [bx, by, br] of blobs) v += Math.max(0, 1 - Math.hypot(x - bx, y - by) / br);
+        const v = field[y * TW + x];
+        if (v === 0) continue;
         const th = ((x * 7 + y * 13) % 16) / 16;
         if (v * 0.55 > th + 0.18) {
           const c2 = v > 0.9 ? cb : ca;
@@ -161,28 +171,44 @@ export class Renderer {
     }
     a.globalAlpha = 1;
     // Shooter lane.
-    for (const lx of [5, 163]) {
+    for (const lx of [5, 185]) {
       a.fillStyle = '#08050f';
-      a.fillRect(lx, 116, 8, TH - 116);
-      for (let y = 150; y < 320; y += 14) {
+      a.fillRect(lx, 130, 10, TH - 130);
+      for (let y = 170; y < 370; y += 14) {
         a.fillStyle = pal.b;
         a.globalAlpha = 0.35;
-        a.fillRect(lx + 2, y, 1, 1);
-        a.fillRect(lx + 3, y - 1, 2, 1);
-        a.fillRect(lx + 5, y, 1, 1);
+        a.fillRect(lx + 3, y, 1, 1);
+        a.fillRect(lx + 4, y - 1, 2, 1);
+        a.fillRect(lx + 6, y, 1, 1);
         a.globalAlpha = 1;
       }
     }
     // Apron.
     a.fillStyle = '#0b0716';
     a.beginPath();
-    a.moveTo(14, 302);
-    a.lineTo(44, 340);
-    a.lineTo(132, 340);
-    a.lineTo(162, 302);
-    a.lineTo(162, TH);
-    a.lineTo(14, TH);
+    a.moveTo(16, 344);
+    a.lineTo(50, 388);
+    a.lineTo(150, 388);
+    a.lineTo(184, 344);
+    a.lineTo(184, TH);
+    a.lineTo(16, TH);
     a.fill();
+    // The vortex: a dark disc with spiral arms painted on.
+    disc(a, VORTEX.x, VORTEX.y, VORTEX.r + 1, '#05030f');
+    for (let k = 0; k < 3; k++) {
+      for (let i = 0; i < 60; i++) {
+        const rr = 3 + (i / 60) * VORTEX.r;
+        const an = k * 2.09 + i * 0.11;
+        a.fillStyle = i % 3 ? pal.a : pal.glow;
+        a.globalAlpha = 0.25 + (i / 60) * 0.3;
+        a.fillRect(Math.round(VORTEX.x + Math.cos(an) * rr), Math.round(VORTEX.y + Math.sin(an) * rr), 1, 1);
+      }
+    }
+    a.globalAlpha = 1;
+    ring(a, VORTEX.x, VORTEX.y, VORTEX.r + 1, pal.b);
+    // The captive ball's chamber.
+    a.fillStyle = '#08050f';
+    a.fillRect(CAPTIVE.x - 5, 201, 11, 45);
     // Neon walls: dark halo, colour, hot core.
     const walls = g.table.segments.filter((q) => ['wall', 'guide', 'apron', 'laneguide', 'gate'].includes(q.kind));
     for (const pass of [[C.ink, 4], [pal.a, 2], [pal.glow, 1]]) {
@@ -191,10 +217,13 @@ export class Renderer {
         line(a, q.ax, Math.min(q.ay, TH - 1), q.bx, Math.min(q.by, TH - 1), pass[0], q.kind === 'gate' ? 1 : pass[1]);
       }
     }
-    // Lane letters.
+    // Lane letters and the names of things.
     ['S', 'T', 'A', 'R'].forEach((ch, i) => {
-      drawText(a, ch, 61 + i * 18 - 2, 54, '#2a2440');
+      drawText(a, ch, LANE_XS[i] + 6, 60, '#2a2440');
     });
+    a.globalAlpha = 0.5;
+    drawText(a, 'ION', 91, 150, pal.b);
+    a.globalAlpha = 1;
     // Apron title.
     a.globalAlpha = 0.6;
     const t1 = 'SUPERNOVA';
@@ -236,6 +265,8 @@ export class Renderer {
       ctx.globalAlpha = 1;
     }
     if (v.panel) this.drawPanel(ctx, g, v, regions, pal);
+    // Paint the next sector's table while the warp screen is up.
+    if (v.panel === 'warp' && g.phaseT > 0.5 && !this.art[g.sector + 1]) this.tableArt(g, g.sector + 1);
     return regions;
   }
 
@@ -302,13 +333,36 @@ export class Renderer {
     ctx.drawImage(this.tableArt(g), 0, 0);
     this.drawLamps(ctx, g, v, pal);
 
-    // Wormholes: swirls of dots, spinning opposite ways.
+    // The vortex spins round the wormhole: arms of light turning inwards.
+    const vo = tb.vortex;
+    const busy = g.balls.some((b) => b.held === 'wormhole');
+    for (let k = 0; k < 4; k++) {
+      for (let i = 0; i < 12; i++) {
+        const rr = VORTEX.r - i * 1.2;
+        const an = k * (Math.PI / 2) + i * 0.32 + t * (busy ? 9 : 2.5);
+        ctx.globalAlpha = 0.25 + (i / 12) * 0.6;
+        ctx.fillStyle = i < 3 ? pal.b : i % 2 ? '#fff' : pal.glow;
+        ctx.fillRect(Math.round(vo.x + Math.cos(an) * rr), Math.round(vo.y + Math.sin(an) * rr), 1, 1);
+      }
+    }
+    ctx.globalAlpha = 1;
+    // The white hole, where the wormhole comes out.
+    {
+      const wh = WHITE_HOLE;
+      const pulse = busy ? 1 : 0.5 + Math.sin(t * 3) * 0.2;
+      ctx.globalAlpha = pulse;
+      ring(ctx, wh.x, wh.y, 5 + Math.sin(t * 6), '#fff', 16);
+      ring(ctx, wh.x, wh.y, 3, pal.b, 10);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(wh.x - 1, wh.y - 1, 2, 2);
+    }
     for (const w of tb.wormholes) {
       const held = g.balls.some((b) => b.held === 'wormhole' && b.hole === w.id);
-      const dir = w.x < CX ? 1 : -1;
+      const dir = 1;
       for (let k = 0; k < 20; k++) {
         const a = dir * t * (held ? 12 : 4) + k * 0.7;
-        const rr = 3 + (k % 6);
+        const rr = 3 + (k % 6) * 0.7;
         ctx.fillStyle = k % 3 === 0 ? '#fff' : pal.b;
         ctx.globalAlpha = held ? 1 : 0.75;
         ctx.fillRect(Math.round(w.x + Math.cos(a) * rr), Math.round(w.y + Math.sin(a) * rr), 1, 1);
@@ -348,6 +402,28 @@ export class Renderer {
       ring(ctx, h.x, h.y, 5, '#fff3a8', 16);
     }
 
+    // I O N standups.
+    for (const q of tb.standups) {
+      const hot = q.flash > 0;
+      line(ctx, q.ax, q.ay, q.bx, q.by, C.ink, 4);
+      line(ctx, q.ax, q.ay, q.bx, q.by, hot ? '#fff' : q.lit ? C.green : '#3a6a55', 2);
+      if (q.lit || hot) line(ctx, q.ax + 1, q.ay, q.bx - 1, q.by, '#fff');
+    }
+    // The captive ball and the target at the top of its chamber.
+    {
+      const cb = tb.captive;
+      const hot = cb.flash > 0;
+      ctx.fillStyle = hot ? '#fff' : C.orange;
+      ctx.fillRect(CAPTIVE.x - 4, 202, 9, 2);
+      ctx.fillStyle = hot ? C.gold : '#5a2a10';
+      ctx.fillRect(CAPTIVE.x - 3, 204, 7, 1);
+      // Hits so far, as pips down the side.
+      for (let i = 0; i < 5; i++) {
+        ctx.fillStyle = i < cb.hits % 6 ? C.orange : '#2e2446';
+        ctx.fillRect(CAPTIVE.x + 9, 212 + i * 6, 2, 3);
+      }
+      ctx.drawImage(this.S.hotBall, Math.round(cb.x - 4), Math.round(cb.y - 4));
+    }
     // Drop targets.
     for (const d of tb.drops) {
       if (d.up) {
@@ -384,8 +460,26 @@ export class Renderer {
       const ph = Math.abs(Math.sin(t * 40 * Math.min(1, spin)));
       ctx.fillStyle = C.ink;
       ctx.fillRect(sp.x0, sp.y - 1, sp.x1 - sp.x0, 3);
+      if (sp.gate) {
+        // The hyperspace gate: a flap that flicks up as the ball goes through.
+        ctx.fillStyle = spin > 0 ? '#fff' : C.cyan;
+        ctx.fillRect(sp.x0 + 1, sp.y - (spin > 0.6 ? 2 : 0), sp.x1 - sp.x0 - 2, 1);
+        continue;
+      }
       ctx.fillStyle = spin > 0 ? (Math.floor(t * 30) % 2 ? '#fff' : pal.a) : '#c9d3ff';
       ctx.fillRect(sp.x0 + 1, sp.y - Math.round(ph), sp.x1 - sp.x0 - 2, 1 + Math.round(ph * 2));
+    }
+    // Asteroids: lumpy tumbling rocks.
+    for (const a of tb.asteroids) {
+      if (a.off) continue;
+      disc(ctx, a.x, a.y, a.r + 1, C.ink);
+      disc(ctx, a.x, a.y, a.r, '#8a93b8');
+      const sp = t * 3 + a.id * 2;
+      ctx.fillStyle = '#4a4f7a';
+      ctx.fillRect(Math.round(a.x + Math.cos(sp) * 1.5), Math.round(a.y + Math.sin(sp) * 1.5), 2, 1);
+      ctx.fillRect(Math.round(a.x - Math.cos(sp) * 2), Math.round(a.y - Math.sin(sp) * 1.2), 1, 1);
+      ctx.fillStyle = '#c9d3ff';
+      ctx.fillRect(Math.round(a.x) - 2, Math.round(a.y) - 2, 1, 1);
     }
     // The moons.
     for (const mo of tb.moons) {
@@ -444,7 +538,7 @@ export class Renderer {
     }
 
     // Plungers: the shooter on the right, the auto-launcher on the left.
-    for (const [lx, pull] of [[165, g.plunger], [5, 0]]) {
+    for (const [lx, pull] of [[187, g.plunger], [7, 0]]) {
       const py = PLUNGER.y + BALL_R + 2 + Math.round(pull * 5);
       ctx.fillStyle = '#c9d3ff';
       ctx.fillRect(lx + 1, py, 5, 2);
@@ -650,16 +744,17 @@ export class Renderer {
       }
     };
     // Lane arrows and S T A R.
+    const skill = (g.phase === 'launch' || g.skillT > 0) && Math.floor(t * 8) % 2;
     g.lanes.forEach((on, i) => {
-      const x = 61 + i * 18;
-      lamp(x - 1, 41, 3, 4, on, pal.b, i);
-      if (on || show) drawText(ctx, 'STAR'[i], x - 2, 54, show ? hsl(i * 60 + t * 300) : pal.glow);
+      const x = LANE_XS[i] + 8;
+      lamp(x - 1, 44, 3, 4, on || (skill && i === g.skillLane), i === g.skillLane && skill ? '#fff' : pal.b, i);
+      if (on || show) drawText(ctx, 'STAR'[i], x - 2, 60, show ? hsl(i * 60 + t * 300) : pal.glow);
     });
     // Multipliers.
     MULTS.slice(1).forEach((mm, i) => {
       const x = CX - 19 + i * 13;
-      lamp(x, 262, 10, 7, g.mult >= mm, C.gold, i + 4);
-      drawText(ctx, `${mm}X`, x + 0, 263, g.mult >= mm ? C.ink : '#3a3055');
+      lamp(x, 300, 10, 7, g.mult >= mm, C.gold, i + 4);
+      drawText(ctx, `${mm}X`, x + 0, 301, g.mult >= mm ? C.ink : '#3a3055');
     });
     // Mass ring round the star: how close it is to going nova.
     const n = 16;
@@ -672,31 +767,40 @@ export class Renderer {
       ctx.fillRect(x - 1, y - 1, 2, 2);
     }
     // Drop target lamps.
-    g.table.drops.forEach((d, i) => lamp(d.bank ? d.ax + 4 : d.ax - 6, d.ay + 3, 2, 3, !d.up, C.cyan, i + 8));
-    // Lock lamps under the wormholes (from sector 2).
+    g.table.drops.forEach((d, i) => lamp(d.ax + 5, d.ay + 3, 2, 3, !d.up, C.cyan, i + 8));
+    // Lock lamps by the wormhole (from sector 2), mission and extra ball.
+    const w = g.table.wormholes[0];
     if (g.sector >= 2) {
-      for (const w of g.table.wormholes) {
-        for (let i = 0; i < 2; i++) lamp(w.x - 5 + i * 7, w.y + 10, 4, 3, g.locks > i || (g.multiball && Math.floor(t * 4) % 2), C.pink, i + 11);
-      }
+      for (let i = 0; i < 2; i++) lamp(w.x + 20, w.y - 4 + i * 6, 3, 4, g.locks > i || (g.multiball && Math.floor(t * 4) % 2), C.pink, i + 11);
     }
-    // Orbit and ramp arrows.
-    const blink = Math.floor(t * 3) % 2;
-    for (const x of [21, m(23)]) {
-      lamp(x, 214, 3, 3, blink, pal.a, 13);
-      lamp(x, 207, 3, 3, !blink, pal.a, 14);
-    }
+    const blink = Math.floor(t * 4) % 2;
+    if (g.missionLit && !g.mission) cText(ctx, 'MISSION', w.x - 4, 44, blink ? C.pink : '#6a2a5a');
+    if (g.extraBallLit) drawText(ctx, 'EB', w.x + 25, w.y + 10, blink ? C.green : '#2a6a4a');
+    // Shot arrows: lit ones blink for the running mission, the rest chase softly.
+    const ms = g.mission;
+    SHOTS.forEach((q, i) => {
+      const lit = ms && ms.lit.has(q.id);
+      const on = lit ? blink : show ? (i + Math.floor(t * 16)) % 3 === 0 : (Math.floor(t * 3) + i) % 7 === 0;
+      const col = lit ? (blink ? '#fff' : C.pink) : show ? hsl(i * 50 + t * 300) : pal.a;
+      ctx.fillStyle = C.ink;
+      ctx.fillRect(q.x - 3, q.y - 1, 7, 5);
+      ctx.fillStyle = on ? col : '#2e2446';
+      ctx.fillRect(q.x, q.y, 1, 1);
+      ctx.fillRect(q.x - 1, q.y + 1, 3, 1);
+      ctx.fillRect(q.x - 2, q.y + 2, 5, 1);
+    });
+    // Ramp mouths chase too.
     for (const r of g.table.ramps) {
       const x = Math.round((r.mouth.x0 + r.mouth.x1) / 2);
-      lamp(x - 1, r.mouth.y + 6, 3, 3, (Math.floor(t * 5) + r.id) % 2 === 0, C.cyan, 18 + r.id);
-      lamp(x - 1, r.mouth.y + 12, 3, 3, (Math.floor(t * 5) + r.id) % 2 === 1, C.cyan, 20 + r.id);
+      lamp(x - 1, r.mouth.y - 5, 3, 2, (Math.floor(t * 5) + r.id) % 2 === 0, C.cyan, 18 + r.id);
     }
     // Shoot again (ball save).
     const save = g.ballSaveT > 0 && (g.ballSaveT > 2 || Math.floor(t * 8) % 2);
-    lamp(CX - 12, 300, 24, 5, save, C.green, 15);
-    if (save) drawText(ctx, 'SAVE', CX - 11, 300, C.ink);
+    lamp(CX - 12, 342, 24, 5, save, C.green, 15);
+    if (save) drawText(ctx, 'SAVE', CX - 11, 342, C.ink);
     // Outlane saves.
-    if (g.upgrades.includes('kickback')) lamp(18, 280, 3, 4, !g.kickbackUsed, C.green, 16);
-    if (g.upgrades.includes('magna')) lamp(m(21), 280, 3, 4, !g.magnaUsed, C.green, 17);
+    if (g.upgrades.includes('kickback')) lamp(20, 322, 3, 4, !g.kickbackUsed, C.green, 16);
+    if (g.upgrades.includes('magna')) lamp(m(23), 322, 3, 4, !g.magnaUsed, C.green, 17);
     // Jackpot.
     if (g.jackpotLit && Math.floor(t * 5) % 2) cText(ctx, 'JACKPOT', CX, STAR.y + 20, C.gold);
     // Combo counter.
@@ -775,6 +879,14 @@ export class Renderer {
     for (let i = 0; i < Math.min(8, g.ballsLeft); i++) ctx.drawImage(this.S.ball, lx + 36 + i * 9, y - 1);
     y += 14;
     sText(ctx, `MULTIPLIER X${g.mult}`, lx, y, C.gold);
+    y += 14;
+    if (g.mission) {
+      sText(ctx, g.mission.def.name, lx, y, Math.floor(t * 4) % 2 ? C.pink : '#fff');
+      y += 9;
+      this.bar(ctx, lx, y, 96, g.mission.t / g.mission.def.time, C.pink, false);
+      y += 9;
+      sText(ctx, `${g.mission.n} / ${g.mission.def.need}  ${g.mission.def.desc}`.slice(0, 17), lx, y, C.muted);
+    } else sText(ctx, g.missionLit ? 'MISSION LIT' : `MISSIONS ${g.missionsDone}`, lx, y, g.missionLit ? C.pink : C.muted);
     if (g.supernovaT > 0) {
       y += 12;
       sText(ctx, `SUPERNOVA ${Math.ceil(g.supernovaT)}`, lx, y, hsl(t * 300));
