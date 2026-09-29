@@ -2,7 +2,7 @@ import { SoundEngine } from './audio.js';
 import { UNLOCKS, UPGRADE_BY_ID, sectorFor } from './data.js';
 import { drawText, measureText } from './font.js';
 import { DT, autopilot, createGame, pickUpgrade, snapshot, step } from './game.js';
-import { COLORS as C, Renderer, fmt } from './render.js';
+import { COLORS as C, DMD_HEIGHT, Renderer, fmt } from './render.js';
 import { loadStore } from './storage.js';
 import { LANE_X, PLUNGER, TH, TW } from './table.js';
 
@@ -20,8 +20,13 @@ let seed = params.has('seed') ? Number(params.get('seed')) >>> 0 : (Date.now() ^
 const store = loadStore();
 if (store.settings.reducedMotion === null) store.settings.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// The game draws at its own pixel size into `frame`; that is blown up by a
+// whole number onto the visible canvas, which the browser then shrinks a
+// touch to fit, so the table fills the screen and pixels stay even.
 const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d', { alpha: false });
+const out = canvas.getContext('2d', { alpha: false });
+const frameCanvas = document.createElement('canvas');
+const ctx = frameCanvas.getContext('2d', { alpha: false });
 const hint = document.getElementById('hint');
 const srAlert = document.getElementById('sr-alert');
 const audio = new SoundEngine();
@@ -53,19 +58,30 @@ function demoGame() {
 }
 
 // ---------------------------------------------------------------- sizing
-let scale = 1;
+let scale = 1, blit = 1;
 function resize() {
   const dpr = window.devicePixelRatio || 1;
   const vw = Math.round(window.innerWidth * dpr), vh = Math.round(window.innerHeight * dpr);
-  // The table needs 184 x 386; wider screens get side panels for free.
-  scale = Math.max(1, Math.floor(Math.min(vw / 184, vh / 386)));
+  // The table (with its display) fills the height; a phone gives it the width
+  // and a strip at the top for the menu buttons; wide screens get side panels.
+  const tall = DMD_HEIGHT + 4 + TH;
+  const side = Math.min(vw / (TW + 224), vh / (tall + 8));
+  const narrow = Math.min(vw / (TW + 12), vh / (tall + 30));
+  scale = Math.max(0.5, side >= narrow * 0.93 ? side : narrow);
+  // Just over a whole number: stay whole and crisp rather than soft.
+  if (scale >= 2 && scale % 1 < 0.2) scale = Math.floor(scale);
   const W = Math.ceil(vw / scale), H = Math.ceil(vh / scale);
-  if (W === canvas.width && H === canvas.height && renderer.W) return;
-  canvas.width = W;
-  canvas.height = H;
-  canvas.style.width = `${(W * scale) / dpr}px`;
-  canvas.style.height = `${(H * scale) / dpr}px`;
+  blit = Math.max(1, Math.ceil(scale - 0.01));
+  if (W === frameCanvas.width && H === frameCanvas.height && canvas.width === W * blit && renderer.W) return;
+  frameCanvas.width = W;
+  frameCanvas.height = H;
+  canvas.width = W * blit;
+  canvas.height = H * blit;
+  canvas.style.width = `${vw / dpr}px`;
+  canvas.style.height = `${vh / dpr}px`;
+  canvas.style.imageRendering = Math.abs(blit - scale) < 0.01 ? 'pixelated' : 'auto';
   ctx.imageSmoothingEnabled = false;
+  out.imageSmoothingEnabled = false;
   renderer.resize(W, H);
 }
 let resizeQueued = false;
@@ -153,7 +169,7 @@ function dmd(msg) {
   if (m.urgent) dmdQueue = [m, ...dmdQueue.filter((q) => !q.urgent)];
   else if (dmdQueue.length < 4) dmdQueue.push(m);
 }
-function dmdText(d, text, y, color = DMD_ON, scale2 = 1, W = 88) {
+function dmdText(d, text, y, color = DMD_ON, scale2 = 1, W = 96) {
   const w = measureText(text, scale2);
   drawText(d, text, Math.round((W - w) / 2), y, color, scale2);
 }
@@ -202,8 +218,9 @@ function drawDmd(d, W, H) {
   dmdText(d, fmt(g.score), 1, DMD_HI, 1, W);
   let info;
   if (g.supernovaT > 0) info = `SUPERNOVA ${Math.ceil(g.supernovaT)}`;
+  else if (g.mission) info = Math.floor(t * 0.7) % 2 ? `${g.mission.def.name} ${Math.ceil(g.mission.t)}` : `${g.mission.def.desc}`;
   else if (g.multiball) info = g.jackpotLit ? 'SHOOT THE STAR' : `RELIGHT ${Math.max(0, g.relight)}`;
-  else if (g.phase === 'launch') info = `BALL ${g.ballNo}  ${touchFirst ? 'HOLD' : 'SPACE'}`;
+  else if (g.phase === 'launch') info = Math.floor(t) % 2 ? 'SKILL SHOT LIT' : `BALL ${g.ballNo}  ${touchFirst ? 'HOLD' : 'SPACE'}`;
   else {
     const pages = [`BALL ${g.ballNo}  X${g.mult}`, `NEED ${fmt(Math.max(0, g.target - g.sectorScore))}`, sectorFor(g.sector).name];
     info = pages[Math.floor(t / 2.5) % pages.length];
@@ -282,9 +299,77 @@ function onEvents(g) {
         break;
       case 'dropsAll':
         audio.play('targets');
-        lightShow(e.both ? 2 : 1);
-        if (e.both) flash(0.3, C.cyan);
-        dmd({ text: e.both ? 'DOUBLE BANK' : 'TARGETS', sub: e.both ? '75,000' : '25,000', big: !e.both, hi: true, urgent: e.both });
+        lightShow(1.2);
+        flash(0.2, C.cyan);
+        dmd({ text: 'NOVA BANK', sub: fmt(e.pts), big: true, hi: true });
+        break;
+      case 'standup':
+        audio.play('standup', e.id);
+        sparks(e.x, e.y, 4, [C.green, '#fff']);
+        break;
+      case 'ion':
+        audio.play('ion');
+        lightShow(0.8);
+        dmd({ text: 'I O N', sub: e.lit === 'time' ? 'MISSION +10 SEC' : 'MISSION IS LIT', big: true, hi: true });
+        break;
+      case 'captive':
+        audio.play('captive');
+        sparks(e.x, e.y + 4, 4, ['#fff', C.orange]);
+        break;
+      case 'planet':
+        audio.play('planet', e.n);
+        shake(4);
+        flash(0.3, C.orange);
+        for (let k = 0; k < 3; k++) setTimeout(() => sparks(e.x, e.y, 18, [C.orange, C.gold, '#fff', C.red], 140), k * 90);
+        shock(e.x, e.y, C.orange, 40, 0.5);
+        dmd({ text: 'PLANET CRACKED', sub: fmt(e.pts), big: true, burst: true, hi: true, urgent: true, dur: 1.8 });
+        alertSr('Planet cracked!');
+        break;
+      case 'skill':
+        audio.play('skill');
+        flash(0.4, C.gold);
+        lightShow(1.5);
+        fireworks(3);
+        dmd({ text: 'SKILL SHOT', sub: fmt(e.pts), big: true, burst: true, hi: true, urgent: true, dur: 2 });
+        alertSr('Skill shot!');
+        break;
+      case 'gate':
+        audio.play('gate');
+        break;
+      case 'missionStart':
+        audio.play('missionStart');
+        flash(0.3, C.pink);
+        lightShow(1.5);
+        dmd({ text: e.name, sub: e.desc, big: true, burst: true, hi: true, urgent: true, dur: 2.4 });
+        alertSr(`Mission: ${e.name}. ${e.desc.toLowerCase()} within ${e.time} seconds.`);
+        break;
+      case 'missionHit':
+        audio.play('missionHit', e.n);
+        sparks(e.x, e.y, 14, [C.pink, '#fff', C.gold], 120);
+        shock(e.x, e.y, C.pink, 26, 0.4);
+        dmd({ text: `${e.n} OF ${e.need}`, sub: fmt(e.pts), big: true, urgent: true, dur: 1.1 });
+        break;
+      case 'missionDone':
+        audio.play('missionDone');
+        flash(0.6, C.pink);
+        shake(5);
+        slow(0.4);
+        lightShow(3);
+        fireworks(8);
+        dmd({ text: 'MISSION COMPLETE', sub: fmt(e.pts), big: true, burst: true, flash: true, urgent: true, dur: 2.6 });
+        if (e.extra) dmd({ text: 'EXTRA BALL', sub: 'AT THE WORMHOLE', big: true, hi: true, dur: 2 });
+        alertSr(`Mission complete: ${e.name}.${e.extra ? ' Extra ball is lit at the wormhole.' : ''}`);
+        break;
+      case 'missionFail':
+        audio.play('missionFail');
+        dmd({ text: 'MISSION OVER', sub: e.name, dur: 1.6, urgent: true });
+        break;
+      case 'extraBall':
+        audio.play('extraBall');
+        flash(0.6, C.green);
+        fireworks(5);
+        dmd({ text: 'EXTRA BALL', big: true, burst: true, flash: true, urgent: true, dur: 2.4 });
+        alertSr('Extra ball!');
         break;
       case 'rampIn':
         audio.play('rampIn');
@@ -308,6 +393,17 @@ function onEvents(g) {
         dmd({ text: 'SUPERNOVA', sub: 'SPELLED! 75,000', big: true, burst: true, hi: true, urgent: true, dur: 2 });
         alertSr('You spelled SUPERNOVA!');
         break;
+      case 'asteroid':
+        audio.play('asteroid');
+        sparks(e.x, e.y, 10, ['#8a93b8', '#c9d3ff', C.orange], 110);
+        shock(e.x, e.y, '#c9d3ff', 12, 0.25);
+        break;
+      case 'belt':
+        audio.play('belt');
+        flash(0.25, '#c9d3ff');
+        lightShow(1);
+        dmd({ text: 'BELT CLEARED', sub: fmt(e.pts), big: true, hi: true, urgent: true });
+        break;
       case 'moon':
         audio.play('moon');
         shock(e.x, e.y, '#c9d3ff', 14, 0.3);
@@ -324,7 +420,7 @@ function onEvents(g) {
         break;
       case 'lane':
         audio.play('lane', e.id);
-        sparks(61 + e.id * 18, 44, 5, [C.gold, '#fff']);
+        sparks(e.x, 50, 5, [C.gold, '#fff']);
         break;
       case 'lanesAll':
         audio.play('multiplier');
@@ -355,6 +451,8 @@ function onEvents(g) {
         break;
       case 'kickout':
         audio.play('kickout');
+        shock(e.x, e.y, '#fff', 22, 0.35);
+        sparks(e.x, e.y, 10, ['#fff', C.cyan, C.pink], 100);
         shake(1);
         break;
       case 'lock':
@@ -602,7 +700,7 @@ window.addEventListener('keyup', (e) => {
 const pointers = new Map();
 function toCanvas(e) {
   const r = canvas.getBoundingClientRect();
-  return { x: ((e.clientX - r.left) / r.width) * canvas.width, y: ((e.clientY - r.top) / r.height) * canvas.height };
+  return { x: ((e.clientX - r.left) / r.width) * frameCanvas.width, y: ((e.clientY - r.top) / r.height) * frameCanvas.height };
 }
 function regionAt(p) {
   for (let i = regions.length - 1; i >= 0; i--) {
@@ -845,18 +943,20 @@ function frame(now) {
   audio.setTease(mode === 'play' && game.mass > 70 && game.supernovaT === 0, (game.mass - 70) / 30);
   audio.update();
   regions = renderer.draw(ctx, game, v);
+  out.drawImage(frameCanvas, 0, 0, canvas.width, canvas.height);
   perf.frames++;
   perf.worst = Math.max(perf.worst, performance.now() - t0);
 }
 
 titleHint();
+renderer.tableArt(game); // paint the first table before the first frame
 requestAnimationFrame(frame);
 
 if (TEST) {
   window.__pin = {
     perf,
     store,
-    snapshot: () => ({ ...snapshot(game), mode, panel: v.panel, paused, scale, W: canvas.width, H: canvas.height }),
+    snapshot: () => ({ ...snapshot(game), mode, panel: v.panel, paused, scale, blit, W: frameCanvas.width, H: frameCanvas.height }),
     game: () => game,
     view: () => v,
     regions: () => regions,

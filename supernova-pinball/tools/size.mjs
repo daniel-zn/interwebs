@@ -14,7 +14,7 @@ for (const f of files) {
   console.log(`${f.padEnd(18)} ${String(buf.length).padStart(7)} B  ${String(z).padStart(6)} B gz`);
 }
 console.log(`${'total'.padEnd(18)} ${String(raw).padStart(7)} B  ${String(gz).padStart(6)} B gz`);
-const LIMIT = 56 * 1024;
+const LIMIT = 64 * 1024;
 if (gz > LIMIT) {
   console.error(`Over budget: ${gz} > ${LIMIT} bytes gzipped`);
   process.exit(1);

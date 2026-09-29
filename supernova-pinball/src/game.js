@@ -4,8 +4,19 @@
 import {
   BALL_SAVE, FINAL_SECTOR, GRAVITY, MAX_BALLS, MULTS, POINTS, START_BALLS, UPGRADES, sectorFor,
 } from './data.js';
-import { SUBSTEPS, collideBalls, makeBall, stepBall, stepFlippers } from './physics.js';
-import { BALL_R, CX, DRAIN_Y, LANE_X, LEFT_PLUNGER, PLUNGER, STAR, buildTable, rampPoint } from './table.js';
+import { SUBSTEPS, collideBalls, makeBall, stepBall, stepCaptive, stepFlippers } from './physics.js';
+import {
+  BALL_R, CX, DRAIN_Y, LANE_X, LEFT_PLUNGER, PLUNGER, SHOTS, STAR, WHITE_HOLE, buildTable, rampPoint,
+} from './table.js';
+
+// Missions: started at the wormhole once the I O N targets light one.
+export const MISSIONS = [
+  { id: 'chase', name: 'COMET CHASE', desc: 'HIT THE LIT SHOT', time: 40, need: 4 },
+  { id: 'orbits', name: 'ORBIT RUN', desc: 'SHOOT THE ORBITS', time: 40, need: 4, shots: ['lorbit', 'rorbit'] },
+  { id: 'hyper', name: 'HYPERDRIVE', desc: 'SHOOT THE RAMPS', time: 40, need: 4, shots: ['lramp', 'rramp'] },
+  { id: 'forge', name: 'STAR FORGE', desc: 'HIT THE STAR', time: 30, need: 8, shots: ['star'] },
+  { id: 'sweep', name: 'SOLAR SWEEP', desc: 'HIT EVERY SHOT', time: 60, need: 7, shots: SHOTS.map((q) => q.id) },
+];
 
 export const DT = 1 / 60;
 
@@ -35,8 +46,10 @@ export function createGame({ seed = 1, sector = 1, demo = false, relaxed = false
     tilt: 0, tilted: false,
     combo: 0, comboT: 0, assistT: 0,
     orbit: { t: -9 },
+    mission: null, missionLit: true, missionsDone: 0, missionNext: 0, extraBallLit: false,
+    skillLane: -1, skillT: 0,
     plunger: 0, launchHeld: false,
-    bonus: { bumpers: 0, drops: 0, lanes: 0, stars: 0, spins: 0 },
+    bonus: { bumpers: 0, drops: 0, lanes: 0, stars: 0, spins: 0, missions: 0 },
     bonusCount: null,
     offers: [],
     events: [],
@@ -69,7 +82,9 @@ function startSector(g, n, first = false) {
   g.unlock = first ? null : s.unlock || null;
   // Moving targets.
   if (n >= 3) g.table.comet = { a: 0, x: CX, y: 60, r: 4, cool: 3, vx: 0, vy: 0 };
-  if (n >= 4) g.table.hole = { x: CX, y: 176, a: 0, catchT: 0 };
+  if (n >= 4) g.table.hole = { x: CX, y: 186, a: 0, catchT: 0 };
+  g.mission = null;
+  g.missionLit = true;
   if (n >= 5) spawnShip(g);
   g.balls = [];
   serveBall(g);
@@ -83,7 +98,7 @@ function applyUpgradesToTable(g) {
 
 function spawnShip(g) {
   const hp = 6 + g.sector * 2;
-  g.table.ship = { x: CX, y: 70, r: 10, hp, maxHp: hp, dir: 1, hitT: 0, dead: 0 };
+  g.table.ship = { x: CX, y: 172, r: 10, hp, maxHp: hp, dir: 1, hitT: 0, dead: 0 };
 }
 
 /** Puts a fresh ball on the plunger. */
@@ -100,7 +115,9 @@ function serveBall(g) {
   g.magnaUsed = false;
   g.ballSaveArmed = true;
   g.mult = has(g, 'start_x2') ? 2 : 1;
-  g.bonus = { bumpers: 0, drops: 0, lanes: 0, stars: 0, spins: 0 };
+  g.bonus = { bumpers: 0, drops: 0, lanes: 0, stars: 0, spins: 0, missions: 0 };
+  g.skillLane = Math.floor(rand(g) * 4);
+  g.skillT = 0;
   g.postT = has(g, 'center_post') ? 30 : 0;
   emit(g, 'serve');
 }
@@ -133,8 +150,9 @@ function award(g, base, x, y, label = null) {
   return pts;
 }
 
-/** Major shots build combos. */
+/** Major shots build combos and count for missions. */
 function shot(g, name, x, y) {
+  missionShot(g, name, x, y);
   addMass(g, 4);
   const window = has(g, 'combo_king') ? 3.5 : 2.5;
   if (g.comboT > 0) g.combo++;
@@ -145,7 +163,50 @@ function shot(g, name, x, y) {
     emit(g, 'combo', { n: g.combo, pts, x, y });
     g.stats.bestCombo = Math.max(g.stats.bestCombo, g.combo);
   }
-  void name;
+}
+
+// ---------------------------------------------------------------- missions
+function startMission(g) {
+  const def = MISSIONS[g.missionNext % MISSIONS.length];
+  g.missionNext++;
+  g.missionLit = false;
+  const lit = new Set(def.shots || [SHOTS[Math.floor(rand(g) * SHOTS.length)].id]);
+  g.mission = { def, t: def.time, n: 0, lit };
+  emit(g, 'missionStart', { name: def.name, desc: def.desc, time: def.time });
+}
+
+/** A named shot was made: does the running mission want it? */
+function missionShot(g, id, x, y) {
+  const ms = g.mission;
+  if (!ms || !ms.lit.has(id)) return;
+  ms.n++;
+  const f = g.sector;
+  const pts = award(g, 20000 * f * ms.n, x, y - 16, `${ms.def.name.split(' ')[0]} ${ms.n}/${ms.def.need}`);
+  emit(g, 'missionHit', { n: ms.n, need: ms.def.need, pts, x, y });
+  if (ms.def.id === 'chase') {
+    // The comet moves on to another shot.
+    const others = SHOTS.filter((q) => q.id !== id);
+    ms.lit = new Set([others[Math.floor(rand(g) * others.length)].id]);
+  } else if (ms.def.id === 'sweep') ms.lit.delete(id);
+  if (ms.n >= ms.def.need) {
+    g.missionsDone++;
+    g.bonus.missions++;
+    const bonus = award(g, 150000 * f * g.missionsDone, CX, 130, 'MISSION COMPLETE');
+    addMass(g, 20);
+    g.mission = null;
+    if (g.missionsDone % 3 === 0) g.extraBallLit = true;
+    emit(g, 'missionDone', { name: ms.def.name, pts: bonus, extra: g.missionsDone % 3 === 0 });
+  }
+}
+
+function stepMission(g) {
+  const ms = g.mission;
+  if (!ms || g.phase !== 'play') return;
+  ms.t -= DT;
+  if (ms.t <= 0) {
+    g.mission = null;
+    emit(g, 'missionFail', { name: ms.def.name });
+  }
 }
 
 function addMass(g, m) {
@@ -202,28 +263,77 @@ function onHit(g, kind, obj, strength, ball) {
     case 'drop':
       if (!obj.up) break;
       obj.up = false;
-      award(g, POINTS.drop, obj.ax + (obj.bank ? -8 : 8), (obj.ay + obj.by) / 2);
+      award(g, POINTS.drop, obj.ax + 8, (obj.ay + obj.by) / 2);
       g.bonus.drops++;
       addMass(g, 2);
       emit(g, 'drop', { id: obj.id, x: obj.ax, y: (obj.ay + obj.by) / 2 });
-      const bank = t.drops.filter((d) => d.bank === obj.bank);
-      if (bank.every((d) => !d.up)) {
-        const both = t.drops.every((d) => !d.up);
-        award(g, POINTS.dropsAll * (both ? 3 : 1), obj.ax, 160, both ? 'DOUBLE BANK' : 'TARGETS!');
-        shot(g, 'drops', obj.ax, 170);
+      if (t.drops.every((d) => !d.up)) {
+        g.dropBanks = (g.dropBanks || 0) + 1;
+        const pts = award(g, POINTS.dropsAll * g.dropBanks, obj.ax + 20, 170, 'NOVA BANK');
+        shot(g, 'drops', obj.ax + 20, 180);
         g.kickbackUsed = false;
         g.magnaUsed = false;
-        emit(g, 'dropsAll', { bank: obj.bank, both });
-        (t.dropReset ||= [0, 0])[obj.bank] = 1.2;
+        // Every bank relights the extra ball's kickback and adds a lock light.
+        emit(g, 'dropsAll', { n: g.dropBanks, pts });
+        t.dropReset = 1.2;
       }
       break;
+    case 'standup': {
+      award(g, obj.lit ? 500 : 3000, (obj.ax + obj.bx) / 2, obj.ay - 6);
+      obj.flash = 0.2;
+      missionShot(g, 'ion', (obj.ax + obj.bx) / 2, obj.ay);
+      emit(g, 'standup', { id: obj.id, x: (obj.ax + obj.bx) / 2, y: obj.ay });
+      if (obj.lit) break;
+      obj.lit = true;
+      if (t.standups.every((q) => q.lit)) {
+        for (const q of t.standups) q.lit = false;
+        award(g, 25000, CX, 128, 'I O N');
+        addMass(g, 4);
+        if (g.mission) {
+          g.mission.t += 10;
+          emit(g, 'ion', { lit: 'time' });
+        } else {
+          g.missionLit = true;
+          emit(g, 'ion', { lit: 'mission' });
+        }
+      }
+      break;
+    }
+    case 'captive': {
+      const cb = obj;
+      cb.flash = 0.2;
+      award(g, 500, cb.x, cb.y + 12);
+      missionShot(g, 'captive', cb.x, cb.y + 12);
+      emit(g, 'captive', { x: cb.x, y: cb.y, strength });
+      break;
+    }
+    case 'captiveTop': {
+      const cb = obj;
+      cb.hits++;
+      cb.flash = 0.5;
+      const pts = award(g, 40000 * cb.hits, cb.x, cb.y - 10, 'PLANET CRACKED');
+      addMass(g, 5);
+      shot(g, 'planet', cb.x, cb.y);
+      emit(g, 'planet', { x: cb.x, y: cb.y, n: cb.hits, pts });
+      // Cracking the planet also starts a lit mission.
+      if (g.missionLit && !g.mission && !g.multiball) startMission(g);
+      break;
+    }
     case 'lane': {
       const i = obj.id;
+      if (g.skillT > 0) {
+        g.skillT = 0;
+        if (i === g.skillLane) {
+          const pts = award(g, 30000 * g.sector, (obj.x0 + obj.x1) / 2, obj.y + 16, 'SKILL SHOT');
+          addMass(g, 5);
+          emit(g, 'skill', { pts });
+        }
+      }
       if (!g.lanes[i]) {
         g.lanes[i] = true;
         award(g, POINTS.lane, (obj.x0 + obj.x1) / 2, obj.y + 8);
         g.bonus.lanes++;
-        emit(g, 'lane', { id: i });
+        emit(g, 'lane', { id: i, x: (obj.x0 + obj.x1) / 2 });
         if (g.lanes.every(Boolean)) {
           const k = MULTS.indexOf(g.mult);
           g.mult = MULTS[Math.min(MULTS.length - 1, k + 1)];
@@ -238,12 +348,22 @@ function onHit(g, kind, obj, strength, ball) {
       break;
     }
     case 'spinner': {
+      if (obj.gate) {
+        // The right orbit's hyperspace gate.
+        if (ball.vy < 0) {
+          award(g, 2500, obj.x0 + 9, obj.y - 8);
+          g.orbit = { t: g.t, id: ball.id, side: 1 };
+          obj.spin = 1;
+          emit(g, 'gate');
+        }
+        break;
+      }
       const spins = Math.max(1, Math.round(strength / 90));
       award(g, POINTS.spin * spins * (has(g, 'gold_spinner') ? 8 : 1), (obj.x0 + obj.x1) / 2, obj.y - 8);
       g.bonus.spins += spins;
       obj.spin = Math.min(3, (obj.spin || 0) + spins * 0.25);
       emit(g, 'spinner', { spins, id: obj.id });
-      if (ball.vy < 0) g.orbit = { t: g.t, id: ball.id, side: obj.id };
+      if (ball.vy < 0) g.orbit = { t: g.t, id: ball.id, side: 0 };
       break;
     }
     case 'star': {
@@ -254,8 +374,9 @@ function onHit(g, kind, obj, strength, ball) {
         g.relight = 6;
         emit(g, 'jackpot', { pts, x: obj.x, y: obj.y });
       } else {
-        award(g, POINTS.star, obj.x, obj.y - 14);
+        award(g, POINTS.star * (g.mission && g.mission.def.id === 'forge' ? 5 : 1), obj.x, obj.y - 14);
       }
+      missionShot(g, 'star', obj.x, obj.y);
       obj.flash = 0.25;
       g.bonus.stars++;
       addMass(g, 3);
@@ -285,6 +406,20 @@ function onHit(g, kind, obj, strength, ball) {
         emit(g, 'letters');
         for (const q of t.letters) q.lit = false;
         addMass(g, 15);
+      }
+      break;
+    }
+    case 'asteroid': {
+      if (obj.off) break;
+      obj.off = true;
+      award(g, 2500, obj.x, obj.y - 8);
+      addMass(g, 1);
+      emit(g, 'asteroid', { x: obj.x, y: obj.y });
+      if (t.asteroids.every((q) => q.off)) {
+        const pts = award(g, 15000 * g.sector, CX, 262, 'BELT CLEARED');
+        shot(g, 'belt', CX, 272);
+        g.beltT = 6;
+        emit(g, 'belt', { pts });
       }
       break;
     }
@@ -357,7 +492,7 @@ function updateMovers(g) {
       if (c.cool <= 0) cc.off = false;
     }
     c.a += DT * 0.9;
-    const nx = CX + Math.cos(c.a) * 50, ny = 62 + Math.sin(c.a * 2) * 14;
+    const nx = CX + Math.cos(c.a) * 52, ny = 150 + Math.sin(c.a * 2) * 10;
     cc.vx = (nx - cc.x) / DT;
     cc.vy = (ny - cc.y) / DT;
     cc.x = c.x = nx;
@@ -378,8 +513,8 @@ function updateMovers(g) {
       }
     } else {
       s.x += s.dir * 22 * DT;
-      if (s.x > 122) s.dir = -1;
-      if (s.x < 54) s.dir = 1;
+      if (s.x > 136) s.dir = -1;
+      if (s.x < 64) s.dir = 1;
       t.shipCircle.x = s.x;
       t.shipCircle.y = s.y + Math.sin(g.t * 2) * 2;
       t.shipCircle.vx = s.dir * 22;
@@ -389,25 +524,35 @@ function updateMovers(g) {
   const h = t.hole;
   if (h) {
     h.a += DT * 0.35;
-    h.x = CX + Math.cos(h.a) * 30;
-    h.y = 172 + Math.sin(h.a * 1.7) * 10;
+    h.x = CX + Math.cos(h.a) * 36;
+    h.y = 188 + Math.sin(h.a * 1.7) * 8;
   }
-  if (t.dropReset) {
-    t.dropReset.forEach((r, bank) => {
-      if (r <= 0) return;
-      t.dropReset[bank] = r - DT;
-      if (t.dropReset[bank] <= 0) {
-        for (const d of t.drops) if (d.bank === bank) d.up = true;
-        emit(g, 'dropReset');
-      }
-    });
+  if (t.dropReset > 0) {
+    t.dropReset -= DT;
+    if (t.dropReset <= 0) {
+      for (const d of t.drops) d.up = true;
+      emit(g, 'dropReset');
+    }
   }
+  t.captive.flash = Math.max(0, t.captive.flash - DT);
   for (const sp of t.spinners) sp.spin = Math.max(0, (sp.spin || 0) - DT);
   for (const r of t.rollovers) r.flash = Math.max(0, (r.flash || 0) - DT);
+  // The asteroids drift; a cleared belt comes back after a while.
+  for (const a of t.asteroids) {
+    const nx = CX + Math.sin(g.t * 0.5 + a.id * 2.1) * 40, ny = 274 + Math.sin(g.t * 1.3 + a.id * 1.7) * 6;
+    a.vx = (nx - a.x) / DT;
+    a.vy = (ny - a.y) / DT;
+    a.x = nx;
+    a.y = ny;
+  }
+  if (g.beltT > 0) {
+    g.beltT -= DT;
+    if (g.beltT <= 0) for (const a of t.asteroids) a.off = false;
+  }
   // The moons orbit the star.
   for (const mo of t.moons) {
     mo.a += DT * 1.1;
-    const nx = STAR.x + Math.cos(mo.a) * 21, ny = STAR.y + Math.sin(mo.a) * 17;
+    const nx = STAR.x + Math.cos(mo.a) * 22, ny = STAR.y + Math.sin(mo.a) * 17;
     mo.vx = (nx - mo.x) / DT;
     mo.vy = (ny - mo.y) / DT;
     mo.x = nx;
@@ -420,7 +565,7 @@ function updateMovers(g) {
   // The center post comes and goes.
   const post = t.circles.find((q) => q.kind === 'centerpost');
   if (g.postT > 0) {
-    if (!post) t.circles.push({ x: CX, y: 333, r: 2.5, kind: 'centerpost', e: 0.5 });
+    if (!post) t.circles.push({ x: CX, y: 380, r: 2.5, kind: 'centerpost', e: 0.5 });
   } else if (post) t.circles.splice(t.circles.indexOf(post), 1);
 }
 
@@ -453,10 +598,12 @@ export function step(g, input) {
   if (L && !t.flippers[0].held) {
     emit(g, 'flip', { side: 'left' });
     g.lanes.push(g.lanes.shift()); // lane change
+    if (g.skillT > 0 || g.phase === 'launch') g.skillLane = (g.skillLane + 3) % 4;
   }
   if (R && !t.flippers[1].held) {
     emit(g, 'flip', { side: 'right' });
     g.lanes.unshift(g.lanes.pop());
+    if (g.skillT > 0 || g.phase === 'launch') g.skillLane = (g.skillLane + 1) % 4;
   }
   for (const f of t.flippers) f.held = f.side === 1 ? L : R;
 
@@ -474,6 +621,7 @@ export function step(g, input) {
       if (g.phase === 'launch') {
         g.phase = 'play';
         g.phaseT = 0;
+        g.skillT = 5;
       }
       if (g.ballSaveArmed) {
         g.ballSaveT = BALL_SAVE + (has(g, 'ball_saver') ? 8 : 0);
@@ -485,7 +633,7 @@ export function step(g, input) {
 
   // A ball resting in the left lane is fired straight back out.
   for (const b of g.balls) {
-    if (b.x < 14 && b.y > LEFT_PLUNGER.y - 8 && Math.abs(b.vy) < 30 && !b.held) {
+    if (b.x < 16 && b.y > LEFT_PLUNGER.y - 8 && Math.abs(b.vy) < 30 && !b.held) {
       b.vy = -900;
       emit(g, 'launch', { power: 1, auto: true });
     }
@@ -517,13 +665,14 @@ export function step(g, input) {
   for (let s = 0; s < SUBSTEPS; s++) {
     stepFlippers(t.flippers, dt);
     for (const b of g.balls) stepBall(b, t, dt, gravity, hit);
+    stepCaptive(t.captive, dt, gravity, hit);
     if (g.balls.length > 1) collideBalls(g.balls);
   }
   for (const b of g.balls) b.age += DT;
 
   // Ball search: a ball that has stopped dead somewhere gets kicked loose.
   for (const b of g.balls) {
-    const onPlunger = (b.x > LANE_X || b.x < 14) && b.y > PLUNGER.y - 8;
+    const onPlunger = (b.x > LANE_X || b.x < 16) && b.y > PLUNGER.y - 8;
     if (b.held || onPlunger || Math.hypot(b.vx, b.vy) > 8) {
       b.still = 0;
       continue;
@@ -545,6 +694,8 @@ export function step(g, input) {
   if (g.phase === 'play') g.ballSaveT = Math.max(0, g.ballSaveT - DT);
   g.postT = Math.max(0, (g.postT || 0) - DT);
   g.comboT = Math.max(0, g.comboT - DT);
+  g.skillT = Math.max(0, g.skillT - DT);
+  stepMission(g);
   if (g.comboT === 0) g.combo = 0;
   g.assistT = Math.max(0, g.assistT - DT);
   if (g.supernovaT > 0) {
@@ -607,6 +758,11 @@ function onDrain(g, b) {
     return;
   }
   // The last ball is gone: count the bonus.
+  if (g.mission) {
+    emit(g, 'missionFail', { name: g.mission.def.name });
+    g.mission = null;
+    g.missionLit = true;
+  }
   g.supernovaT = 0;
   g.mass = Math.max(0, g.mass - 20);
   g.table.star.r = 6 + (g.mass / 100) * 5;
@@ -615,7 +771,7 @@ function onDrain(g, b) {
   g.phaseT = 0;
   const bb = g.bonus;
   const items = [
-    ['BUMPERS', bb.bumpers, 300], ['TARGETS', bb.drops, 2000], ['LANES', bb.lanes, 3000], ['STAR HITS', bb.stars, 5000], ['SPINS', bb.spins, 100],
+    ['BUMPERS', bb.bumpers, 300], ['TARGETS', bb.drops, 2000], ['LANES', bb.lanes, 3000], ['STAR HITS', bb.stars, 5000], ['SPINS', bb.spins, 100], ['MISSIONS', bb.missions, 50000],
   ].filter(([, n]) => n > 0);
   g.bonusCount = { items, i: 0, t: 0, total: 0, tilted: g.tilted, x: g.mult };
   emit(g, 'drain');
@@ -680,7 +836,7 @@ function checkCaptures(g) {
         g.rampRun = g.t - (g.lastRampT || -9) < 5 ? (g.rampRun || 0) + 1 : 1;
         g.lastRampT = g.t;
         const pts = award(g, POINTS.ramp * g.rampRun, b.x, b.y - 20, g.rampRun > 1 ? `RAMP X${g.rampRun}` : 'RAMP');
-        shot(g, 'ramp', b.x, b.y);
+        shot(g, r.id ? 'rramp' : 'lramp', b.x, b.y);
         addMass(g, 4);
         emit(g, 'ramp', { id: r.id, n: g.rampRun, pts, x: b.x, y: b.y });
       }
@@ -689,14 +845,13 @@ function checkCaptures(g) {
     if (b.held) {
       b.holdT -= DT;
       if (b.held === 'wormhole' && b.holdT <= 0) {
-        const w = t.wormholes[b.hole || 0];
-        const dir = w.x < CX ? 1 : -1;
+        // Out of the white hole on the other side of the table.
         b.held = null;
-        b.vx = dir * (200 + rand(g) * 60);
-        b.vy = 150 + rand(g) * 60;
-        b.x = w.x + dir * 7;
-        b.y = w.y + 4;
-        emit(g, 'kickout');
+        b.x = WHITE_HOLE.x;
+        b.y = WHITE_HOLE.y;
+        b.vx = -100 - rand(g) * 60;
+        b.vy = 150 + rand(g) * 50;
+        emit(g, 'kickout', { x: b.x, y: b.y });
       }
       if (b.held === 'hole' && b.holdT <= 0) {
         b.held = null;
@@ -707,7 +862,7 @@ function checkCaptures(g) {
       continue;
     }
     // Wormholes.
-    const w = t.wormholes.find((q) => (b.x - q.x) ** 2 + (b.y - q.y) ** 2 < 20);
+    const w = t.wormholes.find((q) => (b.x - q.x) ** 2 + (b.y - q.y) ** 2 < 36);
     if (w && Math.hypot(b.vx, b.vy) < 420) {
       b.hole = w.id;
       b.held = 'wormhole';
@@ -716,9 +871,16 @@ function checkCaptures(g) {
       b.y = w.y;
       b.vx = b.vy = 0;
       award(g, POINTS.wormhole, w.x, w.y - 12, 'WORMHOLE');
-      shot(g, 'wormhole', w.x, w.y);
+      shot(g, 'worm', w.x, w.y);
       emit(g, 'wormhole', { x: w.x, y: w.y });
-      if (g.sector >= 2 && !g.multiball) {
+      if (g.extraBallLit) {
+        g.extraBallLit = false;
+        g.ballsLeft++;
+        emit(g, 'extraBall');
+      } else if (g.missionLit && !g.mission && !g.multiball) {
+        startMission(g);
+        b.holdT = 2;
+      } else if (g.sector >= 2 && !g.multiball) {
         g.locks++;
         if (g.locks >= 2) {
           startMultiball(g);
@@ -774,10 +936,10 @@ function startMultiball(g) {
 function checkOrbit(g) {
   if (g.t - g.orbit.t > 2.5) return;
   for (const b of g.balls) {
-    const far = g.orbit.side === 0 ? b.x > 132 : b.x < 44;
-    if (b.id === g.orbit.id && far && b.y < 70 && !b.held) {
+    const far = g.orbit.side === 0 ? b.x > 150 : b.x < 50;
+    if (b.id === g.orbit.id && far && b.y < 80 && !b.held) {
       award(g, POINTS.orbit, b.x, 60, 'ORBIT');
-      shot(g, 'orbit', b.x, 60);
+      shot(g, g.orbit.side ? 'rorbit' : 'lorbit', b.x, 60);
       emit(g, 'orbit');
       g.orbit = { t: -9 };
     }
@@ -787,14 +949,14 @@ function checkOrbit(g) {
 // Kickback and magna-save in the outlanes.
 function checkOutlanes(g) {
   for (const b of g.balls) {
-    if (b.held || b.y < 290 || b.y > 326) continue;
-    if (b.x > 14 && b.x < 25 && has(g, 'kickback') && !g.kickbackUsed && b.vy > 0) {
+    if (b.held || b.y < 330 || b.y > 372) continue;
+    if (b.x > 16 && b.x < 28.5 && has(g, 'kickback') && !g.kickbackUsed && b.vy > 0) {
       g.kickbackUsed = true;
       b.vy = -760;
       b.vx = 20;
       emit(g, 'kickback');
     }
-    if (b.x > 151 && b.x < LANE_X && has(g, 'magna') && !g.magnaUsed && b.vy > 0) {
+    if (b.x > 171.5 && b.x < LANE_X && has(g, 'magna') && !g.magnaUsed && b.vy > 0) {
       g.magnaUsed = true;
       b.vy = -700;
       b.vx = -120;
@@ -834,7 +996,7 @@ export const isFinal = (g) => g.sector >= FINAL_SECTOR;
 /** Plays by itself: good enough for the attract mode and for tuning. */
 export function autopilot(g, skill = 1) {
   const ap = g.ap;
-  ap.rs = ap.rs || 12345;
+  ap.rs = ap.rs || (g.rs % 2147483646) + 1;
   const roll = () => {
     ap.rs = (ap.rs * 16807) % 2147483647;
     return ap.rs / 2147483647;
@@ -880,5 +1042,6 @@ export function snapshot(g) {
     balls: g.balls.map((b) => ({ x: +b.x.toFixed(1), y: +b.y.toFixed(1), held: b.held })), mult: g.mult, mass: +g.mass.toFixed(1),
     supernova: g.supernovaT > 0, multiball: g.multiball, locks: g.locks, upgrades: [...g.upgrades], offers: [...g.offers],
     tilted: g.tilted, lanes: [...g.lanes], drops: g.table.drops.map((d) => d.up),
+    mission: g.mission ? g.mission.def.id : null, missionsDone: g.missionsDone,
   };
 }

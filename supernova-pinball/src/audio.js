@@ -345,6 +345,55 @@ export class SoundEngine {
         this.tone(1760, 0.04, { vol: 0.04 });
         this.tone(2349, 0.05, { vol: 0.04, at: 0.03 });
         break;
+      case 'asteroid':
+        this.noise(0.18, { vol: 0.2, freq: 900, slide: 200 });
+        this.tone(160, 0.1, { type: 'square', vol: 0.06, slide: 70 });
+        break;
+      case 'belt':
+        this.noise(0.6, { vol: 0.15, freq: 400, slide: 3000 });
+        [587, 740, 880, 1175].forEach((f, i) => this.tone(f, 0.12, { vol: 0.06, at: 0.2 + i * 0.07 }));
+        break;
+      case 'standup':
+        this.tone(1175 + arg * 196, 0.07, { type: 'square', vol: 0.05 });
+        this.noise(0.03, { vol: 0.05, freq: 4000 });
+        break;
+      case 'ion':
+        [880, 1109, 1319, 1760].forEach((f, i) => this.tone(f, 0.12, { type: 'triangle', vol: 0.07, at: i * 0.05, vibrato: 10 }));
+        break;
+      case 'captive':
+        this.tone(90, 0.12, { type: 'square', vol: 0.12, slide: 50 });
+        this.noise(0.05, { vol: 0.08, freq: 1500 });
+        break;
+      case 'planet':
+        this.tone(60, 0.6, { type: 'sawtooth', vol: 0.12, slide: 30 });
+        this.noise(0.5, { vol: 0.12, freq: 600, slide: 80 });
+        [392, 523, 659, 784].forEach((f, i) => this.tone(f * (1 + Math.min(3, arg - 1) * 0.12), 0.12, { vol: 0.07, at: 0.3 + i * 0.07 }));
+        break;
+      case 'skill':
+        for (let i = 0; i < 10; i++) this.tone(660 * 2 ** (i / 6), 0.06, { vol: 0.06, at: i * 0.035 });
+        this.bell(1760, 0.4, 0.08, 1);
+        break;
+      case 'gate':
+        this.tone(1400, 0.12, { type: 'sine', vol: 0.06, slide: 2800 });
+        break;
+      case 'missionStart':
+        [262, 0, 262, 392, 0, 523].forEach((f, i) => f && this.tone(f, 0.16, { type: 'sawtooth', vol: 0.06, at: i * 0.12 }));
+        this.tone(55, 1.2, { type: 'sine', vol: 0.4, slide: 110, at: 0.1 });
+        break;
+      case 'missionHit':
+        [784, 1047, 1568].forEach((f, i) => this.tone(f * (1 + arg * 0.06), 0.1, { type: 'square', vol: 0.05, at: i * 0.05 }));
+        break;
+      case 'missionDone':
+        [523, 659, 784, 1047, 1319, 1568, 2093].forEach((f, i) => this.tone(f, 0.18, { vol: 0.07, at: i * 0.08 }));
+        [523, 659, 784].forEach((f) => this.tone(f, 1.6, { type: 'sawtooth', vol: 0.03, at: 0.6, vibrato: 5 }));
+        break;
+      case 'missionFail':
+        [440, 415, 392, 370].forEach((f, i) => this.tone(f, 0.25, { type: 'triangle', vol: 0.06, at: i * 0.18 }));
+        break;
+      case 'extraBall':
+        [392, 523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.25, { type: 'square', vol: 0.05, at: i * 0.1 }));
+        this.bell(2093, 0.6, 0.08, 1.2);
+        break;
       case 'kickout':
         this.noise(0.08, { vol: 0.3, freq: 700, q: 1 });
         this.tone(120, 0.12, { type: 'square', vol: 0.1, slide: 60 });

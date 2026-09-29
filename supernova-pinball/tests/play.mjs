@@ -50,9 +50,12 @@ async function openGame(context, name, query = '?test&seed=4') {
 
   const size = await page.evaluate(() => {
     const c = document.getElementById('game');
-    return { w: c.width, cw: c.getBoundingClientRect().width, scale: window.__pin.snapshot().scale };
+    const s = window.__pin.snapshot(), L = window.__pin.layout();
+    return { cw: c.getBoundingClientRect().width, ch: c.getBoundingClientRect().height, scale: s.scale, blit: s.blit, W: s.W, tall: (L.ty + L.TH - L.dy) * s.scale };
   });
-  check(Number.isInteger(size.scale) && Math.abs(size.cw - size.w * size.scale) < 1, 'canvas scales by whole pixels', `x${size.scale}`);
+  check(Math.abs(size.cw - 1280) < 1 && Math.abs(size.ch - 800) < 1, 'the canvas covers the window');
+  check(Number.isInteger(size.blit) && size.blit >= size.scale, 'the frame is blown up by a whole number first', `x${size.blit}`);
+  check(size.tall > 800 * 0.9, 'the table and its display fill the height', `${Math.round(size.tall)} of 800 px`);
 
   await page.keyboard.press('Space');
   await sleep(100);
@@ -116,7 +119,7 @@ async function openGame(context, name, query = '?test&seed=4') {
     g.phase = 'play';
     g.ballSaveT = 0;
     g.balls = [g.balls[0]];
-    Object.assign(g.balls[0], { x: 88, y: 342, vx: 0, vy: 300, held: null });
+    Object.assign(g.balls[0], { x: 100, y: 392, vx: 0, vy: 300, held: null });
     g.score = 123456;
   });
   await page.waitForFunction(() => window.__pin.snapshot().panel === 'over', null, { timeout: 10000 });
@@ -154,7 +157,7 @@ async function openGame(context, name, query = '?test&seed=4') {
   await sleep(100);
   let s = await page.snap();
   check(s.mode === 'play', 'a tap starts a game');
-  check(s.scale >= 6, 'the table fills a phone', `x${s.scale}`);
+  check(s.scale * (200 + 12) >= 390 * 3 * 0.95, 'the table fills a phone', `x${s.scale.toFixed(2)}`);
   const cdp = await context.newCDPSession(page);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 300, y: 600 }] });
   await sleep(600);
