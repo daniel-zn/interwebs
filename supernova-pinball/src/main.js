@@ -57,8 +57,8 @@ let scale = 1;
 function resize() {
   const dpr = window.devicePixelRatio || 1;
   const vw = Math.round(window.innerWidth * dpr), vh = Math.round(window.innerHeight * dpr);
-  // The table needs 184 x 346; wider screens get side panels for free.
-  scale = Math.max(1, Math.floor(Math.min(vw / 184, vh / 346)));
+  // The table needs 184 x 386; wider screens get side panels for free.
+  scale = Math.max(1, Math.floor(Math.min(vw / 184, vh / 386)));
   const W = Math.ceil(vw / scale), H = Math.ceil(vh / scale);
   if (W === canvas.width && H === canvas.height && renderer.W) return;
   canvas.width = W;
@@ -278,19 +278,53 @@ function onEvents(g) {
         break;
       case 'drop':
         audio.play('drop', e.id);
-        sparks(24, g.table.drops[e.id].ay + 5, 6, [C.cyan, '#fff']);
+        sparks(e.x, e.y, 6, [C.cyan, '#fff']);
         break;
       case 'dropsAll':
         audio.play('targets');
-        lightShow(1);
-        dmd({ text: 'TARGETS', sub: g.sector >= 2 ? 'LOCK IS LIT' : '25,000', big: true, hi: true });
+        lightShow(e.both ? 2 : 1);
+        if (e.both) flash(0.3, C.cyan);
+        dmd({ text: e.both ? 'DOUBLE BANK' : 'TARGETS', sub: e.both ? '75,000' : '25,000', big: !e.both, hi: true, urgent: e.both });
+        break;
+      case 'rampIn':
+        audio.play('rampIn');
+        break;
+      case 'ramp':
+        audio.play('ramp', e.n);
+        sparks(e.x, e.y, 16, [C.cyan, '#fff', C.gold], 120);
+        shock(e.x, e.y, C.cyan, 30, 0.4);
+        if (e.n > 1) lightShow(0.8);
+        dmd({ text: e.n > 1 ? `RAMP X${e.n}` : 'RAMP', sub: fmt(e.pts), big: true, hi: e.n > 1, urgent: e.n > 2 });
+        break;
+      case 'letter':
+        audio.play('letter', e.id);
+        sparks(e.x, e.y, 4, [C.gold, '#fff']);
+        break;
+      case 'letters':
+        audio.play('letters');
+        lightShow(2);
+        flash(0.4, C.gold);
+        shake(3);
+        dmd({ text: 'SUPERNOVA', sub: 'SPELLED! 75,000', big: true, burst: true, hi: true, urgent: true, dur: 2 });
+        alertSr('You spelled SUPERNOVA!');
+        break;
+      case 'moon':
+        audio.play('moon');
+        shock(e.x, e.y, '#c9d3ff', 14, 0.3);
+        sparks(e.x, e.y, 5, ['#fff', '#c9d3ff']);
+        break;
+      case 'rollover':
+        audio.play('rollover');
+        break;
+      case 'ballSearch':
+        dmd({ text: 'BALL SEARCH', dur: 0.8 });
         break;
       case 'dropReset':
         audio.play('dropReset');
         break;
       case 'lane':
         audio.play('lane', e.id);
-        sparks(55 + e.id * 18, 44, 5, [C.gold, '#fff']);
+        sparks(61 + e.id * 18, 44, 5, [C.gold, '#fff']);
         break;
       case 'lanesAll':
         audio.play('multiplier');

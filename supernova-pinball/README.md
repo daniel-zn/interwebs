@@ -9,7 +9,7 @@ meter fills, it goes **SUPERNOVA**: two extra balls, double scoring for 20
 seconds, slow motion, and the whole table lights up.
 
 **Stack:** vanilla JS + Canvas 2D · no runtime dependencies · no build step ·
-all sound and music synthesised with WebAudio · about 46 KB gzipped
+all sound and music synthesised with WebAudio · about 49 KB gzipped
 (`npm run size`).
 
 ## Play
@@ -36,14 +36,28 @@ Nudge too hard and the table **tilts**: dead flippers until the ball drains.
 
 ## The table
 
-- **Pop bumpers** (three planets), **slingshots**, a bank of three **drop
-  targets** (all three: big bonus), four **S T A R** top lanes (all four raise
-  the playfield multiplier up to ×5), a **spinner** in the left orbit (loop
-  all the way round for an ORBIT award) and the **wormhole** saucer.
+The table is mirror-symmetric, and packed:
+
+- **Twin lanes**: the right one is the shooter lane; extra balls launch
+  themselves from the left one.
+- **Twin orbits** with **spinners** (loop all the way round for an ORBIT
+  award), fed by **mini flippers** up in the corners.
+- **Crossing ramps**: a lit bridge over the bumpers. Each ride drops the ball
+  into the opposite orbit; ramps back to back multiply.
+- **Pop bumpers** (three planets), **slingshots** and inlane **rollover
+  stars**.
+- **Two drop target banks** (clear one for a bonus, both for a DOUBLE BANK).
+- Four **S T A R** top lanes (all four raise the playfield multiplier up to
+  ×5).
+- **S U P E R N O V A** rollover letters arching over the star: spell it for a
+  big award and a burst of mass.
+- The **dying star** itself, with **two moons** orbiting it, and **twin
+  wormhole** saucers.
 - **Combos**: major shots within 2.5 seconds of each other chain for growing
   bonuses.
-- **Ball save** for the first 6 seconds of each ball, plus an end-of-ball
-  **bonus count** on the dot-matrix display.
+- **Ball save** for the first 6 seconds of each ball, a **ball search** if the
+  ball ever gets stuck, and an end-of-ball **bonus count** on the dot-matrix
+  display.
 
 ## Sectors and what they unlock
 
@@ -74,7 +88,7 @@ wall). Walls are line segments, bumpers and posts are circles, and flippers
 are tapered capsules whose surface speed (ω × r) is added to the bounce, so a
 flip really throws the ball. Balls also bounce off each other in multiball.
 
-The pixel art is drawn at 176 × 304 and scaled by whole device pixels. A
+The pixel art is drawn at 176 × 344 and scaled by whole device pixels. A
 cheap **bloom** pass (the table shrunk to 1/4 and 1/8 size, then added back
 blurred) makes every lamp and wall glow like neon. The dot-matrix display
 above the table runs its own animations for jackpots, multiball, supernova,
@@ -104,7 +118,7 @@ npm run tune -- 16 30 0.6   # let the autopilot play 16 games (30 min cap) flipp
 ```
 
 The autopilot plays the attract mode. For tuning it can be made to miss
-flips like a person would. At 60%, most of its games end in sectors 1 to 4.
+flips like a person would. At 60%, most of its games end in sectors 1 to 5.
 
 URL flags for testing: `?seed=N`, `?sector=N` (start further in), `?fast`
 (3× speed), `?auto` (the autopilot plays your game), `?test` (exposes
