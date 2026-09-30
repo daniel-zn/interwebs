@@ -352,10 +352,6 @@ export class SoundEngine {
         for (let i = 0; i < 12; i++) this.tone(300 + i * 120, 0.05, { type: 'sawtooth', vol: 0.04, at: i * 0.03 });
         this.tone(1760, 1, { type: 'sine', vol: 0.05, vibrato: 30, at: 0.35 });
         break;
-      case 'loop':
-        this.tone(300, 0.6, { type: 'triangle', vol: 0.07, slide: 1500, vibrato: 12 });
-        [784, 988, 1175].forEach((f, i) => this.tone(f, 0.1, { vol: 0.06, at: 0.45 + i * 0.06 }));
-        break;
       case 'cannonLoad':
         this.tone(90, 0.25, { type: 'square', vol: 0.1, slide: 60 });
         this.tone(400, 0.6, { type: 'sine', vol: 0.06, slide: 1600, at: 0.1 });
@@ -376,14 +372,46 @@ export class SoundEngine {
         [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.14, { vol: 0.07, at: i * 0.06 }));
         this.bell(2093, 0.3, 0.07, 1);
         break;
-      case 'rail':
-        this.tone(200, 0.7, { type: 'sawtooth', vol: 0.05, slide: 1800 });
-        this.noise(0.6, { vol: 0.05, freq: 3000, slide: 6000 });
-        break;
       case 'bigBang':
         this.noise(1.6, { vol: 0.3, freq: 200, slide: 4000 });
         this.tone(40, 2, { type: 'sine', vol: 0.5, slide: 25 });
         [262, 330, 392, 523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.3, { type: 'sawtooth', vol: 0.05, at: 0.8 + i * 0.1 }));
+        break;
+      case 'binary':
+        this.tone(arg ? 660 : 990, 0.08, { type: 'square', vol: 0.06, slide: arg ? 330 : 1980 });
+        break;
+      case 'eclipse':
+        this.tone(220, 0.6, { type: 'sawtooth', vol: 0.06, slide: 110 });
+        [880, 1319, 1760].forEach((f, i) => this.tone(f, 0.15, { type: 'triangle', vol: 0.07, at: 0.1 + i * 0.07 }));
+        break;
+      case 'crack':
+        this.noise(0.05, { vol: 0.12, freq: 5000 });
+        this.tone(2400, 0.04, { type: 'triangle', vol: 0.05 });
+        break;
+      case 'shatter':
+        this.noise(0.25, { vol: 0.18, freq: 6000, slide: 2000 });
+        for (let i = 0; i < 4; i++) this.tone(2000 + Math.random() * 2000, 0.05, { type: 'triangle', vol: 0.04, at: i * 0.03 });
+        break;
+      case 'shower':
+        for (let i = 0; i < 14; i++) this.tone(3000 - i * 150, 0.07, { type: 'triangle', vol: 0.04, at: i * 0.04 });
+        this.noise(0.8, { vol: 0.12, freq: 1500, slide: 300, at: 0.3 });
+        break;
+      case 'giant':
+        this.tone(70 + Math.min(80, arg / 8), 0.35, { type: 'sine', vol: 0.3, vibrato: 18, slide: 50 });
+        break;
+      case 'quasar':
+        [1047, 1319, 1568, 2093].forEach((f, i) => this.tone(f * (1 + Math.min(7, arg - 1) * 0.06), 0.1, { type: 'square', vol: 0.05, at: i * 0.04 }));
+        this.bell(3136, 0.15, 0.05, 0.6);
+        break;
+      case 'blink':
+        this.tone(1800, 0.1, { type: 'sine', vol: 0.04, slide: 600 });
+        break;
+      case 'bob':
+        this.tone(330 + Math.min(300, arg / 2), 0.12, { type: 'triangle', vol: 0.08 });
+        this.bell(990, 0, 0.03, 0.4);
+        break;
+      case 'fullSwing':
+        for (let i = 0; i < 8; i++) this.tone(440 * 2 ** (i / 6), 0.08, { type: 'triangle', vol: 0.06, at: i * 0.05 });
         break;
       case 'asteroid':
         this.noise(0.18, { vol: 0.2, freq: 900, slide: 200 });

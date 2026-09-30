@@ -184,6 +184,33 @@ export function stepBall(b, table, dt, gravity, hit) {
     }
   }
 
+  // The gravity bob: a pendulum that only swings along its arc.
+  const pb = table.pendulum;
+  if (pb) {
+    const bx = pb.x + Math.sin(pb.a) * pb.len, by = pb.y + Math.cos(pb.a) * pb.len;
+    const dx = b.x - bx, dy = b.y - by;
+    const rr = BALL_R + pb.r;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < rr * rr) {
+      const d = Math.sqrt(d2) || 1e-6;
+      const nx = dx / d, ny = dy / d;
+      b.x = bx + nx * rr;
+      b.y = by + ny * rr;
+      // Its velocity is along the arc's tangent.
+      const tx = Math.cos(pb.a), ty = -Math.sin(pb.a);
+      const sp = pb.w * pb.len;
+      const vn = (b.vx - tx * sp) * nx + (b.vy - ty * sp) * ny;
+      if (vn < 0) {
+        const tn = tx * nx + ty * ny;
+        const j = (-(1 + 0.6) * vn) / (1 + tn * tn * 0.35);
+        b.vx += j * nx;
+        b.vy += j * ny;
+        pb.w -= (j * tn * 0.35) / pb.len;
+        if (-vn > 40) hit('bob', pb, -vn, b);
+      }
+    }
+  }
+
   // Flippers.
   for (const f of table.flippers) {
     const vIn = capsule(b, f.px, f.py, f.angle, f.len, f.r0, f.r1, f.omega, FLIP.e);
@@ -239,6 +266,20 @@ export function stepCaptive(cb, dt, gravity, hit) {
     cb.y = CAPTIVE.rest;
     cb.vy = cb.vy > 30 ? -cb.vy * 0.2 : 0;
   }
+}
+
+/** Swings the pendulum; returns true when it goes right over the top. */
+export function stepPendulum(pb, dt, gravity) {
+  pb.w += (-(gravity * 0.6) / pb.len) * Math.sin(pb.a) * dt;
+  pb.w *= 1 - 0.9 * dt;
+  const before = pb.a;
+  pb.a += pb.w * dt;
+  // Over the top: count it and wrap round.
+  if (Math.abs(pb.a) > Math.PI) {
+    pb.a -= Math.sign(pb.a) * Math.PI * 2;
+    return Math.abs(before) <= Math.PI;
+  }
+  return false;
 }
 
 /** Balls bounce off each other (multiball). */

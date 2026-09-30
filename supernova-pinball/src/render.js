@@ -6,7 +6,7 @@
 import { FINAL_SECTOR, MULTS, UNLOCKS, UPGRADE_BY_ID, sectorFor } from './data.js';
 import { drawText, measureText, wrap } from './font.js';
 import {
-  ARC, BALL_R, CANNON, CAPTIVE, CX, LANE_XS, LETTERS, LOOP, PLUNGER, SAUCER, SHOTS, STAR, TH, TW, VORTEX, WHITE_HOLE, m, rampPoint,
+  ARC, BALL_R, BINARY, CANNON, CAPTIVE, CX, LANE_XS, LETTERS, PLUNGER, SAUCER, SHOTS, STAR, TH, TW, VORTEX, WHITE_HOLE, m, rampPoint,
 } from './table.js';
 
 export const DMD_W = 96, DMD_H = 16; // dots
@@ -623,6 +623,90 @@ export class Renderer {
       ctx.restore();
     }
 
+    // Binary stars: two small suns tied by a glowing orbit.
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = C.gold;
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.ellipse(BINARY.x, BINARY.y, BINARY.r, BINARY.r * 0.8, 0, 0, TAU);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    tb.binaries.forEach((bs, i) => {
+      const f = bs.flash > 0;
+      glow(ctx, bs.x, bs.y, 9, i ? '#ff6b4a' : C.cyan, f ? 0.8 : 0.45);
+      disc(ctx, bs.x, bs.y, bs.r + 0.7, C.ink);
+      sphere(ctx, bs.x, bs.y, bs.r, '#fff', f ? '#fff' : i ? '#ff9b2f' : C.cyan, i ? '#a3122f' : '#1c5bd9');
+    });
+    // Meteors: crystals that crack, then vanish.
+    for (const q of tb.meteors) {
+      if (q.off) continue;
+      const f = q.flash > 0;
+      ctx.save();
+      ctx.translate(q.x, q.y);
+      ctx.rotate(q.id * 0.7 + t * 0.3);
+      ctx.fillStyle = f ? '#fff' : q.hits ? '#ff9b2f' : '#b35cff';
+      ctx.strokeStyle = C.ink;
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * TAU;
+        const r = q.r + 0.6 + (i % 2) * 0.5;
+        if (i) ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        else ctx.moveTo(r, 0);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      if (q.hits) line(ctx, -q.r, -0.5, q.r * 0.8, 1.2, '#fff', 0.5);
+      disc(ctx, -0.8, -0.9, 0.7, 'rgba(255,255,255,0.8)');
+      ctx.restore();
+    }
+    // The gas giant: striped, and it wobbles like jelly when hit.
+    {
+      const gi = tb.giant;
+      const wob = v.reducedMotion ? 0 : gi.wobble * Math.sin(t * 40) * 0.12;
+      ctx.save();
+      ctx.translate(gi.x, gi.y);
+      ctx.scale(1 + wob, 1 - wob);
+      disc(ctx, 0, 0, gi.r + 0.8, C.ink);
+      sphere(ctx, 0, 0, gi.r, '#fff3e0', gi.wobble > 0.7 ? '#fff' : '#ff9b6a', '#8a3a1a');
+      ctx.globalAlpha = 0.45;
+      for (const [yy, w] of [[-4, 1.2], [-1, 1.8], [2.5, 1.3], [5, 0.9]]) {
+        const hw = Math.sqrt(Math.max(0, gi.r * gi.r - yy * yy));
+        line(ctx, -hw + 1, yy, hw - 1, yy + 0.4, '#c4541b', w);
+      }
+      ctx.globalAlpha = 1;
+      disc(ctx, 3, 2.5, 1.4, '#a3122f');
+      ctx.restore();
+    }
+    // The quasar: a pulsing core with jets out of both poles.
+    {
+      const q = tb.quasar;
+      const p = 0.7 + Math.sin(t * 8) * 0.3;
+      glow(ctx, q.x, q.y, 10, C.pink, 0.5 * p);
+      line(ctx, q.x, q.y - 9 * p, q.x, q.y + 9 * p, 'rgba(255,90,209,0.7)', 1.2);
+      line(ctx, q.x, q.y - 12 * p, q.x, q.y + 12 * p, 'rgba(255,255,255,0.5)', 0.5);
+      disc(ctx, q.x, q.y, q.r + 0.7, C.ink);
+      sphere(ctx, q.x, q.y, q.r, '#fff', C.pink, '#5a1f9e');
+      if (q.value > 1) drawText(ctx, `${q.value}`, Math.round(q.x + 4), Math.round(q.y - 9), C.gold);
+      // A countdown ring before it blinks away.
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, q.r + 2, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - q.t / 7));
+      ctx.stroke();
+    }
+    // The gravity bob: a rod and a heavy chrome ball.
+    {
+      const pb = tb.pendulum;
+      const bx = pb.x + Math.sin(pb.a) * pb.len, by = pb.y + Math.cos(pb.a) * pb.len;
+      line(ctx, pb.x, pb.y, bx, by, '#8a93b8', 1.2);
+      sphere(ctx, pb.x, pb.y, 2, '#fff', '#8a93b8', '#2a2440');
+      if (pb.flash > 0) glow(ctx, bx, by, 10, pal.glow, 0.7);
+      disc(ctx, bx, by, pb.r + 0.7, C.ink);
+      sphere(ctx, bx, by, pb.r, '#fff', pb.flash > 0 ? '#fff' : pal.b, '#2a2440');
+    }
+
     // Bumpers: a skirt ring, then a planet cap.
     tb.bumpers.forEach((b, i) => {
       const f = b.flash > 0;
@@ -785,17 +869,8 @@ export class Renderer {
     const t = v.time;
     for (const r of g.table.ramps) {
       const pts = r.path;
-      const rails = this.rails[r.id] || (this.rails[r.id] = [offsetPath(pts, -4), offsetPath(pts, 4), offsetPath(pts, -1.6), offsetPath(pts, 1.6)]);
-      if (r.kind === 'rail') {
-        // A wire habitrail: two thin rods.
-        ctx.globalAlpha = 0.35;
-        poly(ctx, pts.map(([x, y]) => [x + 2, y + 3]), '#000', 3);
-        ctx.globalAlpha = 0.9;
-        poly(ctx, rails[2], '#c9d3ff', 0.7);
-        poly(ctx, rails[3], '#c9d3ff', 0.7);
-        ctx.globalAlpha = 1;
-        for (let i = 6; i < pts.length - 4; i += 10) line(ctx, rails[2][i][0], rails[2][i][1], rails[3][i][0], rails[3][i][1], '#8a93b8', 0.5);
-      } else {
+      const rails = this.rails[r.id] || (this.rails[r.id] = [offsetPath(pts, -4), offsetPath(pts, 4)]);
+      {
         // Shadow, a tinted plastic body, then chrome rails and struts.
         ctx.globalAlpha = 0.3;
         poly(ctx, pts.map(([x, y]) => [x + 2.5, y + 4]), '#000', 9);
@@ -811,7 +886,7 @@ export class Renderer {
         poly(ctx, rails[1], pal.glow, 1);
         // Chasing lights.
         const n = Math.round(r.len / 14);
-        const hot = g.rampRun > 1 || (g.mission && g.mission.lit.has(r.kind === 'loop' ? 'loop' : r.id ? 'rramp' : 'lramp'));
+        const hot = g.rampRun > 1 || (g.mission && g.mission.lit.has(r.id ? 'rramp' : 'lramp'));
         for (let i = 0; i < n; i++) {
           const k = (i / n + t * (hot ? 0.5 : 0.15)) % 1;
           const p = rampPoint(r, k);
@@ -819,8 +894,6 @@ export class Renderer {
         }
       }
     }
-    // Loop label.
-    cText(ctx, 'LOOP', LOOP.x + 1, LOOP.y - 2, '#6a5a8a');
     // Balls on the ramps ride high: bigger, with a shadow on the playfield.
     for (const b of g.balls) {
       if (b.held !== 'ramp' && b.held !== 'cannon') continue;
@@ -923,8 +996,8 @@ export class Renderer {
     // Multipliers.
     MULTS.slice(1).forEach((mm, i) => {
       const x = CX - 20 + i * 14;
-      lamp(x, 362, 11, 8, g.mult >= mm, C.gold, i + 4);
-      drawText(ctx, `${mm}X`, x + 0.5, 363.5, g.mult >= mm ? C.ink : '#3a3055');
+      lamp(x, 398, 11, 8, g.mult >= mm, C.gold, i + 4);
+      drawText(ctx, `${mm}X`, x + 0.5, 399.5, g.mult >= mm ? C.ink : '#3a3055');
     });
     // Mass ring round the star: how close it is to going nova.
     const n = 20;
@@ -962,8 +1035,8 @@ export class Renderer {
     }
     // Shoot again (ball save).
     const save = g.ballSaveT > 0 && (g.ballSaveT > 2 || Math.floor(t * 8) % 2);
-    lamp(CX - 13, 398, 26, 7, save, C.green, 15);
-    if (save) drawText(ctx, 'SAVE', CX - 11, 399, C.ink);
+    lamp(CX - 13, 412, 26, 7, save, C.green, 15);
+    if (save) drawText(ctx, 'SAVE', CX - 11, 413, C.ink);
     // Outlane saves.
     if (g.upgrades.includes('kickback')) lamp(21, 392, 4, 5, !g.kickbackUsed, C.green, 16);
     if (g.upgrades.includes('magna')) lamp(m(25), 392, 4, 5, !g.magnaUsed, C.green, 17);

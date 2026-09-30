@@ -436,12 +436,6 @@ function onEvents(g) {
       case 'overdriveEnd':
         dmd({ text: 'OVERDRIVE OVER', dur: 1 });
         break;
-      case 'loop':
-        audio.play('loop');
-        sparks(e.x, e.y, 20, [C.pink, '#fff', C.cyan], 120);
-        shock(e.x, e.y, C.pink, 30, 0.4);
-        dmd({ text: 'HYPERLOOP', sub: fmt(e.pts), big: true, hi: true, urgent: true });
-        break;
       case 'cannonLoad':
         audio.play('cannonLoad');
         dmd({ text: 'CANNON LOADED', sub: touchFirst ? 'TAP TO FIRE' : 'FLIP TO FIRE', hi: true, urgent: true, dur: 1.6 });
@@ -473,12 +467,6 @@ function onEvents(g) {
         flash(0.25, C.gold);
         alertSr(`Mystery award: ${e.name.toLowerCase()}.`);
         break;
-      case 'railIn':
-        audio.play('rail');
-        break;
-      case 'railEnd':
-        sparks(e.x, e.y, 8, ['#fff', C.cyan]);
-        break;
       case 'bigBang':
         audio.play('bigBang');
         flash(1, '#fff');
@@ -494,6 +482,58 @@ function onEvents(g) {
         audio.play('novaEnd');
         v.lightShow = 0;
         dmd({ text: 'BIG BANG OVER', sub: `${e.n} SHOTS`, dur: 2, urgent: true });
+        break;
+      case 'binary':
+        audio.play('binary', e.id);
+        shock(e.x, e.y, e.id ? C.orange : C.cyan, 12, 0.25);
+        sparks(e.x, e.y, 5, [e.id ? C.orange : C.cyan, '#fff']);
+        break;
+      case 'eclipse':
+        audio.play('eclipse');
+        flash(0.3, C.gold);
+        shock(e.x, e.y, C.gold, 40, 0.5);
+        dmd({ text: 'ECLIPSE', sub: fmt(e.pts), big: true, hi: true, urgent: true });
+        break;
+      case 'crack':
+        audio.play('crack');
+        sparks(e.x, e.y, 5, ['#b35cff', '#fff']);
+        break;
+      case 'shatter':
+        audio.play('shatter');
+        sparks(e.x, e.y, 16, ['#b35cff', '#fff', C.orange], 130);
+        shake(1);
+        break;
+      case 'shower':
+        audio.play('shower');
+        lightShow(1.5);
+        flash(0.3, '#b35cff');
+        for (let k = 0; k < 12; k++) setTimeout(() => sparks(40 + Math.random() * 160, 10, 6, ['#b35cff', '#fff', C.orange], 60), k * 60);
+        dmd({ text: 'METEOR SHOWER', sub: fmt(e.pts), big: true, burst: true, hi: true, urgent: true });
+        break;
+      case 'meteorsBack':
+        audio.play('dropReset');
+        break;
+      case 'giant':
+        audio.play('giant', e.strength);
+        shock(e.x, e.y, '#ff9b6a', 16, 0.3);
+        break;
+      case 'quasar':
+        audio.play('quasar', e.n);
+        sparks(e.x, e.y, 18, [C.pink, '#fff', '#b35cff'], 140);
+        shock(e.x, e.y, C.pink, 26, 0.4);
+        dmd({ text: e.n > 1 ? `QUASAR X${e.n}` : 'QUASAR', sub: fmt(e.pts), big: true, hi: true });
+        break;
+      case 'quasarMove':
+        audio.play('blink');
+        shock(e.x, e.y, C.pink, 12, 0.3);
+        break;
+      case 'bob':
+        audio.play('bob', e.strength);
+        break;
+      case 'fullSwing':
+        audio.play('fullSwing');
+        flash(0.25, C.cyan);
+        dmd({ text: 'FULL SWING', sub: fmt(e.pts), big: true, hi: true, urgent: true });
         break;
       case 'moon':
         audio.play('moon');
