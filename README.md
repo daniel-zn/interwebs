@@ -55,9 +55,10 @@ to make sure none of it creeps back.
 the Dynamic Island and its toolbars, outside the area a game's canvas fills.
 Each game's `src/bleed.js` samples the colours along the canvas's top and
 bottom edges a few times a second and paints them into strips just past the
-top and bottom of the screen, and sets the page background and `theme-color`
-to match, so the game's backdrop carries on behind them however Safari draws
-its bars. `npm run check` makes sure every game with a canvas does this.
+top and bottom of the screen, and sets the page background to match, so the
+game's backdrop carries on behind them. No page sets `theme-color`, so Safari's
+bars stay see-through instead of solid; the home page's own background runs
+behind them as you scroll. `npm run check` makes sure every game with a canvas does this.
 
 Dev-only files and folders are not published: `node_modules`, `tests`,
 `test-results`, `scripts`, `tools`, `package.json`, `package-lock.json`,
