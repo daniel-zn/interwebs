@@ -1,8 +1,9 @@
 // Edge to edge on phones. iPhones show the page behind the status bar and
 // Safari's toolbars, outside the area the game's canvas fills. This paints
 // strips just above and below the screen with the colours along the canvas's
-// top and bottom edges, and keeps the page and theme colours in step, so the
-// game's backdrop carries on behind them.
+// top and bottom edges, and keeps the page colour in step, so the game's
+// backdrop carries on behind them. There's no theme-color, so Safari's bars
+// stay see-through.
 const COLS = 32;
 
 export function bleed(source) {
@@ -16,7 +17,6 @@ export function bleed(source) {
     return c.getContext('2d', { willReadFrequently: true });
   };
   const top = strip('bleed-top'), bottom = strip('bleed-bottom');
-  const meta = document.querySelector('meta[name="theme-color"]');
   const root = document.documentElement;
   const average = (g) => {
     const d = g.getImageData(0, 0, COLS, 1).data;
@@ -45,7 +45,6 @@ export function bleed(source) {
     lastBottom = b;
     root.style.backgroundColor = t;
     root.style.backgroundImage = `linear-gradient(${t} 50%, ${b} 50%)`;
-    if (meta) meta.content = t;
   }
   requestAnimationFrame(tick);
 }

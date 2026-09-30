@@ -264,9 +264,21 @@ const watch = (page) => {
 // iPhones show the page behind the status bar and Safari's toolbars, outside
 // the area a game's canvas fills. Each game's bleed.js paints strips just
 // past the top and bottom of the screen in its canvas's edge colours, and
-// keeps the page background and theme colour in step with them.
+// keeps the page background in step with them. No theme-color, so Safari's
+// bars stay see-through instead of solid.
 {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  {
+    // The home page: its own background runs behind the bars as it scrolls.
+    const page = await ctx.newPage();
+    await page.goto(`${base}/`);
+    const home = await page.evaluate(() => ({
+      theme: !!document.querySelector('meta[name="theme-color"]'),
+      html: getComputedStyle(document.documentElement).backgroundImage + getComputedStyle(document.documentElement).backgroundColor,
+    }));
+    check(!home.theme && home.html === 'nonergba(0, 0, 0, 0)', 'home page: Safari\'s bars stay see-through over the page\'s own background', JSON.stringify(home));
+    await page.close();
+  }
   for (const p of await findProjects()) {
     const page = await ctx.newPage();
     await page.goto(`${base}/${p.slug}/`);
@@ -284,16 +296,15 @@ const watch = (page) => {
       g.width = 1;
       g.height = 1;
       g.getContext('2d').drawImage(game, game.width >> 1, 0, 1, 1, 0, 0, 1, 1);
-      const theme = document.querySelector('meta[name="theme-color"]');
       return {
         outside: top.getBoundingClientRect().bottom <= 0 && bottom.getBoundingClientRect().top >= innerHeight && top.getBoundingClientRect().height > 100,
         painted: rgb(top) !== '0,0,0' || rgb(g) === '0,0,0',
         root: getComputedStyle(document.documentElement).backgroundImage.includes('gradient'),
-        theme: theme && theme.content.startsWith('#'),
+        seeThrough: !document.querySelector('meta[name="theme-color"]'),
       };
     });
     check(r && r.outside && r.painted, `${p.slug}: the backdrop carries on past the top and bottom of the screen`, JSON.stringify(r));
-    check(r && r.root && r.theme, `${p.slug}: page and theme colours follow the game's edges`, JSON.stringify(r));
+    check(r && r.root && r.seeThrough, `${p.slug}: the page colour follows the game's edges, and Safari's bars stay see-through`, JSON.stringify(r));
     await page.close();
   }
   await ctx.close();
