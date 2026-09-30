@@ -6,7 +6,7 @@ import {
 } from './data.js';
 import { SUBSTEPS, collideBalls, makeBall, stepBall, stepCaptive, stepFlippers } from './physics.js';
 import {
-  BALL_R, CX, DRAIN_Y, LANE_X, LEFT_PLUNGER, PLUNGER, SHOTS, STAR, WHITE_HOLE, buildTable, rampPoint,
+  BALL_R, CANNON, CX, DRAIN_Y, LANE_X, LEFT_PLUNGER, PLUNGER, SAUCER, SHOTS, STAR, WHITE_HOLE, buildTable, rampPoint,
 } from './table.js';
 
 // Missions: started at the wormhole once the I O N targets light one.
@@ -15,7 +15,15 @@ export const MISSIONS = [
   { id: 'orbits', name: 'ORBIT RUN', desc: 'SHOOT THE ORBITS', time: 40, need: 4, shots: ['lorbit', 'rorbit'] },
   { id: 'hyper', name: 'HYPERDRIVE', desc: 'SHOOT THE RAMPS', time: 40, need: 4, shots: ['lramp', 'rramp'] },
   { id: 'forge', name: 'STAR FORGE', desc: 'HIT THE STAR', time: 30, need: 8, shots: ['star'] },
-  { id: 'sweep', name: 'SOLAR SWEEP', desc: 'HIT EVERY SHOT', time: 60, need: 7, shots: SHOTS.map((q) => q.id) },
+  { id: 'sweep', name: 'SOLAR SWEEP', desc: 'HIT EVERY SHOT', time: 60, need: SHOTS.length, shots: SHOTS.map((q) => q.id) },
+];
+// The wizard mode, after every fifth mission.
+export const BIG_BANG = { id: 'bigbang', name: 'BIG BANG', desc: 'EVERYTHING IS LIT', time: 40, need: Infinity, shots: SHOTS.map((q) => q.id) };
+
+// The mystery saucer's awards, with how often each comes up.
+export const MYSTERY = [
+  ['BIG POINTS', 5], ['LIGHT LOCK', 3], ['EXTRA BALL', 1], ['MULTIPLIER', 3], ['SUPER SPINNER', 3], ['SUPER JETS', 3],
+  ['BALL SAVE', 3], ['STAR MASS', 3], ['MISSION', 3], ['LETTERS', 3],
 ];
 
 export const DT = 1 / 60;
@@ -48,6 +56,7 @@ export function createGame({ seed = 1, sector = 1, demo = false, relaxed = false
     orbit: { t: -9 },
     mission: null, missionLit: true, missionsDone: 0, missionNext: 0, extraBallLit: false,
     skillLane: -1, skillT: 0,
+    cannon: null, snipeT: 0, superSpinT: 0, superJetT: 0, mystery: null, overdriveT: 0,
     plunger: 0, launchHeld: false,
     bonus: { bumpers: 0, drops: 0, lanes: 0, stars: 0, spins: 0, missions: 0 },
     bonusCount: null,
@@ -82,9 +91,12 @@ function startSector(g, n, first = false) {
   g.unlock = first ? null : s.unlock || null;
   // Moving targets.
   if (n >= 3) g.table.comet = { a: 0, x: CX, y: 60, r: 4, cool: 3, vx: 0, vy: 0 };
-  if (n >= 4) g.table.hole = { x: CX, y: 186, a: 0, catchT: 0 };
+  if (n >= 4) g.table.hole = { x: CX, y: 240, a: 0, catchT: 0 };
   g.mission = null;
   g.missionLit = true;
+  g.cannon = null;
+  g.mystery = null;
+  g.superSpinT = g.superJetT = g.overdriveT = 0;
   if (n >= 5) spawnShip(g);
   g.balls = [];
   serveBall(g);
@@ -98,7 +110,7 @@ function applyUpgradesToTable(g) {
 
 function spawnShip(g) {
   const hp = 6 + g.sector * 2;
-  g.table.ship = { x: CX, y: 172, r: 10, hp, maxHp: hp, dir: 1, hitT: 0, dead: 0 };
+  g.table.ship = { x: CX, y: 178, r: 10, hp, maxHp: hp, dir: 1, hitT: 0, dead: 0 };
 }
 
 /** Puts a fresh ball on the plunger. */
@@ -153,6 +165,12 @@ function award(g, base, x, y, label = null) {
 /** Major shots build combos and count for missions. */
 function shot(g, name, x, y) {
   missionShot(g, name, x, y);
+  if (g.snipeT > 0) {
+    // Straight from the plasma cannon.
+    g.snipeT = 0;
+    const pts = award(g, 50000 * g.sector, x, y - 24, 'CANNON SNIPE');
+    emit(g, 'snipe', { pts, x, y });
+  }
   addMass(g, 4);
   const window = has(g, 'combo_king') ? 3.5 : 2.5;
   if (g.comboT > 0) g.combo++;
@@ -166,6 +184,15 @@ function shot(g, name, x, y) {
 }
 
 // ---------------------------------------------------------------- missions
+function startBigBang(g) {
+  g.mission = { def: BIG_BANG, t: BIG_BANG.time, n: 0, lit: new Set(BIG_BANG.shots) };
+  g.missionLit = false;
+  for (let i = 0; i < 3; i++) addBall(g);
+  g.ballSaveT = Math.max(g.ballSaveT, 15);
+  addMass(g, 40);
+  emit(g, 'bigBang');
+}
+
 function startMission(g) {
   const def = MISSIONS[g.missionNext % MISSIONS.length];
   g.missionNext++;
@@ -181,6 +208,11 @@ function missionShot(g, id, x, y) {
   if (!ms || !ms.lit.has(id)) return;
   ms.n++;
   const f = g.sector;
+  if (ms.def.id === 'bigbang') {
+    const pts = award(g, 250000 * f, x, y - 16, 'BIG BANG');
+    emit(g, 'missionHit', { n: ms.n, need: 0, pts, x, y });
+    return;
+  }
   const pts = award(g, 20000 * f * ms.n, x, y - 16, `${ms.def.name.split(' ')[0]} ${ms.n}/${ms.def.need}`);
   emit(g, 'missionHit', { n: ms.n, need: ms.def.need, pts, x, y });
   if (ms.def.id === 'chase') {
@@ -196,6 +228,7 @@ function missionShot(g, id, x, y) {
     g.mission = null;
     if (g.missionsDone % 3 === 0) g.extraBallLit = true;
     emit(g, 'missionDone', { name: ms.def.name, pts: bonus, extra: g.missionsDone % 3 === 0 });
+    if (g.missionsDone % MISSIONS.length === 0) startBigBang(g);
   }
 }
 
@@ -205,7 +238,10 @@ function stepMission(g) {
   ms.t -= DT;
   if (ms.t <= 0) {
     g.mission = null;
-    emit(g, 'missionFail', { name: ms.def.name });
+    if (ms.def.id === 'bigbang') {
+      g.missionLit = true;
+      emit(g, 'bigBangEnd', { n: ms.n });
+    } else emit(g, 'missionFail', { name: ms.def.name });
   }
 }
 
@@ -233,7 +269,7 @@ function onHit(g, kind, obj, strength, ball) {
   g.src = kind;
   switch (kind) {
     case 'bumper': {
-      const mega = has(g, 'mega_bumpers') ? 3 : 1;
+      const mega = (has(g, 'mega_bumpers') ? 3 : 1) * (g.superJetT > 0 ? 5 : 1);
       award(g, POINTS.bumper * mega, obj.x, obj.y - 12);
       obj.flash = 0.18;
       g.bonus.bumpers++;
@@ -359,7 +395,7 @@ function onHit(g, kind, obj, strength, ball) {
         break;
       }
       const spins = Math.max(1, Math.round(strength / 90));
-      award(g, POINTS.spin * spins * (has(g, 'gold_spinner') ? 8 : 1), (obj.x0 + obj.x1) / 2, obj.y - 8);
+      award(g, POINTS.spin * spins * (has(g, 'gold_spinner') ? 8 : 1) * (g.superSpinT > 0 ? 10 : 1), (obj.x0 + obj.x1) / 2, obj.y - 8);
       g.bonus.spins += spins;
       obj.spin = Math.min(3, (obj.spin || 0) + spins * 0.25);
       emit(g, 'spinner', { spins, id: obj.id });
@@ -384,7 +420,7 @@ function onHit(g, kind, obj, strength, ball) {
       break;
     }
     case 'ramp': {
-      if (strength < 180 || ball.held) break;
+      if (strength < 180 || ball.held || g.tilted) break;
       ball.held = 'ramp';
       ball.ramp = obj.id;
       ball.rampK = 0;
@@ -409,6 +445,24 @@ function onHit(g, kind, obj, strength, ball) {
       }
       break;
     }
+    case 'rotor': {
+      if (g.t - (obj.lastT || -9) < 0.2) break;
+      obj.lastT = g.t;
+      obj.flash = 0.2;
+      obj.hits++;
+      award(g, 1000 * (g.overdriveT > 0 ? 5 : 1), obj.x, obj.y - 12);
+      addMass(g, 0.5);
+      emit(g, 'rotor', { x: ball.x, y: ball.y });
+      if (obj.hits % 10 === 0 && g.overdriveT <= 0) {
+        g.overdriveT = 15;
+        award(g, 30000 * g.sector, obj.x, obj.y - 20, 'PULSAR OVERDRIVE');
+        emit(g, 'overdrive');
+      }
+      break;
+    }
+    case 'cannon':
+      if (strength > 80) emit(g, 'rubber', { strength });
+      break;
     case 'asteroid': {
       if (obj.off) break;
       obj.off = true;
@@ -416,8 +470,8 @@ function onHit(g, kind, obj, strength, ball) {
       addMass(g, 1);
       emit(g, 'asteroid', { x: obj.x, y: obj.y });
       if (t.asteroids.every((q) => q.off)) {
-        const pts = award(g, 15000 * g.sector, CX, 262, 'BELT CLEARED');
-        shot(g, 'belt', CX, 272);
+        const pts = award(g, 15000 * g.sector, CX, 322, 'BELT CLEARED');
+        shot(g, 'belt', CX, 332);
         g.beltT = 6;
         emit(g, 'belt', { pts });
       }
@@ -492,7 +546,7 @@ function updateMovers(g) {
       if (c.cool <= 0) cc.off = false;
     }
     c.a += DT * 0.9;
-    const nx = CX + Math.cos(c.a) * 52, ny = 150 + Math.sin(c.a * 2) * 10;
+    const nx = CX + Math.cos(c.a) * 64, ny = 176 + Math.sin(c.a * 2) * 10;
     cc.vx = (nx - cc.x) / DT;
     cc.vy = (ny - cc.y) / DT;
     cc.x = c.x = nx;
@@ -513,8 +567,8 @@ function updateMovers(g) {
       }
     } else {
       s.x += s.dir * 22 * DT;
-      if (s.x > 136) s.dir = -1;
-      if (s.x < 64) s.dir = 1;
+      if (s.x > 168) s.dir = -1;
+      if (s.x < 72) s.dir = 1;
       t.shipCircle.x = s.x;
       t.shipCircle.y = s.y + Math.sin(g.t * 2) * 2;
       t.shipCircle.vx = s.dir * 22;
@@ -524,8 +578,8 @@ function updateMovers(g) {
   const h = t.hole;
   if (h) {
     h.a += DT * 0.35;
-    h.x = CX + Math.cos(h.a) * 36;
-    h.y = 188 + Math.sin(h.a * 1.7) * 8;
+    h.x = CX + Math.cos(h.a) * 40;
+    h.y = 240 + Math.sin(h.a * 1.7) * 6;
   }
   if (t.dropReset > 0) {
     t.dropReset -= DT;
@@ -539,7 +593,7 @@ function updateMovers(g) {
   for (const r of t.rollovers) r.flash = Math.max(0, (r.flash || 0) - DT);
   // The asteroids drift; a cleared belt comes back after a while.
   for (const a of t.asteroids) {
-    const nx = CX + Math.sin(g.t * 0.5 + a.id * 2.1) * 40, ny = 274 + Math.sin(g.t * 1.3 + a.id * 1.7) * 6;
+    const nx = CX + Math.sin(g.t * 0.5 + a.id * 2.1) * 30, ny = 334 + Math.sin(g.t * 1.3 + a.id * 1.7) * 5;
     a.vx = (nx - a.x) / DT;
     a.vy = (ny - a.y) / DT;
     a.x = nx;
@@ -552,7 +606,7 @@ function updateMovers(g) {
   // The moons orbit the star.
   for (const mo of t.moons) {
     mo.a += DT * 1.1;
-    const nx = STAR.x + Math.cos(mo.a) * 22, ny = STAR.y + Math.sin(mo.a) * 17;
+    const nx = STAR.x + Math.cos(mo.a) * 26, ny = STAR.y + Math.sin(mo.a) * 20;
     mo.vx = (nx - mo.x) / DT;
     mo.vy = (ny - mo.y) / DT;
     mo.x = nx;
@@ -565,7 +619,7 @@ function updateMovers(g) {
   // The center post comes and goes.
   const post = t.circles.find((q) => q.kind === 'centerpost');
   if (g.postT > 0) {
-    if (!post) t.circles.push({ x: CX, y: 380, r: 2.5, kind: 'centerpost', e: 0.5 });
+    if (!post) t.circles.push({ x: CX, y: 470, r: 2.5, kind: 'centerpost', e: 0.5 });
   } else if (post) t.circles.splice(t.circles.indexOf(post), 1);
 }
 
@@ -593,8 +647,9 @@ export function step(g, input) {
     return;
   }
 
-  // Flippers (dead while tilted).
+  // Flippers (dead while tilted). A fresh flip also fires the cannon.
   const L = !!input.left && !g.tilted, R = !!input.right && !g.tilted;
+  stepCannon(g, (L && !t.flippers[0].held) || (R && !t.flippers[1].held));
   if (L && !t.flippers[0].held) {
     emit(g, 'flip', { side: 'left' });
     g.lanes.push(g.lanes.shift()); // lane change
@@ -633,7 +688,7 @@ export function step(g, input) {
 
   // A ball resting in the left lane is fired straight back out.
   for (const b of g.balls) {
-    if (b.x < 16 && b.y > LEFT_PLUNGER.y - 8 && Math.abs(b.vy) < 30 && !b.held) {
+    if (b.x < 17 && b.y > LEFT_PLUNGER.y - 8 && Math.abs(b.vy) < 30 && !b.held) {
       b.vy = -900;
       emit(g, 'launch', { power: 1, auto: true });
     }
@@ -664,6 +719,7 @@ export function step(g, input) {
   const dt = DT / SUBSTEPS;
   for (let s = 0; s < SUBSTEPS; s++) {
     stepFlippers(t.flippers, dt);
+    for (const r of t.rotors) r.a += r.omega * dt;
     for (const b of g.balls) stepBall(b, t, dt, gravity, hit);
     stepCaptive(t.captive, dt, gravity, hit);
     if (g.balls.length > 1) collideBalls(g.balls);
@@ -672,7 +728,7 @@ export function step(g, input) {
 
   // Ball search: a ball that has stopped dead somewhere gets kicked loose.
   for (const b of g.balls) {
-    const onPlunger = (b.x > LANE_X || b.x < 16) && b.y > PLUNGER.y - 8;
+    const onPlunger = (b.x > LANE_X || b.x < 17) && b.y > PLUNGER.y - 8;
     if (b.held || onPlunger || Math.hypot(b.vx, b.vy) > 8) {
       b.still = 0;
       continue;
@@ -695,6 +751,17 @@ export function step(g, input) {
   g.postT = Math.max(0, (g.postT || 0) - DT);
   g.comboT = Math.max(0, g.comboT - DT);
   g.skillT = Math.max(0, g.skillT - DT);
+  g.snipeT = Math.max(0, g.snipeT - DT);
+  g.superSpinT = Math.max(0, g.superSpinT - DT);
+  g.superJetT = Math.max(0, g.superJetT - DT);
+  if (g.overdriveT > 0) {
+    g.overdriveT -= DT;
+    if (g.overdriveT <= 0) emit(g, 'overdriveEnd');
+  }
+  for (const r of t.rotors) {
+    r.omega = g.overdriveT > 0 ? 9 : 3;
+    r.flash = Math.max(0, r.flash - DT);
+  }
   stepMission(g);
   if (g.comboT === 0) g.combo = 0;
   g.assistT = Math.max(0, g.assistT - DT);
@@ -825,10 +892,26 @@ function checkCaptures(g) {
     if (b.held === 'ramp') {
       // Riding a ramp over the playfield.
       const r = t.ramps[b.ramp];
-      b.rampK += (DT * 430) / r.len;
+      b.rampK += (DT * r.speed) / r.len;
       const p = rampPoint(r, b.rampK);
       b.x = p.x;
       b.y = p.y;
+      if (b.rampK >= 1 && r.kind === 'loop') {
+        // Round the loop and into the plasma cannon.
+        const pts = award(g, 40000 * g.sector, b.x, b.y - 20, 'HYPERLOOP');
+        shot(g, 'loop', b.x, b.y);
+        addMass(g, 5);
+        emit(g, 'loop', { pts, x: b.x, y: b.y });
+        loadCannon(g, b);
+        continue;
+      }
+      if (b.rampK >= 1 && r.kind === 'rail') {
+        b.held = null;
+        b.vx = -30;
+        b.vy = 90;
+        emit(g, 'railEnd', { x: b.x, y: b.y });
+        continue;
+      }
       if (b.rampK >= 1) {
         b.held = null;
         b.vx = 0;
@@ -852,6 +935,15 @@ function checkCaptures(g) {
         b.vx = -100 - rand(g) * 60;
         b.vy = 150 + rand(g) * 50;
         emit(g, 'kickout', { x: b.x, y: b.y });
+      }
+      if (b.held === 'saucer' && b.holdT <= 0) {
+        // The award lands, then the rail fires the ball up to the top lanes.
+        applyMystery(g, g.mystery);
+        g.mystery = null;
+        b.held = 'ramp';
+        b.ramp = 3;
+        b.rampK = 0;
+        emit(g, 'railIn');
       }
       if (b.held === 'hole' && b.holdT <= 0) {
         b.held = null;
@@ -894,6 +986,20 @@ function checkCaptures(g) {
         }
       }
     }
+    // The mystery saucer.
+    const sc = t.saucer;
+    if ((b.x - sc.x) ** 2 + (b.y - sc.y) ** 2 < 30 && Math.hypot(b.vx, b.vy) < 400 && !g.mystery) {
+      b.held = 'saucer';
+      b.holdT = 2.4;
+      b.x = sc.x;
+      b.y = sc.y;
+      b.vx = b.vy = 0;
+      g.mystery = rollMystery(g);
+      award(g, 5000, sc.x, sc.y - 12);
+      shot(g, 'saucer', sc.x, sc.y);
+      emit(g, 'mystery', { pick: g.mystery, x: sc.x, y: sc.y });
+      continue;
+    }
     // Black hole.
     const h = t.hole;
     if (h) {
@@ -911,6 +1017,107 @@ function checkCaptures(g) {
       }
     }
   }
+}
+
+// ---------------------------------------------------------------- cannon and mystery
+function loadCannon(g, b) {
+  b.held = 'cannon';
+  b.x = CANNON.x;
+  b.y = CANNON.y;
+  b.vx = b.vy = 0;
+  g.cannon = { t: 0, a: -Math.PI / 2, id: b.id };
+  emit(g, 'cannonLoad');
+}
+
+/** The cannon sweeps back and forth; a flip (or waiting too long) fires it. */
+function stepCannon(g, fire) {
+  const c = g.cannon;
+  if (!c) return;
+  const b = g.balls.find((q) => q.id === c.id && q.held === 'cannon');
+  if (!b) {
+    g.cannon = null;
+    return;
+  }
+  c.t += DT;
+  c.a = -Math.PI / 2 + Math.sin(c.t * 2.2) * 1.15;
+  if ((fire && c.t > 0.3) || c.t > 5) {
+    b.held = null;
+    b.x = CANNON.x + Math.cos(c.a) * 11;
+    b.y = CANNON.y + Math.sin(c.a) * 11;
+    b.vx = Math.cos(c.a) * 860;
+    b.vy = Math.sin(c.a) * 860;
+    g.snipeT = 1.6;
+    award(g, 10000, CANNON.x, CANNON.y - 14);
+    emit(g, 'cannonFire', { x: b.x, y: b.y, a: c.a });
+    g.cannon = null;
+  }
+}
+
+function rollMystery(g) {
+  let total = 0;
+  for (const [, w] of MYSTERY) total += w;
+  let r = rand(g) * total;
+  for (const [name, w] of MYSTERY) {
+    r -= w;
+    if (r <= 0) return name;
+  }
+  return MYSTERY[0][0];
+}
+
+function applyMystery(g, name) {
+  const f = g.sector;
+  const { x, y } = SAUCER;
+  switch (name) {
+    case 'LIGHT LOCK':
+      if (g.sector >= 2 && !g.multiball) {
+        g.locks++;
+        if (g.locks >= 2) startMultiball(g);
+        else emit(g, 'lock', { n: g.locks });
+        break;
+      }
+      award(g, 100000 * f, x, y - 12);
+      break;
+    case 'EXTRA BALL':
+      g.extraBallLit = true;
+      break;
+    case 'MULTIPLIER': {
+      const k = MULTS.indexOf(g.mult);
+      g.mult = MULTS[Math.min(MULTS.length - 1, k + 1)];
+      emit(g, 'lanesAll', { mult: g.mult });
+      break;
+    }
+    case 'SUPER SPINNER':
+      g.superSpinT = 20;
+      break;
+    case 'SUPER JETS':
+      g.superJetT = 20;
+      break;
+    case 'BALL SAVE':
+      g.ballSaveT = Math.max(g.ballSaveT, 15);
+      break;
+    case 'STAR MASS':
+      addMass(g, 80);
+      break;
+    case 'MISSION':
+      if (g.mission) g.mission.t += 15;
+      else if (!g.multiball) startMission(g);
+      else g.missionLit = true;
+      break;
+    case 'LETTERS': {
+      const dark = g.table.letters.filter((q) => !q.lit);
+      for (let i = 0; i < 3 && dark.length; i++) dark.splice(Math.floor(rand(g) * dark.length), 1)[0].lit = true;
+      if (g.table.letters.every((q) => q.lit)) {
+        award(g, 75000, STAR.x, STAR.y - 40, 'S U P E R N O V A');
+        for (const q of g.table.letters) q.lit = false;
+        addMass(g, 15);
+        emit(g, 'letters');
+      }
+      break;
+    }
+    default:
+      award(g, 150000 * f, x, y - 12, 'MYSTERY');
+  }
+  emit(g, 'mysteryAward', { name });
 }
 
 function startMultiball(g) {
@@ -936,8 +1143,8 @@ function startMultiball(g) {
 function checkOrbit(g) {
   if (g.t - g.orbit.t > 2.5) return;
   for (const b of g.balls) {
-    const far = g.orbit.side === 0 ? b.x > 150 : b.x < 50;
-    if (b.id === g.orbit.id && far && b.y < 80 && !b.held) {
+    const far = g.orbit.side === 0 ? b.x > 190 : b.x < 50;
+    if (b.id === g.orbit.id && far && b.y < 90 && !b.held) {
       award(g, POINTS.orbit, b.x, 60, 'ORBIT');
       shot(g, g.orbit.side ? 'rorbit' : 'lorbit', b.x, 60);
       emit(g, 'orbit');
@@ -949,14 +1156,14 @@ function checkOrbit(g) {
 // Kickback and magna-save in the outlanes.
 function checkOutlanes(g) {
   for (const b of g.balls) {
-    if (b.held || b.y < 330 || b.y > 372) continue;
-    if (b.x > 16 && b.x < 28.5 && has(g, 'kickback') && !g.kickbackUsed && b.vy > 0) {
+    if (b.held || b.y < 400 || b.y > 450) continue;
+    if (b.x > 17 && b.x < 30.5 && has(g, 'kickback') && !g.kickbackUsed && b.vy > 0) {
       g.kickbackUsed = true;
       b.vy = -760;
       b.vx = 20;
       emit(g, 'kickback');
     }
-    if (b.x > 171.5 && b.x < LANE_X && has(g, 'magna') && !g.magnaUsed && b.vy > 0) {
+    if (b.x > 209.5 && b.x < LANE_X && has(g, 'magna') && !g.magnaUsed && b.vy > 0) {
       g.magnaUsed = true;
       b.vy = -700;
       b.vx = -120;
@@ -1029,6 +1236,8 @@ export function autopilot(g, skill = 1) {
       else ap.holdR = 0.2;
     }
   });
+  // With the cannon loaded, fire when it points at the comet ramp.
+  if (g.cannon && g.cannon.t > 0.4 && Math.abs(g.cannon.a + 1.04) < 0.05 && roll() < skill) ap.holdL = 0.12;
   ap.holdL -= DT;
   ap.holdR -= DT;
   input.left = ap.holdL > 0;
@@ -1042,6 +1251,6 @@ export function snapshot(g) {
     balls: g.balls.map((b) => ({ x: +b.x.toFixed(1), y: +b.y.toFixed(1), held: b.held })), mult: g.mult, mass: +g.mass.toFixed(1),
     supernova: g.supernovaT > 0, multiball: g.multiball, locks: g.locks, upgrades: [...g.upgrades], offers: [...g.offers],
     tilted: g.tilted, lanes: [...g.lanes], drops: g.table.drops.map((d) => d.up),
-    mission: g.mission ? g.mission.def.id : null, missionsDone: g.missionsDone,
+    mission: g.mission ? g.mission.def.id : null, missionsDone: g.missionsDone, cannon: !!g.cannon,
   };
 }

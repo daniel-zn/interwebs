@@ -1,7 +1,7 @@
 import { SoundEngine } from './audio.js';
 import { UNLOCKS, UPGRADE_BY_ID, sectorFor } from './data.js';
 import { drawText, measureText } from './font.js';
-import { DT, autopilot, createGame, pickUpgrade, snapshot, step } from './game.js';
+import { DT, MYSTERY, autopilot, createGame, pickUpgrade, snapshot, step } from './game.js';
 import { COLORS as C, DMD_HEIGHT, Renderer, fmt } from './render.js';
 import { loadStore } from './storage.js';
 import { LANE_X, PLUNGER, TH, TW } from './table.js';
@@ -20,13 +20,12 @@ let seed = params.has('seed') ? Number(params.get('seed')) >>> 0 : (Date.now() ^
 const store = loadStore();
 if (store.settings.reducedMotion === null) store.settings.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// The game draws at its own pixel size into `frame`; that is blown up by a
-// whole number onto the visible canvas, which the browser then shrinks a
-// touch to fit, so the table fills the screen and pixels stay even.
+// The game is laid out in table units; the canvas holds `RS` device pixels
+// per unit (a whole number, near the real scale) so shapes are drawn sharp,
+// and the browser stretches it the last little bit to fill the window.
 const canvas = document.getElementById('game');
-const out = canvas.getContext('2d', { alpha: false });
-const frameCanvas = document.createElement('canvas');
-const ctx = frameCanvas.getContext('2d', { alpha: false });
+const ctx = canvas.getContext('2d', { alpha: false });
+const hud = document.querySelector('.hud');
 const hint = document.getElementById('hint');
 const srAlert = document.getElementById('sr-alert');
 const audio = new SoundEngine();
@@ -58,31 +57,43 @@ function demoGame() {
 }
 
 // ---------------------------------------------------------------- sizing
-let scale = 1, blit = 1;
+let scale = 1, RS = 1, W = 0, H = 0;
 function resize() {
   const dpr = window.devicePixelRatio || 1;
   const vw = Math.round(window.innerWidth * dpr), vh = Math.round(window.innerHeight * dpr);
-  // The table (with its display) fills the height; a phone gives it the width
-  // and a strip at the top for the menu buttons; wide screens get side panels.
-  const tall = DMD_HEIGHT + 4 + TH;
-  const side = Math.min(vw / (TW + 224), vh / (tall + 8));
-  const narrow = Math.min(vw / (TW + 12), vh / (tall + 30));
+  // The table (with its display on top) fills the height, or on a phone the
+  // width; wide screens get side panels either side.
+  const tall = DMD_HEIGHT + 3 + TH + 2;
+  const side = Math.min(vw / (TW + 224), vh / tall);
+  const narrow = Math.min(vw / (TW + 10), vh / tall);
   scale = Math.max(0.5, side >= narrow * 0.93 ? side : narrow);
-  // Just over a whole number: stay whole and crisp rather than soft.
-  if (scale >= 2 && scale % 1 < 0.2) scale = Math.floor(scale);
-  const W = Math.ceil(vw / scale), H = Math.ceil(vh / scale);
-  blit = Math.max(1, Math.ceil(scale - 0.01));
-  if (W === frameCanvas.width && H === frameCanvas.height && canvas.width === W * blit && renderer.W) return;
-  frameCanvas.width = W;
-  frameCanvas.height = H;
-  canvas.width = W * blit;
-  canvas.height = H * blit;
+  const nW = Math.ceil(vw / scale), nH = Math.ceil(vh / scale);
+  const nRS = Math.max(1, Math.min(4, Math.ceil(scale - 0.05)));
+  if (nW === W && nH === H && nRS === RS && renderer.W) return;
+  W = nW;
+  H = nH;
+  RS = nRS;
+  canvas.width = W * RS;
+  canvas.height = H * RS;
   canvas.style.width = `${vw / dpr}px`;
   canvas.style.height = `${vh / dpr}px`;
-  canvas.style.imageRendering = Math.abs(blit - scale) < 0.01 ? 'pixelated' : 'auto';
-  ctx.imageSmoothingEnabled = false;
-  out.imageSmoothingEnabled = false;
-  renderer.resize(W, H);
+  renderer.resize(W, H, RS);
+  placeHud(scale / dpr);
+}
+
+/** On a phone the menu buttons sit either side of the display. */
+function placeHud(unit) {
+  const L = renderer.L;
+  hud.classList.toggle('flank', !L.side);
+  const btns = { 'btn-pause': L.tx + 18, 'btn-help': L.tx + TW - 18 };
+  for (const b of hud.querySelectorAll('.icon-btn')) {
+    if (L.side || !(b.id in btns)) {
+      b.style.left = b.style.top = '';
+      continue;
+    }
+    b.style.left = `${btns[b.id] * unit}px`;
+    b.style.top = `${(L.dy + 2 + DMD_HEIGHT / 2 - 2) * unit}px`;
+  }
 }
 let resizeQueued = false;
 window.addEventListener('resize', () => {
@@ -149,7 +160,7 @@ function shock(x, y, color = '#fff', r1 = 30, max = 0.4) {
 function fireworks(n) {
   for (let i = 0; i < n; i++) {
     setTimeout(() => {
-      const x = 20 + Math.random() * (TW - 40), y = 20 + Math.random() * 150;
+      const x = 20 + Math.random() * (TW - 40), y = 20 + Math.random() * 200;
       const hue = Math.floor(Math.random() * 360);
       sparks(x, y, 22, [`hsl(${hue} 100% 65%)`, '#fff', `hsl(${hue + 50} 100% 70%)`], 120);
       shock(x, y, `hsl(${hue} 100% 70%)`, 20, 0.5);
@@ -193,6 +204,13 @@ function drawDmd(d, W, H) {
         d.fillRect(Math.round(W / 2 + Math.cos(a) * r), Math.round(H / 2 + Math.sin(a) * r * 0.5), 1, 1);
       }
     }
+    if (m.roll && age < m.dur - 0.9) {
+      // The mystery award spins like a slot machine reel.
+      const k = Math.floor(age * (18 - age * 5));
+      dmdText(d, 'MYSTERY', 0, DMD_HI, 1, W);
+      dmdText(d, m.roll[k % m.roll.length], 9, DMD_ON, 1, W);
+      return;
+    }
     if (m.flash && Math.floor(age * 8) % 2 && !v.reducedMotion) return;
     const col = m.hi && Math.floor(age * 6) % 2 ? DMD_HI : DMD_ON;
     if (m.big) {
@@ -219,6 +237,7 @@ function drawDmd(d, W, H) {
   let info;
   if (g.supernovaT > 0) info = `SUPERNOVA ${Math.ceil(g.supernovaT)}`;
   else if (g.mission) info = Math.floor(t * 0.7) % 2 ? `${g.mission.def.name} ${Math.ceil(g.mission.t)}` : `${g.mission.def.desc}`;
+  else if (g.cannon) info = touchFirst ? 'TAP TO FIRE' : 'FLIP TO FIRE';
   else if (g.multiball) info = g.jackpotLit ? 'SHOOT THE STAR' : `RELIGHT ${Math.max(0, g.relight)}`;
   else if (g.phase === 'launch') info = Math.floor(t) % 2 ? 'SKILL SHOT LIT' : `BALL ${g.ballNo}  ${touchFirst ? 'HOLD' : 'SPACE'}`;
   else {
@@ -403,6 +422,78 @@ function onEvents(g) {
         flash(0.25, '#c9d3ff');
         lightShow(1);
         dmd({ text: 'BELT CLEARED', sub: fmt(e.pts), big: true, hi: true, urgent: true });
+        break;
+      case 'rotor':
+        audio.play('rotor');
+        sparks(e.x, e.y, 5, ['#fff', C.cyan]);
+        break;
+      case 'overdrive':
+        audio.play('overdrive');
+        lightShow(1.5);
+        flash(0.3, C.cyan);
+        dmd({ text: 'PULSAR', sub: 'OVERDRIVE X5', big: true, burst: true, hi: true, urgent: true, dur: 2 });
+        break;
+      case 'overdriveEnd':
+        dmd({ text: 'OVERDRIVE OVER', dur: 1 });
+        break;
+      case 'loop':
+        audio.play('loop');
+        sparks(e.x, e.y, 20, [C.pink, '#fff', C.cyan], 120);
+        shock(e.x, e.y, C.pink, 30, 0.4);
+        dmd({ text: 'HYPERLOOP', sub: fmt(e.pts), big: true, hi: true, urgent: true });
+        break;
+      case 'cannonLoad':
+        audio.play('cannonLoad');
+        dmd({ text: 'CANNON LOADED', sub: touchFirst ? 'TAP TO FIRE' : 'FLIP TO FIRE', hi: true, urgent: true, dur: 1.6 });
+        alertSr('Plasma cannon loaded. Flip to fire.');
+        break;
+      case 'cannonFire':
+        audio.play('cannonFire');
+        shake(3);
+        flash(0.2, C.pink);
+        for (let i = 0; i < 16; i++) {
+          const a = e.a + (Math.random() - 0.5) * 0.8, sp = 60 + Math.random() * 160;
+          v.particles.push({ x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 0, life: 0, max: 0.4, color: i % 2 ? C.pink : '#fff', size: 2 });
+        }
+        shock(e.x, e.y, C.pink, 18, 0.3);
+        break;
+      case 'snipe':
+        audio.play('snipe');
+        flash(0.3, C.gold);
+        fireworks(2);
+        dmd({ text: 'CANNON SNIPE', sub: fmt(e.pts), big: true, burst: true, hi: true, urgent: true });
+        break;
+      case 'mystery':
+        audio.play('mystery');
+        lightShow(2.4);
+        dmd({ text: e.pick, roll: MYSTERY.map(([n]) => n), sub: 'MYSTERY', big: true, hi: true, urgent: true, dur: 3 });
+        break;
+      case 'mysteryAward':
+        audio.play('mysteryAward');
+        flash(0.25, C.gold);
+        alertSr(`Mystery award: ${e.name.toLowerCase()}.`);
+        break;
+      case 'railIn':
+        audio.play('rail');
+        break;
+      case 'railEnd':
+        sparks(e.x, e.y, 8, ['#fff', C.cyan]);
+        break;
+      case 'bigBang':
+        audio.play('bigBang');
+        flash(1, '#fff');
+        shake(9);
+        slow(0.9);
+        lightShow(40);
+        fireworks(14);
+        dmd({ text: 'BIG BANG', big: true, burst: true, flash: true, urgent: true, dur: 3 });
+        dmd({ text: 'EVERYTHING LIT', sub: '250,000 A SHOT', dur: 2.2 });
+        alertSr('Big Bang! Every shot is lit for 40 seconds.');
+        break;
+      case 'bigBangEnd':
+        audio.play('novaEnd');
+        v.lightShow = 0;
+        dmd({ text: 'BIG BANG OVER', sub: `${e.n} SHOTS`, dur: 2, urgent: true });
         break;
       case 'moon':
         audio.play('moon');
@@ -700,7 +791,7 @@ window.addEventListener('keyup', (e) => {
 const pointers = new Map();
 function toCanvas(e) {
   const r = canvas.getBoundingClientRect();
-  return { x: ((e.clientX - r.left) / r.width) * frameCanvas.width, y: ((e.clientY - r.top) / r.height) * frameCanvas.height };
+  return { x: ((e.clientX - r.left) / r.width) * W, y: ((e.clientY - r.top) / r.height) * H };
 }
 function regionAt(p) {
   for (let i = regions.length - 1; i >= 0; i--) {
@@ -943,7 +1034,6 @@ function frame(now) {
   audio.setTease(mode === 'play' && game.mass > 70 && game.supernovaT === 0, (game.mass - 70) / 30);
   audio.update();
   regions = renderer.draw(ctx, game, v);
-  out.drawImage(frameCanvas, 0, 0, canvas.width, canvas.height);
   perf.frames++;
   perf.worst = Math.max(perf.worst, performance.now() - t0);
 }
@@ -956,7 +1046,7 @@ if (TEST) {
   window.__pin = {
     perf,
     store,
-    snapshot: () => ({ ...snapshot(game), mode, panel: v.panel, paused, scale, blit, W: frameCanvas.width, H: frameCanvas.height }),
+    snapshot: () => ({ ...snapshot(game), mode, panel: v.panel, paused, scale, RS, W, H }),
     game: () => game,
     view: () => v,
     regions: () => regions,

@@ -51,8 +51,6 @@ html, body {
   top: 0;
   left: 0;
   display: block;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
   touch-action: none;
   cursor: pointer;
   outline: none;
@@ -76,6 +74,11 @@ html, body {
   pointer-events: none;
 }
 .buttons { display: flex; gap: 6px; pointer-events: auto; }
+/* Phones: the buttons flank the dot-matrix display, so the table can use the
+   whole height. Sound lives in the help panel there. */
+.hud.flank { inset: 0; padding: 0; }
+.hud.flank .icon-btn { position: absolute; margin: -21px 0 0 -21px; width: 42px; height: 42px; }
+.hud.flank #btn-sound { display: none; }
 
 .icon-btn {
   width: 44px;
