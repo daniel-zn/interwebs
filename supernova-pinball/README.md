@@ -140,6 +140,10 @@ blurred) makes every lamp and wall glow like neon. The dot-matrix display
 above the table runs its own animations for jackpots, multiball, supernova,
 combos and the bonus count.
 
+The sound is mixed for phone speakers: deep bass they can't play is filtered
+out (it only makes them crackle), a compressor and a limiter keep busy moments
+clean, and the same effect firing many times at once only plays every 40 ms.
+
 Big moments get slow motion, screen shake, flashes, fireworks, shockwave
 rings, lightning between bumpers and a light show on the lamps. **Reduce
 motion** (in help) turns all of that off.

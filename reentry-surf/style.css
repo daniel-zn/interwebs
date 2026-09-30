@@ -272,3 +272,15 @@ dialog::backdrop { background: rgb(7 8 26 / 0.7); }
 @media (prefers-reduced-motion: reduce) {
   .hint.title, .result.show { animation: none; }
 }
+
+/* Edge to edge on phones: strips above and below the screen that carry on the
+   game's backdrop behind the status bar and Safari's toolbars (see bleed.js). */
+.bleed {
+  position: fixed;
+  left: 0;
+  width: 100%;
+  height: 60vh;
+  pointer-events: none;
+}
+.bleed-top { bottom: 100%; }
+.bleed-bottom { top: 100%; }

@@ -1,4 +1,5 @@
 import { SoundEngine } from './audio.js';
+import { bleed } from './bleed.js';
 import { Game } from './game.js';
 import { SCENE_BOTTOM, SCENE_TOP } from './layout.js';
 import { Scene } from './scene.js';
@@ -18,6 +19,7 @@ if (store.settings.reducedMotion === null) {
 }
 
 const canvas = document.getElementById('game');
+bleed(canvas);
 const ctx = canvas.getContext('2d', { alpha: false });
 const audio = new SoundEngine();
 audio.setMuted(store.settings.muted);

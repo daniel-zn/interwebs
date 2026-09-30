@@ -622,3 +622,15 @@ body:has(#battle:not([hidden])) .banner { display: none; }
 @media (max-aspect-ratio: 3/4) {
   .bh-me { bottom: auto; top: calc(max(10px, env(safe-area-inset-top)) + 96px); left: max(10px, env(safe-area-inset-left)); right: auto; width: min(230px, 56vw); border-right: 2px solid #3a2f7a; border-left: 4px solid var(--cyan); }
 }
+
+/* Edge to edge on phones: strips above and below the screen that carry on the
+   game's backdrop behind the status bar and Safari's toolbars (see bleed.js). */
+.bleed {
+  position: fixed;
+  left: 0;
+  width: 100%;
+  height: 60vh;
+  pointer-events: none;
+}
+.bleed-top { bottom: 100%; }
+.bleed-bottom { top: 100%; }

@@ -260,6 +260,45 @@ const watch = (page) => {
   await ctx.close();
 }
 
+// ------------------------------------------------------------------ edge to edge
+// iPhones show the page behind the status bar and Safari's toolbars, outside
+// the area a game's canvas fills. Each game's bleed.js paints strips just
+// past the top and bottom of the screen in its canvas's edge colours, and
+// keeps the page background and theme colour in step with them.
+{
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  for (const p of await findProjects()) {
+    const page = await ctx.newPage();
+    await page.goto(`${base}/${p.slug}/`);
+    if (!(await page.$('canvas#game'))) {
+      await page.close();
+      continue;
+    }
+    await page.waitForTimeout(1500);
+    const r = await page.evaluate(() => {
+      const top = document.querySelector('.bleed-top'), bottom = document.querySelector('.bleed-bottom');
+      if (!top || !bottom) return null;
+      const rgb = (c) => c.getContext('2d').getImageData(c.width >> 1, 0, 1, 1).data.slice(0, 3).join(',');
+      const game = document.getElementById('game');
+      const g = document.createElement('canvas');
+      g.width = 1;
+      g.height = 1;
+      g.getContext('2d').drawImage(game, game.width >> 1, 0, 1, 1, 0, 0, 1, 1);
+      const theme = document.querySelector('meta[name="theme-color"]');
+      return {
+        outside: top.getBoundingClientRect().bottom <= 0 && bottom.getBoundingClientRect().top >= innerHeight && top.getBoundingClientRect().height > 100,
+        painted: rgb(top) !== '0,0,0' || rgb(g) === '0,0,0',
+        root: getComputedStyle(document.documentElement).backgroundImage.includes('gradient'),
+        theme: theme && theme.content.startsWith('#'),
+      };
+    });
+    check(r && r.outside && r.painted, `${p.slug}: the backdrop carries on past the top and bottom of the screen`, JSON.stringify(r));
+    check(r && r.root && r.theme, `${p.slug}: page and theme colours follow the game's edges`, JSON.stringify(r));
+    await page.close();
+  }
+  await ctx.close();
+}
+
 check(errors.length === 0, 'no console errors', errors.join(' | '));
 
 await browser.close();

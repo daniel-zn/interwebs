@@ -5,6 +5,7 @@
 // supernova, a rolling-ball rumble, and a big bag of one-shot effects: every
 // bumper, sling, target, lane and solenoid on the table has its own sound.
 
+const MASTER = 0.42;
 const NOTE = (n) => 440 * 2 ** ((n - 69) / 12);
 // Em - C - G - D, one bar each: root (MIDI) and the arpeggio's chord tones.
 const CHORDS = [
@@ -42,6 +43,7 @@ export class SoundEngine {
     this.heat = 0;
     this.nextStep = 0;
     this.step = 0;
+    this.last = {};
   }
 
   unlock() {
@@ -55,13 +57,29 @@ export class SoundEngine {
       }
       const c = this.ctx;
       this.master = c.createGain();
-      this.master.gain.value = this.muted ? 0 : 0.5;
-      // A gentle compressor keeps the loud moments from clipping.
+      this.master.gain.value = this.muted ? 0 : MASTER;
+      // Phone speakers can't play deep bass; it only eats headroom and makes
+      // them crackle, so it's cut. Then a compressor evens out the busy
+      // moments and a limiter stops anything from clipping.
+      const hp = c.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 90;
+      hp.Q.value = 0.6;
       const comp = c.createDynamicsCompressor();
-      comp.threshold.value = -14;
-      comp.ratio.value = 4;
-      this.master.connect(comp).connect(c.destination);
+      comp.threshold.value = -20;
+      comp.knee.value = 10;
+      comp.ratio.value = 5;
+      comp.attack.value = 0.004;
+      comp.release.value = 0.25;
+      const limit = c.createDynamicsCompressor();
+      limit.threshold.value = -3;
+      limit.knee.value = 0;
+      limit.ratio.value = 20;
+      limit.attack.value = 0.001;
+      limit.release.value = 0.1;
+      this.master.connect(hp).connect(comp).connect(limit).connect(c.destination);
       this.fx = c.createGain();
+      this.fx.gain.value = 0.85;
       this.fx.connect(this.master);
       this.music = c.createGain();
       this.music.gain.value = this.musicOn ? 0.32 : 0;
@@ -76,7 +94,7 @@ export class SoundEngine {
       this.hum = c.createGain();
       this.hum.gain.value = 0;
       this.hum.connect(this.fx);
-      for (const f of [41, 41.7]) {
+      for (const f of [82, 82.7]) {
         const o = c.createOscillator();
         o.frequency.value = f;
         o.connect(this.hum);
@@ -124,7 +142,7 @@ export class SoundEngine {
 
   setMuted(m) {
     this.muted = m;
-    if (this.master) this.master.gain.setTargetAtTime(m ? 0 : 0.5, this.ctx.currentTime, 0.03);
+    if (this.master) this.master.gain.setTargetAtTime(m ? 0 : MASTER, this.ctx.currentTime, 0.03);
   }
 
   setMusic(on) {
@@ -149,7 +167,7 @@ export class SoundEngine {
   /** How unstable the star sounds (0..1). */
   setHum(level) {
     if (!this.ctx) return;
-    this.hum.gain.setTargetAtTime(0.05 + level * 0.12, this.ctx.currentTime, 0.4);
+    this.hum.gain.setTargetAtTime(0.015 + level * 0.04, this.ctx.currentTime, 0.4);
   }
 
   /** Rolling rumble: 0 when still, 1 at full speed. */
@@ -206,13 +224,16 @@ export class SoundEngine {
   }
 
   kick(at) {
-    this.tone(150, 0.14, { type: 'sine', vol: 0.3, at, slide: 45, out: this.music });
+    this.tone(150, 0.12, { type: 'sine', vol: 0.22, at, slide: 70, out: this.music });
   }
 
   // ---------------------------------------------------------------- building blocks
   tone(freq, dur, { type = 'square', vol = 0.1, at = 0, slide = null, attack = 0.004, out = null, vibrato = 0 } = {}) {
     const c = this.ctx;
     const t = c.currentTime + Math.max(0, at);
+    // Low notes and buzzy waves are much louder than they look: trim them.
+    if (freq < 160) vol *= 0.4 + (freq / 160) * 0.5;
+    if (type === 'square' || type === 'sawtooth') vol *= 0.8;
     const o = c.createOscillator();
     const g = c.createGain();
     o.type = type;
@@ -248,7 +269,9 @@ export class SoundEngine {
     if (slide) f.frequency.exponentialRampToValueAtTime(slide, t + dur);
     f.Q.value = q;
     const g = c.createGain();
-    g.gain.setValueAtTime(vol, t);
+    // A 3 ms fade in, so bursts don't click.
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol * 0.8, t + 0.003);
     g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
     s.connect(f).connect(g).connect(out || this.fx);
     s.start(t);
@@ -266,6 +289,11 @@ export class SoundEngine {
   // ---------------------------------------------------------------- one-shots
   play(event, arg = 0) {
     if (!this.live) return;
+    // The same sound piling up many times at once is what distorts: let each
+    // one through at most every 40 ms.
+    const now = this.ctx.currentTime;
+    if (now - (this.last[event] || -1) < 0.04) return;
+    this.last[event] = now;
     const r = Math.random();
     switch (event) {
       case 'flip':
@@ -321,7 +349,7 @@ export class SoundEngine {
         // Sucked in: a falling whoosh and a thunk.
         this.noise(0.5, { vol: 0.18, freq: 4000, q: 0.8, slide: 200 });
         this.tone(900, 0.5, { type: 'sine', vol: 0.08, slide: 120, vibrato: 14 });
-        this.tone(70, 0.2, { type: 'sine', vol: 0.35, at: 0.45, slide: 40 });
+        this.tone(90, 0.2, { type: 'sine', vol: 0.2, at: 0.45, slide: 60 });
         break;
       case 'rampIn':
         this.noise(0.5, { vol: 0.1, freq: 300, q: 1.2, slide: 2400 });
@@ -357,7 +385,7 @@ export class SoundEngine {
         this.tone(400, 0.6, { type: 'sine', vol: 0.06, slide: 1600, at: 0.1 });
         break;
       case 'cannonFire':
-        this.noise(0.35, { vol: 0.35, freq: 500, slide: 90 });
+        this.noise(0.35, { vol: 0.22, freq: 600, slide: 150 });
         this.tone(160, 0.3, { type: 'sawtooth', vol: 0.12, slide: 40 });
         this.tone(1800, 0.25, { type: 'square', vol: 0.04, slide: 200 });
         break;
@@ -373,8 +401,8 @@ export class SoundEngine {
         this.bell(2093, 0.3, 0.07, 1);
         break;
       case 'bigBang':
-        this.noise(1.6, { vol: 0.3, freq: 200, slide: 4000 });
-        this.tone(40, 2, { type: 'sine', vol: 0.5, slide: 25 });
+        this.noise(1.6, { vol: 0.2, freq: 300, slide: 4000 });
+        this.tone(110, 2, { type: 'sine', vol: 0.22, slide: 55 });
         [262, 330, 392, 523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.3, { type: 'sawtooth', vol: 0.05, at: 0.8 + i * 0.1 }));
         break;
       case 'binary':
@@ -397,7 +425,7 @@ export class SoundEngine {
         this.noise(0.8, { vol: 0.12, freq: 1500, slide: 300, at: 0.3 });
         break;
       case 'giant':
-        this.tone(70 + Math.min(80, arg / 8), 0.35, { type: 'sine', vol: 0.3, vibrato: 18, slide: 50 });
+        this.tone(120 + Math.min(80, arg / 8), 0.35, { type: 'sine', vol: 0.18, vibrato: 18, slide: 80 });
         break;
       case 'quasar':
         [1047, 1319, 1568, 2093].forEach((f, i) => this.tone(f * (1 + Math.min(7, arg - 1) * 0.06), 0.1, { type: 'square', vol: 0.05, at: i * 0.04 }));
@@ -433,7 +461,7 @@ export class SoundEngine {
         this.noise(0.05, { vol: 0.08, freq: 1500 });
         break;
       case 'planet':
-        this.tone(60, 0.6, { type: 'sawtooth', vol: 0.12, slide: 30 });
+        this.tone(110, 0.6, { type: 'sawtooth', vol: 0.1, slide: 60 });
         this.noise(0.5, { vol: 0.12, freq: 600, slide: 80 });
         [392, 523, 659, 784].forEach((f, i) => this.tone(f * (1 + Math.min(3, arg - 1) * 0.12), 0.12, { vol: 0.07, at: 0.3 + i * 0.07 }));
         break;
@@ -446,7 +474,7 @@ export class SoundEngine {
         break;
       case 'missionStart':
         [262, 0, 262, 392, 0, 523].forEach((f, i) => f && this.tone(f, 0.16, { type: 'sawtooth', vol: 0.06, at: i * 0.12 }));
-        this.tone(55, 1.2, { type: 'sine', vol: 0.4, slide: 110, at: 0.1 });
+        this.tone(110, 1.2, { type: 'sine', vol: 0.18, slide: 220, at: 0.1 });
         break;
       case 'missionHit':
         [784, 1047, 1568].forEach((f, i) => this.tone(f * (1 + arg * 0.06), 0.1, { type: 'square', vol: 0.05, at: i * 0.05 }));
@@ -463,7 +491,7 @@ export class SoundEngine {
         this.bell(2093, 0.6, 0.08, 1.2);
         break;
       case 'kickout':
-        this.noise(0.08, { vol: 0.3, freq: 700, q: 1 });
+        this.noise(0.08, { vol: 0.2, freq: 800, q: 1 });
         this.tone(120, 0.12, { type: 'square', vol: 0.1, slide: 60 });
         break;
       case 'lock':
@@ -488,8 +516,8 @@ export class SoundEngine {
         // The star blows: a huge riser, a boom and a shimmering chord.
         this.tone(80, 1.2, { type: 'sawtooth', vol: 0.1, slide: 2400 });
         this.noise(1.2, { vol: 0.15, freq: 200, q: 0.8, slide: 9000 });
-        this.tone(45, 1.4, { type: 'sine', vol: 0.55, at: 1.2, slide: 25 });
-        this.noise(1.5, { vol: 0.4, freq: 900, q: 0.4, at: 1.2, slide: 80 });
+        this.tone(110, 1.4, { type: 'sine', vol: 0.25, at: 1.2, slide: 55 });
+        this.noise(1.5, { vol: 0.24, freq: 900, q: 0.4, at: 1.2, slide: 150 });
         [330, 415, 494, 659, 830].forEach((f) => this.tone(f, 2.2, { type: 'sawtooth', vol: 0.03, at: 1.25, vibrato: 5 }));
         for (let i = 0; i < 10; i++) this.bell(1319 + i * 120, 1.3 + i * 0.08, 0.035);
         break;
@@ -534,7 +562,7 @@ export class SoundEngine {
         this.noise(0.06, { vol: 0.15, freq: 3000, q: 2 });
         break;
       case 'shipKill':
-        this.noise(1.3, { vol: 0.4, freq: 1500, q: 0.5, slide: 60 });
+        this.noise(1.3, { vol: 0.24, freq: 1500, q: 0.5, slide: 150 });
         this.tone(200, 1.0, { type: 'sawtooth', vol: 0.12, slide: 30 });
         for (let i = 0; i < 6; i++) this.noise(0.1, { vol: 0.2, freq: 600 + r * 800, q: 1, at: 0.15 + i * 0.12 });
         [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.18, { vol: 0.07, at: 1.1 + i * 0.1 }));
@@ -547,7 +575,7 @@ export class SoundEngine {
         this.tone(60, 0.5, { type: 'sawtooth', vol: 0.1, slide: 900 });
         break;
       case 'nudge':
-        this.tone(55, 0.15, { type: 'sine', vol: 0.4, slide: 35 });
+        this.tone(110, 0.15, { type: 'sine', vol: 0.2, slide: 70 });
         this.noise(0.08, { vol: 0.15, freq: 300, q: 1 });
         break;
       case 'warning':
@@ -575,7 +603,7 @@ export class SoundEngine {
         [659, 784, 988, 1319].forEach((f, i) => this.tone(f, 0.6, { type: 'sine', vol: 0.06, at: i * 0.05, attack: 0.05, vibrato: 5 }));
         break;
       case 'kickback':
-        this.noise(0.1, { vol: 0.35, freq: 500, q: 1 });
+        this.noise(0.1, { vol: 0.2, freq: 600, q: 1 });
         this.tone(90, 0.2, { type: 'square', vol: 0.15, slide: 400 });
         break;
       case 'thud':
