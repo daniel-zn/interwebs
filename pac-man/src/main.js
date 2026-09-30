@@ -1,4 +1,5 @@
 import { SoundEngine } from './audio.js';
+import { bleed } from './bleed.js';
 import { MH, MW, Renderer } from './render.js';
 import { DOWN, DT, LEFT, NONE, RIGHT, UP, createGame, demoPilot, snapshot, step } from './sim.js';
 import { loadStore } from './storage.js';
@@ -19,6 +20,7 @@ if (store.settings.reducedMotion === null) {
 }
 
 const canvas = document.getElementById('game');
+bleed(canvas);
 const ctx = canvas.getContext('2d', { alpha: false });
 const hint = document.getElementById('hint');
 const srAlert = document.getElementById('sr-alert');

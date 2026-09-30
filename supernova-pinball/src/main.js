@@ -1,4 +1,5 @@
 import { SoundEngine } from './audio.js';
+import { bleed } from './bleed.js';
 import { UNLOCKS, UPGRADE_BY_ID, sectorFor } from './data.js';
 import { drawText, measureText } from './font.js';
 import { DT, MYSTERY, autopilot, createGame, pickUpgrade, snapshot, step } from './game.js';
@@ -24,6 +25,7 @@ if (store.settings.reducedMotion === null) store.settings.reducedMotion = matchM
 // per unit (a whole number, near the real scale) so shapes are drawn sharp,
 // and the browser stretches it the last little bit to fill the window.
 const canvas = document.getElementById('game');
+bleed(canvas);
 const ctx = canvas.getContext('2d', { alpha: false });
 const hud = document.querySelector('.hud');
 const hint = document.getElementById('hint');

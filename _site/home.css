@@ -17,7 +17,9 @@
 *, *::before, *::after { touch-action: manipulation; }
 html { -webkit-tap-highlight-color: transparent; }
 
-html { background: var(--bg); }
+/* Behind the status bar and Safari's toolbars (and when the page bounces),
+   carry on the glow at the top and the dark at the bottom. */
+html { background: linear-gradient(#141340 50%, var(--bg) 50%); background-color: #141340; }
 
 body {
   margin: 0;

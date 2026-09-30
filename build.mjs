@@ -95,7 +95,7 @@ function page({ title, description, body, head = '' }) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
-  <meta name="theme-color" content="#07081a">
+  <meta name="theme-color" content="#141340">
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(description)}">
   <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">

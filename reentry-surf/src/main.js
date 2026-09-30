@@ -1,4 +1,5 @@
 import { SoundEngine } from './audio.js';
+import { bleed } from './bleed.js';
 import { Renderer } from './render.js';
 import { createRun, hotAt, snapshot, speedN, step } from './sim.js';
 import { loadStore } from './storage.js';
@@ -19,6 +20,7 @@ if (store.settings.reducedMotion === null) {
 }
 
 const canvas = document.getElementById('game');
+bleed(canvas);
 const ctx = canvas.getContext('2d', { alpha: false });
 const audio = new SoundEngine();
 audio.setMuted(store.settings.muted);

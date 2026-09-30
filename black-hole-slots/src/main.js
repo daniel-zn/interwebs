@@ -1,4 +1,5 @@
 import { SoundEngine } from './audio.js';
+import { bleed } from './bleed.js';
 import { CHARM_BY_ID, COLS, DAYS, EVENT_BY_ID, PATTERNS, PULSAR, ROWS, SYMBOLS, SYMBOL_BY_ID, VOID, WHEEL, debtFor, unlocked } from './data.js';
 import { COLORS as C, CELL, LINE_COLORS, RX, RY, Renderer, fmt } from './render.js';
 import {
@@ -22,6 +23,7 @@ if (store.settings.reducedMotion === null) {
 }
 
 const canvas = document.getElementById('game');
+bleed(canvas);
 const ctx = canvas.getContext('2d', { alpha: false });
 const hint = document.getElementById('hint');
 const srAlert = document.getElementById('sr-alert');
