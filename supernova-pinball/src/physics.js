@@ -30,6 +30,26 @@ function bounce(b, nx, ny, e, svx = 0, svy = 0, friction = 0.02) {
   return -vn;
 }
 
+/**
+ * A tapered capsule from (px, py) at angle `a`, turning at `omega`: pushes the
+ * ball out and bounces it off the moving surface. Returns the impact speed.
+ */
+function capsule(b, px, py, a, len, r0, r1, omega, e) {
+  const tx = px + Math.cos(a) * len, ty = py + Math.sin(a) * len;
+  const q = closestOnSeg(b.x, b.y, px, py, tx, ty);
+  const rr = BALL_R + r0 + (r1 - r0) * q.t;
+  const dx = b.x - q.x, dy = b.y - q.y;
+  const d2 = dx * dx + dy * dy;
+  if (d2 >= rr * rr) return 0;
+  const d = Math.sqrt(d2) || 1e-6;
+  const nx = dx / d, ny = dy / d;
+  b.x = q.x + nx * rr;
+  b.y = q.y + ny * rr;
+  // The surface moves: omega x r.
+  const rx = q.x - px, ry = q.y - py;
+  return bounce(b, nx, ny, e, -omega * ry, omega * rx, 0.01);
+}
+
 /** Moves flippers towards held/rest. Returns nothing; sets omega for the collisions. */
 export function stepFlippers(flippers, dt, speed = FLIP.speed) {
   for (const f of flippers) {
@@ -166,22 +186,15 @@ export function stepBall(b, table, dt, gravity, hit) {
 
   // Flippers.
   for (const f of table.flippers) {
-    const tx = f.px + Math.cos(f.angle) * f.len, ty = f.py + Math.sin(f.angle) * f.len;
-    const q = closestOnSeg(b.x, b.y, f.px, f.py, tx, ty);
-    const rad = f.r0 + (f.r1 - f.r0) * q.t;
-    const rr = BALL_R + rad;
-    const dx = b.x - q.x, dy = b.y - q.y;
-    const d2 = dx * dx + dy * dy;
-    if (d2 >= rr * rr) continue;
-    const d = Math.sqrt(d2) || 1e-6;
-    const nx = dx / d, ny = dy / d;
-    b.x = q.x + nx * rr;
-    b.y = q.y + ny * rr;
-    // The flipper's surface moves: omega x r.
-    const rx = q.x - f.px, ry = q.y - f.py;
-    const svx = -f.omega * ry, svy = f.omega * rx;
-    const vIn = bounce(b, nx, ny, FLIP.e, svx, svy, 0.01);
+    const vIn = capsule(b, f.px, f.py, f.angle, f.len, f.r0, f.r1, f.omega, FLIP.e);
     if (vIn > 60) hit('flipper', f, vIn, b);
+  }
+  // The pulsar: a bar spinning round its middle, both arms bat the ball.
+  for (const r of table.rotors) {
+    for (const a of [r.a, r.a + Math.PI]) {
+      const vIn = capsule(b, r.x, r.y, a, r.len, r.r, r.r, r.omega, 0.6);
+      if (vIn > 20) hit('rotor', r, vIn, b);
+    }
   }
 
   // Sensors: lines the ball crosses, and rollover buttons.
@@ -193,6 +206,7 @@ export function stepBall(b, table, dt, gravity, hit) {
   }
   for (const r of table.ramps) {
     const mo = r.mouth;
+    if (!mo) continue;
     if (py > mo.y && b.y <= mo.y && b.x > mo.x0 && b.x < mo.x1) hit('ramp', r, -b.vy, b);
   }
   for (const q of table.letters) {

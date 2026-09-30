@@ -345,6 +345,46 @@ export class SoundEngine {
         this.tone(1760, 0.04, { vol: 0.04 });
         this.tone(2349, 0.05, { vol: 0.04, at: 0.03 });
         break;
+      case 'rotor':
+        this.tone(2200 + Math.random() * 400, 0.04, { type: 'square', vol: 0.04, slide: 900 });
+        break;
+      case 'overdrive':
+        for (let i = 0; i < 12; i++) this.tone(300 + i * 120, 0.05, { type: 'sawtooth', vol: 0.04, at: i * 0.03 });
+        this.tone(1760, 1, { type: 'sine', vol: 0.05, vibrato: 30, at: 0.35 });
+        break;
+      case 'loop':
+        this.tone(300, 0.6, { type: 'triangle', vol: 0.07, slide: 1500, vibrato: 12 });
+        [784, 988, 1175].forEach((f, i) => this.tone(f, 0.1, { vol: 0.06, at: 0.45 + i * 0.06 }));
+        break;
+      case 'cannonLoad':
+        this.tone(90, 0.25, { type: 'square', vol: 0.1, slide: 60 });
+        this.tone(400, 0.6, { type: 'sine', vol: 0.06, slide: 1600, at: 0.1 });
+        break;
+      case 'cannonFire':
+        this.noise(0.35, { vol: 0.35, freq: 500, slide: 90 });
+        this.tone(160, 0.3, { type: 'sawtooth', vol: 0.12, slide: 40 });
+        this.tone(1800, 0.25, { type: 'square', vol: 0.04, slide: 200 });
+        break;
+      case 'snipe':
+        [1319, 1568, 2093, 2637].forEach((f, i) => this.tone(f, 0.09, { type: 'square', vol: 0.05, at: i * 0.05 }));
+        this.bell(2637, 0.25, 0.07, 0.8);
+        break;
+      case 'mystery':
+        for (let i = 0; i < 26; i++) this.tone(600 + ((i * 7) % 5) * 150, 0.04, { type: 'square', vol: 0.035, at: i * (0.05 + i * 0.003) });
+        break;
+      case 'mysteryAward':
+        [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.14, { vol: 0.07, at: i * 0.06 }));
+        this.bell(2093, 0.3, 0.07, 1);
+        break;
+      case 'rail':
+        this.tone(200, 0.7, { type: 'sawtooth', vol: 0.05, slide: 1800 });
+        this.noise(0.6, { vol: 0.05, freq: 3000, slide: 6000 });
+        break;
+      case 'bigBang':
+        this.noise(1.6, { vol: 0.3, freq: 200, slide: 4000 });
+        this.tone(40, 2, { type: 'sine', vol: 0.5, slide: 25 });
+        [262, 330, 392, 523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.3, { type: 'sawtooth', vol: 0.05, at: 0.8 + i * 0.1 }));
+        break;
       case 'asteroid':
         this.noise(0.18, { vol: 0.2, freq: 900, slide: 200 });
         this.tone(160, 0.1, { type: 'square', vol: 0.06, slide: 70 });

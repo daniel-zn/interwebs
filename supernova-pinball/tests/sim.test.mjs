@@ -42,7 +42,7 @@ test('a ball on the plunger stays put, and holding then releasing launches it', 
 });
 
 test('a ball dropped down the middle drains, and the bonus is counted', () => {
-  const g = inPlay(CX, 250, 0, 50);
+  const g = inPlay(CX, 380, 0, 50);
   const ev = run(g, 60 * 6);
   assert.ok(types(ev).includes('drain'));
   assert.ok(types(ev).includes('bonusTotal'));
@@ -52,13 +52,13 @@ test('a ball dropped down the middle drains, and the bonus is counted', () => {
 
 test('a flipper sends the ball back up the table', () => {
   // A ball falling onto the left flipper's middle, flipped as it arrives.
-  const g = inPlay(80, 336, 0, 120);
+  const g = inPlay(96, 428, 0, 120);
   let minY = 999;
   run(g, 60, (gg, i) => {
     minY = Math.min(minY, gg.balls[0] ? gg.balls[0].y : 999);
     return { ...NONE, left: i > 6 && i < 30 };
   });
-  assert.ok(minY < 280, `the ball goes up the table (min y ${minY.toFixed(0)})`);
+  assert.ok(minY < 360, `the ball goes up the table (min y ${minY.toFixed(0)})`);
 });
 
 test('fast balls never tunnel out of the table', () => {
@@ -66,7 +66,7 @@ test('fast balls never tunnel out of the table', () => {
   let seed = 3;
   const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   for (let k = 0; k < 40; k++) {
-    const b = makeBall(20 + r() * 160, 60 + r() * 200);
+    const b = makeBall(20 + r() * 200, 60 + r() * 260);
     const a = r() * Math.PI * 2;
     b.vx = Math.cos(a) * 1000;
     b.vy = Math.sin(a) * 1000;
@@ -74,33 +74,33 @@ test('fast balls never tunnel out of the table', () => {
       stepFlippers(t.flippers, DT / SUBSTEPS);
       stepBall(b, t, DT / SUBSTEPS, 520, () => {});
       if (b.y > DRAIN_Y) break;
-      assert.ok(b.x > 4 - BALL_R && b.x < 196 + BALL_R && b.y > 8 - BALL_R, `ball ${k} escaped at ${b.x.toFixed(1)},${b.y.toFixed(1)}`);
+      assert.ok(b.x > 4 - BALL_R && b.x < 236 + BALL_R && b.y > 8 - BALL_R, `ball ${k} escaped at ${b.x.toFixed(1)},${b.y.toFixed(1)}`);
     }
   }
 });
 
 test('the shooter lane gate is one way', () => {
   const t = buildTable();
-  const up = makeBall(190, 250);
+  const up = makeBall(229.5, 300);
   up.vy = -700;
   for (let i = 0; i < 60 * SUBSTEPS; i++) stepBall(up, t, DT / SUBSTEPS, 520, () => {});
   assert.ok(up.x < LANE_X, 'a launched ball comes out into the playfield');
-  const down = makeBall(172, 112);
+  const down = makeBall(210, 126);
   down.vx = 200;
   down.vy = 200;
   for (let i = 0; i < 30 * SUBSTEPS; i++) stepBall(down, t, DT / SUBSTEPS, 520, () => {});
-  assert.ok(!(down.x > LANE_X && down.y > 150), 'a ball from the playfield cannot drop back into the lane');
+  assert.ok(!(down.x > LANE_X && down.y > 170), 'a ball from the playfield cannot drop back into the lane');
 });
 
 test('pop bumpers fire the ball away and score', () => {
-  const g = inPlay(104, 70, 0, 30);
+  const g = inPlay(128, 84, 0, 30);
   const ev = run(g, 20);
   assert.ok(types(ev).includes('bumper'));
   assert.ok(g.score >= 1000);
 });
 
 test('all five drop targets: a bonus, then they reset', () => {
-  const g = inPlay(48, 178, -300, 0);
+  const g = inPlay(50, 206, -300, 0);
   for (const d of g.table.drops) d.up = false;
   g.table.drops[0].up = true;
   const ev = run(g, 30);
@@ -116,14 +116,14 @@ test('four lit lanes raise the playfield multiplier; flippers move the lit lanes
   assert.deepEqual(g.lanes, [true, true, false, true], 'lane change');
   run(g, 5);
   g.lanes = [true, true, true, false];
-  Object.assign(g.balls[0], { x: 138, y: 54, vx: 0, vy: -200 });
+  Object.assign(g.balls[0], { x: 166, y: 56, vx: 0, vy: -200 });
   const ev = run(g, 10);
   assert.ok(types(ev).includes('lanesAll'));
   assert.equal(g.mult, 2);
 });
 
 test('a full star goes supernova: extra balls and double scoring', () => {
-  const g = inPlay(STAR.x, 212, 0, 200);
+  const g = inPlay(STAR.x, 262, 0, 200);
   g.mass = 99.9;
   const ev = run(g, 30);
   assert.ok(types(ev).includes('supernova'));
@@ -132,7 +132,7 @@ test('a full star goes supernova: extra balls and double scoring', () => {
 });
 
 test('from sector 2, two wormhole locks start multiball', () => {
-  const g = inPlay(62, 84, 0, 30, { sector: 2 });
+  const g = inPlay(64, 100, 0, 30, { sector: 2 });
   g.missionLit = false;
   let ev = run(g, 30);
   assert.ok(types(ev).includes('lock'));
@@ -142,7 +142,7 @@ test('from sector 2, two wormhole locks start multiball', () => {
   run(g, 40, { ...NONE, launch: true });
   run(g, 5);
   const b = g.balls.find((x) => !x.held);
-  Object.assign(b, { x: 62, y: 84, vx: 0, vy: 30 });
+  Object.assign(b, { x: 64, y: 100, vx: 0, vy: 30 });
   ev = run(g, 30);
   assert.ok(types(ev).includes('multiball'));
   run(g, 120);
@@ -152,7 +152,7 @@ test('from sector 2, two wormhole locks start multiball', () => {
 });
 
 test('the wormhole starts a lit mission and spits the ball out of the white hole', () => {
-  const g = inPlay(62, 84, 0, 30);
+  const g = inPlay(64, 100, 0, 30);
   const ev = run(g, 60 * 3);
   assert.ok(types(ev).includes('wormhole'));
   assert.ok(types(ev).includes('missionStart'));
@@ -163,7 +163,7 @@ test('the wormhole starts a lit mission and spits the ball out of the white hole
 });
 
 test('the vortex draws a slow ball into the wormhole', () => {
-  const g = inPlay(69, 93, 0, 0);
+  const g = inPlay(70, 98, 0, 0);
   const ev = run(g, 90);
   assert.ok(types(ev).includes('wormhole'));
 });
@@ -173,13 +173,13 @@ test('a lit shot during a mission counts, and enough of them complete it', () =>
   g.mission = null;
   g.missionNext = 2; // HYPERDRIVE: the ramps
   g.missionLit = true;
-  Object.assign(g.balls[0], { x: 62, y: 84, vx: 0, vy: 30 });
+  Object.assign(g.balls[0], { x: 64, y: 100, vx: 0, vy: 30 });
   run(g, 60 * 3);
   assert.equal(g.mission.def.id, 'hyper');
   let hits = 0;
   for (let i = 0; i < 4; i++) {
     const b = g.balls.find((x) => !x.held);
-    Object.assign(b, { x: 46, y: 160, vx: 0, vy: -500 });
+    Object.assign(b, { x: 50, y: 196, vx: 0, vy: -500 });
     const ev = run(g, 90);
     hits += types(ev).filter((t) => t === 'missionHit').length;
     if (types(ev).includes('missionDone')) break;
@@ -190,7 +190,7 @@ test('a lit shot during a mission counts, and enough of them complete it', () =>
 });
 
 test('I O N: all three standups light a mission', () => {
-  const g = inPlay(116, 160, 0, -300);
+  const g = inPlay(136, 176, 0, -300);
   g.missionLit = false;
   g.table.standups[0].lit = g.table.standups[1].lit = true;
   const ev = run(g, 20);
@@ -199,19 +199,19 @@ test('I O N: all three standups light a mission', () => {
 });
 
 test('smacking the captive ball to the top cracks the planet', () => {
-  const g = inPlay(150, 262, 0, -800);
+  const g = inPlay(184, 316, 0, -800);
   const ev = run(g, 40);
   assert.ok(types(ev).includes('captive'));
   assert.ok(types(ev).includes('planet'));
   run(g, 120);
-  assert.ok(Math.abs(g.table.captive.y - 238) < 1, 'the captive ball rolls back down');
+  assert.ok(Math.abs(g.table.captive.y - 292) < 1, 'the captive ball rolls back down');
 });
 
 test('the lit lane after a launch is a skill shot', () => {
   const g = inPlay(CX, 150);
   g.skillLane = 2;
   g.skillT = 3;
-  Object.assign(g.balls[0], { x: 122, y: 54, vx: 0, vy: -200 });
+  Object.assign(g.balls[0], { x: 150, y: 58, vx: 0, vy: -200 });
   const ev = run(g, 5);
   assert.ok(types(ev).includes('skill'));
 });
@@ -246,7 +246,7 @@ test('ball save relaunches a ball lost straight after launch', () => {
   const g = createGame({ seed: 2 });
   run(g, 30, { ...NONE, launch: true });
   run(g, 2);
-  Object.assign(g.balls[0], { x: CX, y: 320, vx: 0, vy: 200 });
+  Object.assign(g.balls[0], { x: CX, y: 420, vx: 0, vy: 200 });
   const ev = run(g, 30);
   assert.ok(types(ev).includes('ballSaved'));
   assert.equal(g.ballsLeft, 3);
@@ -316,8 +316,8 @@ test('the table fits the playfield', () => {
 
 test('the lower playfield is mirror-symmetric (the top is not)', () => {
   const t = buildTable();
-  t.segments = t.segments.filter((q) => q.ay >= 256 && q.by >= 256 && q.kind !== 'wall');
-  t.circles = t.circles.filter((c) => c.y >= 256 && c.kind !== 'asteroid');
+  t.segments = t.segments.filter((q) => q.ay >= 330 && q.by >= 330 && q.kind !== 'wall');
+  t.circles = t.circles.filter((c) => c.y >= 330 && !['asteroid', 'cannon'].includes(c.kind));
   const key = (x, y) => `${Math.round(x * 2)},${Math.round(y * 2)}`;
   const segs = new Set(t.segments.map((q) => [key(q.ax, q.ay), key(q.bx, q.by)].sort().join('|')));
   for (const q of t.segments) {
@@ -329,8 +329,8 @@ test('the lower playfield is mirror-symmetric (the top is not)', () => {
 });
 
 test('both ramps take the ball for a ride and drop it into their orbit', () => {
-  for (const [x, left] of [[46, true], [126, false]]) {
-    const g = inPlay(x, 160, 0, -500);
+  for (const [x, left] of [[50, true], [158, false]]) {
+    const g = inPlay(x, 196, 0, -500);
     let ev = run(g, 10);
     assert.ok(types(ev).includes('rampIn'));
     assert.equal(g.balls[0].held, 'ramp');
@@ -354,8 +354,65 @@ test('rolling over all nine letters spells SUPERNOVA', () => {
 
 test('multiball balls launch themselves from the left lane', () => {
   const g = inPlay(CX, 150);
-  const b = makeBall(10, 340);
+  const b = makeBall(10.5, 420);
   g.balls.push(b);
   run(g, 60);
   assert.ok(b.y < 200 || b.x > 16, 'the left lane ball is fired back out');
+});
+
+test('the hyperloop loads the plasma cannon, and a flip fires it', () => {
+  const g = inPlay(84, 196, 0, -500);
+  let ev = run(g, 150);
+  assert.ok(types(ev).includes('loop'));
+  assert.ok(types(ev).includes('cannonLoad'));
+  assert.equal(g.balls[0].held, 'cannon');
+  ev = run(g, 2, { ...NONE, left: true });
+  assert.ok(types(ev).includes('cannonFire'));
+  const b = g.balls[0];
+  assert.equal(b.held, null);
+  assert.ok(Math.hypot(b.vx, b.vy) > 700, 'it goes off like a shot');
+});
+
+test('an unfired cannon fires itself', () => {
+  const g = inPlay(84, 196, 0, -500);
+  const ev = run(g, 60 * 8);
+  assert.ok(types(ev).includes('cannonFire'));
+});
+
+test('the mystery saucer rolls an award, then fires the ball up the rail', () => {
+  const g = inPlay(166, 326, 0, 40);
+  const ev = run(g, 60 * 4);
+  const roll = ev.find((e) => e.type === 'mystery');
+  assert.ok(roll, 'it catches the ball');
+  assert.ok(types(ev).includes('mysteryAward'));
+  assert.ok(types(ev).includes('railIn'));
+  assert.ok(types(ev).includes('railEnd'));
+  assert.ok(g.balls[0].y < 120, 'the rail drops it at the top');
+});
+
+test('ten pulsar hits kick it into overdrive', () => {
+  const g = inPlay(CX, 150);
+  g.table.rotors[0].hits = 9;
+  Object.assign(g.balls[0], { x: CX - 6, y: 196, vx: 0, vy: 200 });
+  const ev = run(g, 30);
+  assert.ok(types(ev).includes('rotor'));
+  assert.ok(types(ev).includes('overdrive'));
+  assert.ok(g.overdriveT > 0);
+});
+
+test('every fifth mission sets off the Big Bang', () => {
+  const g = inPlay(CX, 150);
+  g.missionsDone = 4;
+  g.missionNext = 2;
+  g.missionLit = true;
+  Object.assign(g.balls[0], { x: 64, y: 100, vx: 0, vy: 30 });
+  run(g, 60 * 3);
+  g.mission.n = 3;
+  const b = g.balls.find((x) => !x.held);
+  Object.assign(b, { x: 50, y: 196, vx: 0, vy: -500 });
+  const ev = run(g, 90);
+  assert.ok(types(ev).includes('missionDone'));
+  assert.ok(types(ev).includes('bigBang'));
+  assert.equal(g.mission.def.id, 'bigbang');
+  assert.ok(g.balls.length >= 3);
 });

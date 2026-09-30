@@ -9,7 +9,7 @@ meter fills, it goes **SUPERNOVA**: two extra balls, double scoring for 20
 seconds, slow motion, and the whole table lights up.
 
 **Stack:** vanilla JS + Canvas 2D · no runtime dependencies · no build step ·
-all sound and music synthesised with WebAudio · about 55 KB gzipped
+all sound and music synthesised with WebAudio · about 60 KB gzipped
 (`npm run size`).
 
 ## Play
@@ -36,36 +36,40 @@ Nudge too hard and the table **tilts**: dead flippers until the ball drains.
 
 ## The table
 
-The table fills the screen: on a phone it takes the full width, on a laptop
-the full height, with score and upgrades in panels either side. The lower
-half is a classic symmetric pair of flippers, slingshots and lanes; the upper
-half is deliberately lopsided and packed:
+The table fills the screen: on a phone it takes the full width and nearly
+the whole height (the menu buttons sit either side of the display), on a
+laptop the full height, with score and upgrades in panels either side. The
+lower half is a classic symmetric pair of flippers, slingshots and lanes; the
+upper half is lopsided and packed:
 
-- **Warp ramp** (left): a see-through spiral that loops round the wormhole
-  vortex and drops into the left orbit. **Comet ramp** (right): a hairpin over
-  the bumpers into the right orbit. Ramps back to back multiply.
-- **The vortex**: a spinning disc that swirls the ball and sucks it into the
-  **wormhole**, which teleports it out of the **white hole** on the other side
-  of the table. It starts missions, collects extra balls and locks balls for
-  multiball.
+- **Warp ramp**: a see-through spiral round the wormhole vortex, down into
+  the left orbit. **Comet ramp**: a hairpin over the bumpers into the right
+  orbit. Ramps back to back multiply.
+- **Hyperloop**: a loop-the-loop ramp that drops the ball into the **plasma
+  cannon**. The turret sweeps back and forth; flip to fire the ball wherever
+  it points. Hit a major shot straight out of the cannon for a **CANNON
+  SNIPE**.
+- **Mystery saucer**: catches the ball, spins a slot-machine reel of awards
+  on the display (big points, light lock, extra ball, multiplier, super
+  spinner, super jets, ball save, star mass, a mission, letters), then fires
+  the ball up a wire **rail** to the top lanes.
+- **The vortex**: a spinning disc that swirls the ball into the **wormhole**,
+  which teleports it out of the **white hole** across the table. It starts
+  missions, collects extra balls and locks balls for multiball.
+- **The pulsar**: a bar spinning in the middle of the table. Ten hits send it
+  into **overdrive** (faster, and five times the points).
 - **Two orbits**: a **spinner** on the left, a **hyperspace gate** on the
   right. Loop all the way round for an ORBIT award.
-- A **mini flipper** on the right orbit guide for cross-table shots.
-- The **pop bumper nest** under four **S T A R** top lanes (all four raise the
+- **Two mini flippers**, one on each orbit guide, at different heights.
+- **Four pop bumpers** under four **S T A R** top lanes (all four raise the
   playfield multiplier up to ×5). Each plunge lights one lane as a **skill
   shot**; the flippers move it.
-- A **five-bank of drop targets** (NOVA BANK, worth more every time).
-- **I O N standup targets**: complete them to light a mission.
-- The **captive ball** chamber: smack the ball hard enough to reach the top
-  and the planet cracks (which also starts a lit mission).
-- The **dying star** with **two orbiting moons** and the **S U P E R N O V A**
-  rollover letters arching over it.
-- An **asteroid belt** of drifting rocks below the star (clear all three).
-- **Combos**: major shots within 2.5 seconds of each other chain for growing
-  bonuses.
-- **Ball save** for the first 8 seconds of each ball, a **ball search** if the
-  ball ever gets stuck, and an end-of-ball **bonus count** on the dot-matrix
-  display.
+- A **five-bank of drop targets**, **I O N standups** (they light missions)
+  and a **captive ball** chamber (smack it to the top to crack the planet).
+- The **dying star** with **two orbiting moons**, the **S U P E R N O V A**
+  rollover letters and a drifting **asteroid belt**.
+- **Combos**, **ball save** for the first 8 seconds of each ball, a **ball
+  search** if the ball ever gets stuck, and an end-of-ball **bonus count**.
 
 ### Missions
 
@@ -83,6 +87,8 @@ display counts down the time.
 | Solar Sweep | Every shot on the table once |
 
 Every third completed mission lights an **extra ball** at the wormhole.
+Every fifth sets off the **BIG BANG**: three more balls and every shot on
+the table lit at 250,000 (× the sector) for 40 seconds.
 
 ## Sectors and what they unlock
 
@@ -113,9 +119,10 @@ wall). Walls are line segments, bumpers and posts are circles, and flippers
 are tapered capsules whose surface speed (ω × r) is added to the bounce, so a
 flip really throws the ball. Balls also bounce off each other in multiball.
 
-The pixel art is drawn at 200 × 392. It is blown up by a whole number of
-device pixels and then shrunk a touch to fit, so the table fills the screen
-and every pixel stays the same size. A
+The table is 240 × 480 units. Everything on it is drawn as smooth vector
+shapes (spline ramps with rails and struts, shaded bumpers, tapered
+flippers) on a canvas with up to 4 device pixels per unit, so it stays sharp
+at any size; only the lettering keeps a chunky pixel font. A
 cheap **bloom** pass (the table shrunk to 1/4 and 1/8 size, then added back
 blurred) makes every lamp and wall glow like neon. The dot-matrix display
 above the table runs its own animations for jackpots, multiball, supernova,
@@ -127,9 +134,9 @@ motion** (in help) turns all of that off.
 
 | File | What |
 | --- | --- |
-| `src/table.js` | The layout: walls, bumpers, targets, lanes, ramps, the vortex, the captive ball, flippers |
+| `src/table.js` | The layout: walls, bumpers, targets, lanes, ramps (as splines), the vortex, cannon, saucer, pulsar, captive ball, flippers |
 | `src/physics.js` | Ball stepping, collisions, flippers, ball on ball |
-| `src/game.js` | The rules: scoring, combos, missions, skill shot, wormhole, multiball, supernova, sectors, upgrades, tilt, bonus, and an autopilot |
+| `src/game.js` | The rules: scoring, combos, missions, Big Bang, cannon, mystery awards, skill shot, wormhole, multiball, supernova, sectors, upgrades, tilt, bonus, and an autopilot |
 | `src/data.js` | Sectors, upgrades and points |
 | `src/render.js` | The table, lamps, bloom, dot-matrix display, side panels and menus |
 | `src/main.js` | Input, the loop, effects, the DMD's messages and menus |
@@ -145,7 +152,7 @@ npm run tune -- 16 30 0.8   # let the autopilot play 16 games (30 min cap) flipp
 ```
 
 The autopilot plays the attract mode. For tuning it can be made to miss
-flips like a person would. At 80%, most of its games end in sectors 2 to 5, and some reach 8.
+flips like a person would. At 80%, most of its games end in sectors 2 to 5, and some reach 9.
 
 URL flags for testing: `?seed=N`, `?sector=N` (start further in), `?fast`
 (3× speed), `?auto` (the autopilot plays your game), `?test` (exposes
