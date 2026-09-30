@@ -360,10 +360,9 @@ test('multiball balls launch themselves from the left lane', () => {
   assert.ok(b.y < 200 || b.x > 16, 'the left lane ball is fired back out');
 });
 
-test('the hyperloop loads the plasma cannon, and a flip fires it', () => {
-  const g = inPlay(84, 196, 0, -500);
-  let ev = run(g, 150);
-  assert.ok(types(ev).includes('loop'));
+test('the plasma cannon swallows a slow ball, and a flip fires it', () => {
+  const g = inPlay(70, 326, 0, 60);
+  let ev = run(g, 30);
   assert.ok(types(ev).includes('cannonLoad'));
   assert.equal(g.balls[0].held, 'cannon');
   ev = run(g, 2, { ...NONE, left: true });
@@ -374,20 +373,82 @@ test('the hyperloop loads the plasma cannon, and a flip fires it', () => {
 });
 
 test('an unfired cannon fires itself', () => {
-  const g = inPlay(84, 196, 0, -500);
-  const ev = run(g, 60 * 8);
+  const g = inPlay(70, 326, 0, 60);
+  const ev = run(g, 60 * 7);
   assert.ok(types(ev).includes('cannonFire'));
 });
 
-test('the mystery saucer rolls an award, then fires the ball up the rail', () => {
+test('the mystery saucer rolls an award, then kicks the ball out', () => {
   const g = inPlay(166, 326, 0, 40);
   const ev = run(g, 60 * 4);
-  const roll = ev.find((e) => e.type === 'mystery');
-  assert.ok(roll, 'it catches the ball');
+  assert.ok(ev.find((e) => e.type === 'mystery'), 'it catches the ball');
   assert.ok(types(ev).includes('mysteryAward'));
-  assert.ok(types(ev).includes('railIn'));
-  assert.ok(types(ev).includes('railEnd'));
-  assert.ok(g.balls[0].y < 120, 'the rail drops it at the top');
+  assert.ok(types(ev).includes('kickout'));
+  assert.equal(g.balls[0].held, null);
+});
+
+test('hitting both binary stars in a second is an eclipse', () => {
+  const g = inPlay(CX, 150);
+  run(g, 1);
+  const [a, b] = g.table.binaries;
+  b.lastT = g.t;
+  Object.assign(g.balls[0], { x: a.x, y: a.y + 9, vx: 0, vy: -200 });
+  const ev = run(g, 5);
+  assert.ok(types(ev).includes('binary'));
+  assert.ok(types(ev).includes('eclipse'));
+});
+
+test('meteors crack, shatter, and a whole shower comes back', () => {
+  const g = inPlay(CX, 150);
+  for (const q of g.table.meteors.slice(1)) q.off = true;
+  const q = g.table.meteors[0];
+  let ev = [];
+  for (let k = 0; k < 2; k++) {
+    Object.assign(g.balls[0], { x: q.x, y: q.y + 8, vx: 0, vy: -250 });
+    ev = ev.concat(run(g, 15));
+  }
+  assert.ok(types(ev).includes('crack'));
+  assert.ok(types(ev).includes('shatter'));
+  assert.ok(types(ev).includes('shower'));
+  Object.assign(g.balls[0], { held: 'test', holdT: 99 });
+  run(g, 60 * 4);
+  assert.ok(g.table.meteors.every((m2) => !m2.off && m2.hits === 0));
+});
+
+test('the gas giant sends the ball back faster than it came', () => {
+  const t = buildTable();
+  const b = makeBall(t.giant.x, t.giant.y + 20);
+  b.vy = -300;
+  let hit = false;
+  for (let i = 0; i < 20 * SUBSTEPS; i++) stepBall(b, t, DT / SUBSTEPS, 0, (k) => (hit ||= k === 'giant'));
+  assert.ok(hit);
+  assert.ok(b.vy > 300, `out at ${b.vy.toFixed(0)}`);
+});
+
+test('the quasar scores more each time and blinks somewhere else', () => {
+  const g = inPlay(CX, 150);
+  const q = g.table.quasar;
+  const pts = [];
+  for (let k = 0; k < 2; k++) {
+    const x = q.x, y = q.y;
+    Object.assign(g.balls[0], { x, y: y + 9, vx: 0, vy: -250 });
+    const ev = run(g, 5);
+    const e = ev.find((e2) => e2.type === 'quasar');
+    assert.ok(e, `hit ${k}`);
+    pts.push(e.pts);
+    assert.ok(q.x !== x || q.y !== y, 'it moved');
+    Object.assign(g.balls[0], { x: CX, y: 150, vx: 0, vy: 0 });
+  }
+  assert.ok(pts[1] > pts[0]);
+});
+
+test('a hard hit swings the gravity bob right over the top', () => {
+  const g = inPlay(CX, 150);
+  const pb = g.table.pendulum;
+  Object.assign(g.balls[0], { x: pb.x - 12, y: pb.y + pb.len, vx: 900, vy: 0 });
+  const ev = run(g, 60);
+  assert.ok(types(ev).includes('bob'));
+  assert.ok(types(ev).includes('fullSwing'), `swung to ${pb.a.toFixed(2)}`);
 });
 
 test('ten pulsar hits kick it into overdrive', () => {

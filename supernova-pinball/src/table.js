@@ -1,10 +1,11 @@
 // The table's layout, in playfield units (0..TW across, 0..TH down). The
 // lower half is a classic symmetric pair of flippers, slingshots and lanes;
-// the upper half is deliberately lopsided and packed: a spiral warp ramp round
-// the wormhole vortex, a loop-the-loop ramp that loads a plasma cannon, a
-// hairpin comet ramp, a rail from the mystery saucer to the top lanes, a
-// spinning pulsar, four pop bumpers, two mini flippers, a five-bank of drop
-// targets, I O N standups, a captive ball and an asteroid belt round the star.
+// the upper half is lopsided and packed with different things to hit: a
+// spiral warp ramp round the wormhole vortex, a hairpin comet ramp, four pop
+// bumpers, orbiting binary stars, a bouncy gas giant, breakable meteors, a
+// blinking quasar, a spinning pulsar, a plasma cannon, a mystery saucer, a
+// pendulum, two mini flippers, drop targets, I O N standups, a captive ball
+// and an asteroid belt round the star.
 // Everything the ball can touch is a segment, a circle or a capsule.
 
 export const TW = 240;
@@ -23,7 +24,12 @@ export const CAPTIVE = { x: 184, top: 247, rest: 292 };
 export const CANNON = { x: 70, y: 338, r: 6 };
 export const SAUCER = { x: 166, y: 334 };
 export const PULSAR = { x: CX, y: 216, len: 13 };
-export const LOOP = { x: 96, y: 56, r: 13 };
+export const BINARY = { x: 92, y: 58, r: 8 };
+export const GIANT = { x: 194, y: 74, r: 8.5 };
+export const PENDULUM = { x: CX, y: 356, len: 20, r: 4.5 };
+export const METEORS = [[74, 178], [90, 178], [82, 192], [98, 192], [74, 206], [90, 206]];
+// Where the quasar can blink to.
+export const QUASAR_SPOTS = [[112, 70], [150, 150], [106, 240], [138, 246], [58, 268], [150, 300], [184, 180], [60, 64]];
 
 export const m = (x) => 2 * CX - x;
 
@@ -53,18 +59,6 @@ export function smooth(points, step = 2) {
   return out;
 }
 
-// The loop-the-loop: up from its mouth, one and a half turns round, and down
-// the other side into the plasma cannon.
-function loopPath() {
-  const pts = [[84, 188], [90, 160], [104, 124], [109, 90], [LOOP.x + LOOP.r, LOOP.y + 8]];
-  for (let i = 0; i <= 30; i++) {
-    const a = -(i / 30) * Math.PI * 3;
-    pts.push([LOOP.x + Math.cos(a) * LOOP.r, LOOP.y + Math.sin(a) * LOOP.r]);
-  }
-  pts.push([LOOP.x - LOOP.r + 3, LOOP.y + 16], [96, 98], [98, 126], [82, 154], [66, 184], [61, 230], [62, 290], [CANNON.x - 2, CANNON.y - 9]);
-  return pts;
-}
-
 // Ramps: the ball is carried along a path over the playfield.
 export const RAMPS = [
   {
@@ -74,11 +68,6 @@ export const RAMPS = [
   {
     id: 1, name: 'COMET', kind: 'ramp', mouth: { x0: 150, x1: 166, y: 188 }, speed: 430,
     control: [[158, 188], [160, 160], [168, 140], [184, 124], [202, 118], [213, 130], [214, 150], [213.5, 172]],
-  },
-  { id: 2, name: 'LOOP', kind: 'loop', mouth: { x0: 76, x1: 92, y: 188 }, speed: 470, control: loopPath() },
-  {
-    id: 3, name: 'RAIL', kind: 'rail', mouth: null, speed: 620,
-    control: [[SAUCER.x, SAUCER.y], [178, 322], [196, 300], [197, 250], [196, 180], [197, 120], [192, 70], [178, 40], [160, 28], [150, 30]],
   },
 ];
 for (const r of RAMPS) {
@@ -112,7 +101,7 @@ export const LANE_XS = [110, 126, 142, 158, 174];
 export const SHOTS = [
   { id: 'lorbit', name: 'LEFT ORBIT', x: 48, y: 346 },
   { id: 'lramp', name: 'WARP RAMP', x: 50, y: 200 },
-  { id: 'loop', name: 'HYPERLOOP', x: 84, y: 200 },
+  { id: 'cannon', name: 'CANNON', x: 84, y: 326 },
   { id: 'worm', name: 'WORMHOLE', x: 64, y: 146 },
   { id: 'ion', name: 'ION TARGETS', x: 118, y: 170 },
   { id: 'rramp', name: 'COMET RAMP', x: 158, y: 200 },
@@ -183,8 +172,20 @@ export function buildTable() {
   circles.push({ x: CAPTIVE.x - 6, y: 300, r: 1.8, kind: 'post', e: 0.4 }, { x: CAPTIVE.x + 6, y: 300, r: 1.8, kind: 'post', e: 0.4 });
   const captive = { x: CAPTIVE.x, y: CAPTIVE.rest, vy: 0, r: BALL_R, hits: 0, flash: 0 };
 
-  // The plasma cannon's turret base.
-  circles.push({ x: CANNON.x, y: CANNON.y, r: CANNON.r, kind: 'cannon', e: 0.5 });
+  // Binary stars: two small bumpers orbiting each other.
+  const binaries = [0, 1].map((id) => ({ x: BINARY.x, y: BINARY.y, r: 4.5, kind: 'binary', id, e: 0.6, kick: 280 }));
+  circles.push(...binaries);
+  // Meteors: crystal pegs that crack, then shatter.
+  const meteors = METEORS.map(([x, y], id) => ({ x, y, r: 2.6, kind: 'meteor', id, e: 0.55, hits: 0, off: false }));
+  circles.push(...meteors);
+  // The gas giant: big, soft and extra bouncy.
+  const giant = { ...GIANT, kind: 'giant', e: 1.05, wobble: 0, hits: 0 };
+  circles.push(giant);
+  // The quasar: a target that blinks from place to place.
+  const quasar = { x: QUASAR_SPOTS[0][0], y: QUASAR_SPOTS[0][1], r: 3.4, kind: 'quasar', e: 0.6, spot: 0, t: 0, value: 1 };
+  circles.push(quasar);
+  // The gravity bob: a pendulum hanging over the flippers.
+  const pendulum = { ...PENDULUM, a: 0, w: 0, flash: 0 };
 
   // SUPERNOVA: nine rollover inserts arching over the star.
   const letters = [];
@@ -200,7 +201,7 @@ export function buildTable() {
   circles.push(...moons);
 
   // An asteroid belt drifting across below the star.
-  const asteroids = [0, 1, 2].map((i) => ({ x: CX, y: 334, r: 3.4, kind: 'asteroid', id: i, e: 0.7, off: false }));
+  const asteroids = [0, 1, 2].map((i) => ({ x: CX, y: 318, r: 3.4, kind: 'asteroid', id: i, e: 0.7, off: false }));
   circles.push(...asteroids);
 
   // The main flippers and two mini flippers on the orbit guides.
@@ -221,6 +222,7 @@ export function buildTable() {
 
   return {
     segments, circles, bumpers, drops, standups, asteroids, letters, star, moons, wormholes, lanes, spinners, rollovers, flippers, rotors, captive,
+    binaries, meteors, giant, quasar, pendulum,
     vortex: { ...VORTEX, spin: 1 },
     saucer: { ...SAUCER },
     ramps: RAMPS,

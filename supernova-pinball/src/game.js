@@ -4,9 +4,9 @@
 import {
   BALL_SAVE, FINAL_SECTOR, GRAVITY, MAX_BALLS, MULTS, POINTS, START_BALLS, UPGRADES, sectorFor,
 } from './data.js';
-import { SUBSTEPS, collideBalls, makeBall, stepBall, stepCaptive, stepFlippers } from './physics.js';
+import { SUBSTEPS, collideBalls, makeBall, stepBall, stepCaptive, stepFlippers, stepPendulum } from './physics.js';
 import {
-  BALL_R, CANNON, CX, DRAIN_Y, LANE_X, LEFT_PLUNGER, PLUNGER, SAUCER, SHOTS, STAR, WHITE_HOLE, buildTable, rampPoint,
+  BALL_R, BINARY, CANNON, CX, DRAIN_Y, LANE_X, LEFT_PLUNGER, PLUNGER, QUASAR_SPOTS, SAUCER, SHOTS, STAR, WHITE_HOLE, buildTable, rampPoint,
 } from './table.js';
 
 // Missions: started at the wormhole once the I O N targets light one.
@@ -110,7 +110,7 @@ function applyUpgradesToTable(g) {
 
 function spawnShip(g) {
   const hp = 6 + g.sector * 2;
-  g.table.ship = { x: CX, y: 178, r: 10, hp, maxHp: hp, dir: 1, hitT: 0, dead: 0 };
+  g.table.ship = { x: 140, y: 176, r: 10, hp, maxHp: hp, dir: 1, hitT: 0, dead: 0 };
 }
 
 /** Puts a fresh ball on the plunger. */
@@ -168,7 +168,7 @@ function shot(g, name, x, y) {
   if (g.snipeT > 0) {
     // Straight from the plasma cannon.
     g.snipeT = 0;
-    const pts = award(g, 50000 * g.sector, x, y - 24, 'CANNON SNIPE');
+    const pts = award(g, 25000 * g.sector, x, y - 24, 'CANNON SNIPE');
     emit(g, 'snipe', { pts, x, y });
   }
   addMass(g, 4);
@@ -460,8 +460,62 @@ function onHit(g, kind, obj, strength, ball) {
       }
       break;
     }
-    case 'cannon':
-      if (strength > 80) emit(g, 'rubber', { strength });
+    case 'binary': {
+      award(g, 1500, obj.x, obj.y - 8);
+      obj.flash = 0.18;
+      addMass(g, 0.5);
+      emit(g, 'binary', { id: obj.id, x: obj.x, y: obj.y });
+      // Both stars hit within a second: an eclipse.
+      const other = t.binaries[1 - obj.id];
+      if (g.t - (other.lastT || -9) < 1) {
+        other.lastT = -9;
+        const pts = award(g, 20000 * g.sector, BINARY.x, BINARY.y - 16, 'ECLIPSE');
+        emit(g, 'eclipse', { pts, x: BINARY.x, y: BINARY.y });
+      } else obj.lastT = g.t;
+      break;
+    }
+    case 'meteor': {
+      if (obj.off || g.t - (obj.lastT || -9) < 0.15) break;
+      obj.lastT = g.t;
+      obj.hits++;
+      obj.flash = 0.2;
+      if (obj.hits >= 2) {
+        obj.off = true;
+        award(g, 4000, obj.x, obj.y - 8);
+        addMass(g, 1);
+        emit(g, 'shatter', { x: obj.x, y: obj.y });
+        if (t.meteors.every((q) => q.off)) {
+          g.showers = (g.showers || 0) + 1;
+          const pts = award(g, 30000 * g.sector * g.showers, 86, 168, 'METEOR SHOWER');
+          shot(g, 'meteors', 86, 190);
+          g.meteorT = 3;
+          emit(g, 'shower', { pts });
+        }
+      } else {
+        award(g, 1000, obj.x, obj.y - 8);
+        emit(g, 'crack', { x: obj.x, y: obj.y });
+      }
+      break;
+    }
+    case 'giant':
+      obj.hits++;
+      obj.wobble = 1;
+      award(g, 2000 + Math.min(8000, Math.round(strength) * 10), obj.x, obj.y - 14);
+      addMass(g, 1);
+      emit(g, 'giant', { x: ball.x, y: ball.y, strength });
+      break;
+    case 'quasar': {
+      const pts = award(g, 5000 * obj.value * g.sector, obj.x, obj.y - 10, obj.value > 1 ? `QUASAR X${obj.value}` : 'QUASAR');
+      emit(g, 'quasar', { x: obj.x, y: obj.y, pts, n: obj.value });
+      addMass(g, 3);
+      obj.value = Math.min(8, obj.value + 1);
+      moveQuasar(g, obj);
+      break;
+    }
+    case 'bob':
+      obj.flash = 0.2;
+      award(g, 500 + Math.min(4500, Math.round(strength) * 5), obj.x, obj.y);
+      emit(g, 'bob', { strength });
       break;
     case 'asteroid': {
       if (obj.off) break;
@@ -470,8 +524,8 @@ function onHit(g, kind, obj, strength, ball) {
       addMass(g, 1);
       emit(g, 'asteroid', { x: obj.x, y: obj.y });
       if (t.asteroids.every((q) => q.off)) {
-        const pts = award(g, 15000 * g.sector, CX, 322, 'BELT CLEARED');
-        shot(g, 'belt', CX, 332);
+        const pts = award(g, 15000 * g.sector, CX, 306, 'BELT CLEARED');
+        shot(g, 'belt', CX, 316);
         g.beltT = 6;
         emit(g, 'belt', { pts });
       }
@@ -568,7 +622,7 @@ function updateMovers(g) {
     } else {
       s.x += s.dir * 22 * DT;
       if (s.x > 168) s.dir = -1;
-      if (s.x < 72) s.dir = 1;
+      if (s.x < 116) s.dir = 1;
       t.shipCircle.x = s.x;
       t.shipCircle.y = s.y + Math.sin(g.t * 2) * 2;
       t.shipCircle.vx = s.dir * 22;
@@ -591,9 +645,37 @@ function updateMovers(g) {
   t.captive.flash = Math.max(0, t.captive.flash - DT);
   for (const sp of t.spinners) sp.spin = Math.max(0, (sp.spin || 0) - DT);
   for (const r of t.rollovers) r.flash = Math.max(0, (r.flash || 0) - DT);
+  // The binary stars orbit each other.
+  for (const bs of t.binaries) {
+    const a = g.t * 2.4 + bs.id * Math.PI;
+    const nx = BINARY.x + Math.cos(a) * BINARY.r, ny = BINARY.y + Math.sin(a) * BINARY.r * 0.8;
+    bs.vx = (nx - bs.x) / DT;
+    bs.vy = (ny - bs.y) / DT;
+    bs.x = nx;
+    bs.y = ny;
+    bs.flash = Math.max(0, (bs.flash || 0) - DT);
+  }
+  // Meteors come back once the whole shower has been smashed.
+  for (const q of t.meteors) q.flash = Math.max(0, (q.flash || 0) - DT);
+  if (g.meteorT > 0) {
+    g.meteorT -= DT;
+    if (g.meteorT <= 0) {
+      for (const q of t.meteors) Object.assign(q, { off: false, hits: 0 });
+      emit(g, 'meteorsBack');
+    }
+  }
+  // The quasar blinks elsewhere every so often; its value cools off.
+  const qz = t.quasar;
+  qz.t += DT;
+  if (qz.t > 7) {
+    qz.value = Math.max(1, qz.value - 1);
+    moveQuasar(g, qz);
+  }
+  t.giant.wobble = Math.max(0, t.giant.wobble - DT * 1.5);
+  t.pendulum.flash = Math.max(0, t.pendulum.flash - DT);
   // The asteroids drift; a cleared belt comes back after a while.
   for (const a of t.asteroids) {
-    const nx = CX + Math.sin(g.t * 0.5 + a.id * 2.1) * 30, ny = 334 + Math.sin(g.t * 1.3 + a.id * 1.7) * 5;
+    const nx = CX + Math.sin(g.t * 0.5 + a.id * 2.1) * 30, ny = 318 + Math.sin(g.t * 1.3 + a.id * 1.7) * 4;
     a.vx = (nx - a.x) / DT;
     a.vy = (ny - a.y) / DT;
     a.x = nx;
@@ -722,6 +804,12 @@ export function step(g, input) {
     for (const r of t.rotors) r.a += r.omega * dt;
     for (const b of g.balls) stepBall(b, t, dt, gravity, hit);
     stepCaptive(t.captive, dt, gravity, hit);
+    if (stepPendulum(t.pendulum, dt, gravity) && g.t - (t.pendulum.swingT || -9) > 2) {
+      t.pendulum.swingT = g.t;
+      const pts = award(g, 10000 * g.sector, t.pendulum.x, t.pendulum.y - 30, 'FULL SWING');
+      addMass(g, 5);
+      emit(g, 'fullSwing', { pts });
+    }
     if (g.balls.length > 1) collideBalls(g.balls);
   }
   for (const b of g.balls) b.age += DT;
@@ -896,22 +984,6 @@ function checkCaptures(g) {
       const p = rampPoint(r, b.rampK);
       b.x = p.x;
       b.y = p.y;
-      if (b.rampK >= 1 && r.kind === 'loop') {
-        // Round the loop and into the plasma cannon.
-        const pts = award(g, 40000 * g.sector, b.x, b.y - 20, 'HYPERLOOP');
-        shot(g, 'loop', b.x, b.y);
-        addMass(g, 5);
-        emit(g, 'loop', { pts, x: b.x, y: b.y });
-        loadCannon(g, b);
-        continue;
-      }
-      if (b.rampK >= 1 && r.kind === 'rail') {
-        b.held = null;
-        b.vx = -30;
-        b.vy = 90;
-        emit(g, 'railEnd', { x: b.x, y: b.y });
-        continue;
-      }
       if (b.rampK >= 1) {
         b.held = null;
         b.vx = 0;
@@ -937,13 +1009,15 @@ function checkCaptures(g) {
         emit(g, 'kickout', { x: b.x, y: b.y });
       }
       if (b.held === 'saucer' && b.holdT <= 0) {
-        // The award lands, then the rail fires the ball up to the top lanes.
+        // The award lands, then the saucer kicks the ball out to the left.
         applyMystery(g, g.mystery);
         g.mystery = null;
-        b.held = 'ramp';
-        b.ramp = 3;
-        b.rampK = 0;
-        emit(g, 'railIn');
+        b.held = null;
+        b.x = SAUCER.x - 6;
+        b.y = SAUCER.y + 2;
+        b.vx = -200 - rand(g) * 60;
+        b.vy = 60 + rand(g) * 60;
+        emit(g, 'kickout', { x: b.x, y: b.y });
       }
       if (b.held === 'hole' && b.holdT <= 0) {
         b.held = null;
@@ -986,6 +1060,13 @@ function checkCaptures(g) {
         }
       }
     }
+    // The plasma cannon's muzzle swallows the ball.
+    if (!g.cannon && (b.x - CANNON.x) ** 2 + (b.y - CANNON.y) ** 2 < 25 && Math.hypot(b.vx, b.vy) < 260) {
+      award(g, 15000 * g.sector, CANNON.x, CANNON.y - 16, 'CANNON');
+      shot(g, 'cannon', CANNON.x, CANNON.y);
+      loadCannon(g, b);
+      continue;
+    }
     // The mystery saucer.
     const sc = t.saucer;
     if ((b.x - sc.x) ** 2 + (b.y - sc.y) ** 2 < 30 && Math.hypot(b.vx, b.vy) < 400 && !g.mystery) {
@@ -1017,6 +1098,16 @@ function checkCaptures(g) {
       }
     }
   }
+}
+
+function moveQuasar(g, q) {
+  let spot = q.spot;
+  while (spot === q.spot) spot = Math.floor(rand(g) * QUASAR_SPOTS.length);
+  // Never onto a ball.
+  const [x, y] = QUASAR_SPOTS[spot];
+  if (g.balls.some((b) => Math.hypot(b.x - x, b.y - y) < 10)) return;
+  Object.assign(q, { spot, x, y, t: 0, off: false });
+  emit(g, 'quasarMove', { x, y });
 }
 
 // ---------------------------------------------------------------- cannon and mystery

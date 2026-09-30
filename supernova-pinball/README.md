@@ -45,14 +45,27 @@ upper half is lopsided and packed:
 - **Warp ramp**: a see-through spiral round the wormhole vortex, down into
   the left orbit. **Comet ramp**: a hairpin over the bumpers into the right
   orbit. Ramps back to back multiply.
-- **Hyperloop**: a loop-the-loop ramp that drops the ball into the **plasma
-  cannon**. The turret sweeps back and forth; flip to fire the ball wherever
-  it points. Hit a major shot straight out of the cannon for a **CANNON
-  SNIPE**.
+- **Plasma cannon**: roll the ball slowly into its muzzle and it loads. The
+  turret sweeps back and forth; flip to fire the ball wherever it points. Hit
+  a major shot straight out of the cannon for a **CANNON SNIPE**.
 - **Mystery saucer**: catches the ball, spins a slot-machine reel of awards
   on the display (big points, light lock, extra ball, multiplier, super
-  spinner, super jets, ball save, star mass, a mission, letters), then fires
-  the ball up a wire **rail** to the top lanes.
+  spinner, super jets, ball save, star mass, a mission, letters), then kicks
+  it back out.
+- **Lots of different round things to hit**:
+  - **Four pop bumpers** (planets, one ringed) under the top lanes.
+  - **Binary stars**: two small bumpers orbiting each other. Hit both within
+    a second for an **ECLIPSE**.
+  - The **gas giant**: big, soft and bouncier than anything else; it wobbles
+    like jelly.
+  - **Meteors**: six crystal pegs that crack, then shatter. Smash them all for
+    a **METEOR SHOWER**, and they grow back.
+  - The **quasar**: a target that blinks to a new spot every few seconds and
+    is worth more every time you catch it.
+  - The **gravity bob**: a pendulum hanging over the flippers. Hit it hard
+    enough and it swings right over the top.
+  - The **dying star** with **two orbiting moons**, and an **asteroid belt**
+    drifting below it.
 - **The vortex**: a spinning disc that swirls the ball into the **wormhole**,
   which teleports it out of the **white hole** across the table. It starts
   missions, collects extra balls and locks balls for multiball.
@@ -66,8 +79,7 @@ upper half is lopsided and packed:
   shot**; the flippers move it.
 - A **five-bank of drop targets**, **I O N standups** (they light missions)
   and a **captive ball** chamber (smack it to the top to crack the planet).
-- The **dying star** with **two orbiting moons**, the **S U P E R N O V A**
-  rollover letters and a drifting **asteroid belt**.
+- The **S U P E R N O V A** rollover letters arching over the star.
 - **Combos**, **ball save** for the first 8 seconds of each ball, a **ball
   search** if the ball ever gets stuck, and an end-of-ball **bonus count**.
 
@@ -120,7 +132,7 @@ are tapered capsules whose surface speed (ω × r) is added to the bounce, so a
 flip really throws the ball. Balls also bounce off each other in multiball.
 
 The table is 240 × 480 units. Everything on it is drawn as smooth vector
-shapes (spline ramps with rails and struts, shaded bumpers, tapered
+shapes (spline ramps with rails and struts, shaded planets, tapered
 flippers) on a canvas with up to 4 device pixels per unit, so it stays sharp
 at any size; only the lettering keeps a chunky pixel font. A
 cheap **bloom** pass (the table shrunk to 1/4 and 1/8 size, then added back
@@ -134,9 +146,9 @@ motion** (in help) turns all of that off.
 
 | File | What |
 | --- | --- |
-| `src/table.js` | The layout: walls, bumpers, targets, lanes, ramps (as splines), the vortex, cannon, saucer, pulsar, captive ball, flippers |
+| `src/table.js` | The layout: walls, bumpers, targets, lanes, ramps (as splines), the vortex, cannon, saucer, pulsar, pendulum, binary stars, meteors, gas giant, quasar, captive ball, flippers |
 | `src/physics.js` | Ball stepping, collisions, flippers, ball on ball |
-| `src/game.js` | The rules: scoring, combos, missions, Big Bang, cannon, mystery awards, skill shot, wormhole, multiball, supernova, sectors, upgrades, tilt, bonus, and an autopilot |
+| `src/game.js` | The rules: scoring, combos, missions, Big Bang, cannon, mystery awards, the round targets, skill shot, wormhole, multiball, supernova, sectors, upgrades, tilt, bonus, and an autopilot |
 | `src/data.js` | Sectors, upgrades and points |
 | `src/render.js` | The table, lamps, bloom, dot-matrix display, side panels and menus |
 | `src/main.js` | Input, the loop, effects, the DMD's messages and menus |
