@@ -26,7 +26,7 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   color: var(--line);
-  background: radial-gradient(120% 80% at 50% 0%, #1a1650 0%, var(--bg-2) 45%, var(--bg) 100%) fixed;
+  background: radial-gradient(120% 80% at 50% 0%, #1a1650 0%, var(--bg-2) 45%, var(--bg) 100%) no-repeat fixed var(--bg);
   font: 15px/1.5 var(--font);
   -webkit-font-smoothing: antialiased;
   display: flex;
@@ -35,6 +35,19 @@ body {
 
 /* The fixed layers reach down behind Safari's toolbar (100lvh), and none of
    them has a solid background, so Safari keeps its bars see-through. */
+/* Above the top of the page (behind the status bar, and when it bounces at
+   the top), carry on the glow's top edge rather than the dark. */
+body::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 100vh;
+  background: linear-gradient(to right, #0f1133, #1a1650 50%, #0f1133);
+  pointer-events: none;
+}
+
 #sky {
   position: fixed;
   top: 0;
