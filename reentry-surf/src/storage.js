@@ -8,11 +8,17 @@ function read() {
   }
 }
 
+/** The saved best landing, if it has the shape the game draws: anything else is dropped. */
+function validBest(b) {
+  const ok = b && Number.isFinite(b.score) && typeof b.rating === 'string' && /^[SABCD]$/.test(b.rating);
+  return ok ? { score: b.score, rating: b.rating, time: Number(b.time) || 0, gentle: !!b.gentle } : null;
+}
+
 /** Best run + settings, persisted to localStorage when it's available. */
 export function loadStore() {
   const data = read();
   return {
-    best: data.best || null, // { score, rating, time, gentle }
+    best: validBest(data.best), // { score, rating, time, gentle }
     runs: data.runs | 0,
     landings: data.landings | 0,
     settings: { muted: false, gentle: false, reducedMotion: null, ...(data.settings || {}) },

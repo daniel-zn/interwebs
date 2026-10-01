@@ -174,8 +174,8 @@ export const SCRIPTS = {
     game.healParty();
     await sleep(game.fast ? 50 : 700);
     game.s.respawn = { map: game.map.id, x: 5, y: 3 };
-    game.save();
-    await ui.say(['All done! Your drakes are running at full power.', 'I\'ve saved your Linker ID and set this Den as your restart point.'], { name: 'Medic' });
+    const saved = game.save();
+    await ui.say(['All done! Your drakes are running at full power.', saved ? 'I\'ve saved your Linker ID and set this Den as your restart point.' : 'I\'ve set this Den as your restart point, but your Linker ID wouldn\'t save. Your browser is blocking storage, or it\'s full.'], { name: 'Medic' });
   },
 
   async shop(game, npc) {
@@ -262,6 +262,11 @@ export const SCRIPTS = {
       game.unlockLegend('dream');
       game.save();
     }
+    if (id === 'rival3') {
+      // She's off to hold back the enforcers, which clears the Spire door.
+      game.setFlag('rival3_done');
+      game.npcs = game.npcs.filter((n) => n.id !== 'rival3');
+    }
     if (id === 'kade') {
       game.setFlag('kade_done');
       game.audio.sfx('heartbeat');
@@ -338,7 +343,7 @@ export async function onTrigger(game, id) {
     await game.walkPlayer('down', 1);
     return true;
   }
-  if (id === 'rival2' && game.flag('sigil1') && !game.flag('t_rival2') && !game.flag('rival2_met')) {
+  if (id === 'rival2' && game.flag('sigil1') && !game.flag('t_rival2') && !game.flag('rival2_met') && game.s.party.some((m) => m.hp > 0)) {
     game.setFlag('rival2_met');
     const p = game.player;
     const kes = { id: 'kes2', x: p.x + 4, y: p.y, px: (p.x + 4) * 16, py: p.y * 16, dir: 'left', look: 'rival' };

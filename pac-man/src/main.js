@@ -15,9 +15,9 @@ const START_LEVEL = Math.max(1, Number(params.get('level')) || 1);
 let seed = params.has('seed') ? Number(params.get('seed')) >>> 0 : (Date.now() ^ (Math.random() * 1e9)) >>> 0;
 
 const store = loadStore();
-if (store.settings.reducedMotion === null) {
-  store.settings.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
+// The system's reduced-motion setting applies until the player picks one in the menu.
+const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+const reducedMotion = () => (store.settings.reducedMotion === null ? motionQuery.matches : !!store.settings.reducedMotion);
 
 const canvas = document.getElementById('game');
 bleed(canvas);
@@ -49,11 +49,12 @@ function resize() {
   const fit = (w, h) => Math.floor(Math.min(vw / w, vh / h));
   scale = Math.max(1, fit(MW, MH + 40), fit(MW + 136, MH + 8));
   const W = Math.ceil(vw / scale), H = Math.ceil(vh / scale);
+  // The CSS size follows the zoom level even when the pixel size doesn't change.
+  canvas.style.width = `${(W * scale) / dpr}px`;
+  canvas.style.height = `${(H * scale) / dpr}px`;
   if (W === canvas.width && H === canvas.height && renderer.W) return;
   canvas.width = W;
   canvas.height = H;
-  canvas.style.width = `${(W * scale) / dpr}px`;
-  canvas.style.height = `${(H * scale) / dpr}px`;
   ctx.imageSmoothingEnabled = false;
   renderer.resize(W, H);
 }
@@ -84,9 +85,23 @@ function titleHint() {
   setHint(touchFirst ? 'Tap to play · swipe to steer' : 'Press Enter to play · arrow keys steer', 'title');
 }
 function applyMotion() {
-  document.documentElement.classList.toggle('reduced-motion', !!store.settings.reducedMotion);
+  document.documentElement.classList.toggle('reduced-motion', reducedMotion());
 }
 applyMotion();
+motionQuery.addEventListener?.('change', applyMotion);
+
+// Whether the last input was a click or tap (rather than a key).
+let pointerUsed = false;
+window.addEventListener('pointerdown', () => (pointerUsed = true), true);
+window.addEventListener('keydown', () => (pointerUsed = false), true);
+/**
+ * Hands keyboard focus back to the game. After a click or tap it only takes focus off a
+ * button: focusing the canvas from script would frame the whole screen with the focus ring.
+ */
+function focusGame() {
+  if (!pointerUsed) canvas.focus({ preventScroll: true, focusVisible: false });
+  else if (isControl(document.activeElement)) document.activeElement.blur();
+}
 
 const soundBtn = document.getElementById('btn-sound');
 function syncSound() {
@@ -104,7 +119,7 @@ function startGame() {
   pendingDir = NONE;
   setHint(store.games ? '' : touchFirst ? 'Swipe to steer' : 'Arrow keys steer');
   audio.play('intro');
-  canvas.focus({ preventScroll: true });
+  focusGame();
   alertSr(`Game started${store.settings.relaxed ? ' at relaxed speed' : ''}. Three lives.`);
 }
 
@@ -202,7 +217,7 @@ window.addEventListener('keydown', (e) => {
 let swipe = null;
 canvas.addEventListener('pointerdown', (e) => {
   audio.unlock();
-  canvas.focus({ preventScroll: true });
+  focusGame(); // (then the press focuses the canvas by itself, with no focus ring)
   swipe = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
   try {
     canvas.setPointerCapture(e.pointerId);
@@ -246,6 +261,8 @@ function pollPad() {
   if (!openDialogs()) {
     if ((a && !padPrev.a) || (start && !padPrev.start && state !== 'play')) pressStart();
     else if (start && !padPrev.start && state === 'play' && game.phase !== 'over') pause();
+  } else if (pauseDlg.open && ((a && !padPrev.a) || (start && !padPrev.start))) {
+    pauseDlg.close('resume');
   }
   padPrev = { a, start };
 }
@@ -263,12 +280,18 @@ function pause() {
 function resume() {
   paused = false;
   audio.resume();
-  canvas.focus({ preventScroll: true });
+  focusGame();
 }
 pauseDlg.addEventListener('close', () => {
-  if (pauseDlg.returnValue === 'quit') toTitle();
+  const v = pauseDlg.returnValue;
+  // Closing with Esc keeps the last returnValue, so clear it for next time.
+  pauseDlg.returnValue = '';
+  if (v === 'quit') toTitle();
   resume();
 });
+// A click on a menu button mustn't leave focus on it, or the arrow keys would stop
+// steering and Space would press it again. (Keyboard users still Tab to them.)
+for (const btn of document.querySelectorAll('.hud button')) btn.addEventListener('mousedown', (e) => e.preventDefault());
 document.getElementById('btn-pause').addEventListener('click', () => (state === 'play' && game.phase !== 'over' ? pause() : null));
 
 function toggleSound() {
@@ -291,11 +314,12 @@ function openHelp() {
   }
   document.getElementById('opt-sound').checked = !store.settings.muted;
   document.getElementById('opt-relaxed').checked = !!store.settings.relaxed;
-  document.getElementById('opt-motion').checked = !!store.settings.reducedMotion;
+  document.getElementById('opt-motion').checked = reducedMotion();
   helpDlg.showModal();
 }
 helpDlg.addEventListener('close', () => {
   if (pausedForHelp) resume();
+  else focusGame();
   pausedForHelp = false;
 });
 document.getElementById('btn-help').addEventListener('click', openHelp);
@@ -316,7 +340,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden && state === 'play' && game.phase !== 'over') pause();
 });
 window.addEventListener('blur', () => {
-  if (!TEST && state === 'play' && game.phase !== 'over' && game.phase !== 'ready') pause();
+  if (!TEST && state === 'play' && game.phase !== 'over') pause();
 });
 
 // ---------------------------------------------------------------- loop
@@ -366,7 +390,7 @@ function frame(now) {
     mode: state,
     high: store.high,
     time: clock,
-    reducedMotion: !!store.settings.reducedMotion,
+    reducedMotion: reducedMotion(),
   });
   perf.frames++;
   perf.worst = Math.max(perf.worst, performance.now() - t0);

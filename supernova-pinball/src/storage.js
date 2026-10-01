@@ -11,10 +11,12 @@ function read() {
 /** High score and settings, persisted to localStorage when it's available. */
 export function loadStore() {
   const data = read();
+  // Scores pass 2^31 in the deep sectors, so no `| 0` here.
+  const count = (n) => Math.max(0, Math.floor(Number(n)) || 0);
   return {
-    high: data.high | 0,
-    bestSector: data.bestSector | 0,
-    games: data.games | 0,
+    high: count(data.high),
+    bestSector: count(data.bestSector),
+    games: count(data.games),
     settings: { muted: false, music: true, relaxed: false, reducedMotion: null, ...(data.settings || {}) },
     save() {
       try {

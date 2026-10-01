@@ -473,7 +473,7 @@ function populate(M) {
   item('house_e', 6, 4, 'scrap', 2);
   npc('house_g', 'house_g_npc', 5, 4, 'left', 'hacker', { say: ['I found a Void Core in a meteor crater once. A Comettail ate it and turned into something that glowed so bright I had to sleep with sunglasses on.', 'The Nightside Neo-Mart sells them now. Capitalism.'] });
 
-  npc('spire', 'kade', 6, 6, 'down', 'kade', { trainer: 'kade', sight: 5 });
+  npc('spire', 'kade', 6, 6, 'down', 'kade', { trainer: 'kade', sight: 5, hide: 'kade_gone' });
   M.spire.objects.push({ kind: 'sovereign', x: 6, y: 3 });
 }
 

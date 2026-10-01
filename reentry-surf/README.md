@@ -58,7 +58,9 @@ npm start            # zero-dependency server on http://127.0.0.1:8080/
 
 Points tick up while you ride, multiplied by **flow** (x1–x5). Flow goes up one
 step for every 5 s riding cleanly inside the band. A junk hit resets it, and
-red-lining a gauge drops it one step. You get **edge** points for skimming within
+red-lining a gauge drops it one step. Flow is for riding, not drifting: after
+25 s hands-off (no fresh dive or pull) it stops building and drops a step every
+5 s until you carve again. You get **edge** points for skimming within
 a hair of either line, plus bonuses for close calls, jet-stream rides, cresting
 storm waves and coolant. A landing adds a bonus for shield condition and best
 flow. Landings get a rank from S to D. Your best landing is saved in

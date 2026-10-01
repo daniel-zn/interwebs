@@ -9,7 +9,7 @@ meter fills, it goes **SUPERNOVA**: two extra balls, double scoring for 20
 seconds, slow motion, and the whole table lights up.
 
 **Stack:** vanilla JS + Canvas 2D · no runtime dependencies · no build step ·
-all sound and music synthesised with WebAudio · about 60 KB gzipped
+all sound and music synthesised with WebAudio · about 68 KB gzipped
 (`npm run size`).
 
 ## Play
@@ -27,12 +27,15 @@ npm start            # zero-dependency server on http://127.0.0.1:8080/
 | --- | --- | --- | --- |
 | Left flipper | **Z**, ←, Left Shift, A | Left half of the screen | LB / LT / d-pad left |
 | Right flipper | **/**, →, Right Shift, L, D | Right half | RB / RT / d-pad right |
-| Plunger | Hold **Space** (or Enter, ↓), let go to launch | Hold anywhere, let go | Hold **A** |
+| Plunger | Hold **Space** (or Enter, ↓), let go to launch | Hold anywhere, let go (a quick tap only flips) | Hold **A** |
 | Nudge | ↑, W, N | Quick swipe up | Y |
-| Pause · sound · help | P · M · H | Buttons, top right | Start |
+| Pause · sound · help | P · M · H | Buttons, top right | Start (in the menus: d-pad moves, A presses, B or Start closes) |
 
 Flipping also moves the lit S T A R lanes, like a real table's lane change.
-Nudge too hard and the table **tilts**: dead flippers until the ball drains.
+Nudge too hard and the table **tilts**: the flippers, bumpers and slings go
+dead and nothing scores until the ball drains. The ball save and skill shot
+start once the ball is out of the shooter lane, so a weak plunge that rolls
+back costs nothing.
 
 ## The table
 
@@ -162,7 +165,7 @@ motion** (in help) turns all of that off.
 
 ```sh
 npm test             # physics and rules: launching, draining, flippers, no tunnelling, gates, bumpers, targets, lanes, supernova, multiball, tilt, ball save, sectors, upgrades
-npm run play         # headless Chromium: keyboard, touch (two-finger flips), plunger, warp and upgrade, pause, game over, scaling
+npm run play         # headless Chromium: keyboard, touch (two-finger flips, taps that don't plunge), plunger, warp and upgrade, pause, game over, scaling, a small phone
 npm run check        # all of the above plus the size budget
 npm run tune -- 16 30 0.8   # let the autopilot play 16 games (30 min cap) flipping 80% of the time
 ```

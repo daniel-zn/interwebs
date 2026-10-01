@@ -120,18 +120,38 @@ function arrow(g, x, y, color, s = 1) {
   g.closePath();
   g.fill();
 }
-function sText(g, text, x, y, color, scale = 1) {
-  x = Math.round(x);
-  y = Math.round(y);
-  drawText(g, text, x + scale, y + scale, C.ink, scale);
+// The pixel font is one fillRect per lit pixel (nine times over for an
+// outline), so lettering is drawn once into a sprite and reused. Colours that
+// change every frame (fractional hues) are drawn directly instead.
+let RES = 1; // device pixels per table unit, set by the renderer
+const sprites = new Map();
+const OUTLINE = [[-1, 0], [1, 0], [0, -1], [0, 1], [1, 1], [-1, -1], [1, -1], [-1, 1]];
+function shadowed(g, text, x, y, color, scale, outline) {
+  if (outline) for (const [dx, dy] of OUTLINE) drawText(g, text, x + dx * scale, y + dy * scale, C.ink, scale);
+  else drawText(g, text, x + scale, y + scale, C.ink, scale);
   drawText(g, text, x, y, color, scale);
 }
-function oText(g, text, x, y, color, scale = 1) {
+function spriteText(g, text, x, y, color, scale, outline) {
   x = Math.round(x);
   y = Math.round(y);
-  for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) drawText(g, text, x + dx * scale, y + dy * scale, C.ink, scale);
-  drawText(g, text, x, y, color, scale);
+  if (/\d\.\d/.test(color)) {
+    shadowed(g, text, x, y, color, scale, outline);
+    return;
+  }
+  const key = `${RES}|${scale}|${outline ? 1 : 0}|${color}|${text}`;
+  let c = sprites.get(key);
+  if (!c) {
+    if (sprites.size >= 500) sprites.clear();
+    c = mk((measureText(text, scale) + 2 * scale) * RES, 7 * scale * RES);
+    const sg = c.getContext('2d');
+    sg.setTransform(RES, 0, 0, RES, 0, 0);
+    shadowed(sg, text, scale, scale, color, scale, outline);
+    sprites.set(key, c);
+  }
+  g.drawImage(c, x - scale, y - scale, c.width / RES, c.height / RES);
 }
+const sText = (g, text, x, y, color, scale = 1) => spriteText(g, String(text), x, y, color, scale, false);
+const oText = (g, text, x, y, color, scale = 1) => spriteText(g, String(text), x, y, color, scale, true);
 const cText = (g, text, cx, y, color, scale = 1, fn = sText) => fn(g, text, Math.round(cx - measureText(String(text), scale) / 2), y, color, scale);
 
 function box(g, x, y, w, h, fill, border) {
@@ -175,9 +195,11 @@ export class Renderer {
     this.rails = {};
   }
 
-  resize(W, H, RS = 1) {
+  /** `inset`: the screen's safe area insets, in table units. */
+  resize(W, H, RS = 1, inset = { top: 0, right: 0, bottom: 0, left: 0 }) {
     this.W = W;
     this.H = H;
+    RES = RS;
     if (RS !== this.RS || !this.tc) {
       this.RS = RS;
       this.art = {};
@@ -188,11 +210,12 @@ export class Renderer {
     }
     const L = (this.L = {});
     const total = DMD_HEIGHT + 3 + TH;
-    L.side = W >= TW + 2 * 112;
-    L.tx = Math.floor((W - TW) / 2);
-    const spare = Math.max(0, H - total);
+    const iw = W - inset.left - inset.right, ih = H - inset.top - inset.bottom;
+    L.side = iw >= TW + 2 * 112;
+    L.tx = Math.floor(inset.left + (iw - TW) / 2);
+    const spare = Math.max(0, ih - total);
     L.bottom = !L.side && spare >= 30;
-    L.dy = Math.floor(spare / (L.bottom ? 3 : 2));
+    L.dy = Math.floor(inset.top + spare / (L.bottom ? 3 : 2));
     L.ty = L.dy + DMD_HEIGHT + 3;
     L.dmdX = L.tx + (TW - DMD_W * DMD_PX) / 2;
     L.dmdW = DMD_W * DMD_PX;
@@ -213,6 +236,8 @@ export class Renderer {
   // ---------------------------------------------------------------- playfield art
   tableArt(g, key = g.sector) {
     if (this.art[key]) return this.art[key];
+    // Only this sector's and the next one's art are kept (each is megabytes).
+    for (const k of Object.keys(this.art)) if (Number(k) !== key && Number(k) !== g.sector) delete this.art[k];
     const RS = this.RS;
     const pal = sectorFor(key).pal;
     const c = mk(TW * RS, TH * RS);
@@ -749,7 +774,7 @@ export class Renderer {
     if (tb.ship && !tb.ship.dead) {
       const s = tb.ship;
       const sc = tb.shipCircle || s;
-      const flick = s.hitT > 0 && Math.floor(t * 30) % 2;
+      const flick = s.hitT > 0 && !v.reducedMotion && Math.floor(t * 30) % 2;
       if (!flick) {
         glow(ctx, sc.x, sc.y + 7, 10, C.pink, 0.3);
         sphere(ctx, sc.x, sc.y - 2, 5, '#fff', C.cyan, '#1c5bd9');
@@ -886,7 +911,8 @@ export class Renderer {
         poly(ctx, rails[1], pal.glow, 1);
         // Chasing lights.
         const n = Math.round(r.len / 14);
-        const hot = g.rampRun > 1 || (g.mission && g.mission.lit.has(r.id ? 'rramp' : 'lramp'));
+        // Hot while a ramp combo can still go on (5 s), or when a mission wants the ramp.
+        const hot = (g.rampRun > 1 && g.t - g.lastRampT < 5) || (g.mission && g.mission.lit.has(r.id ? 'rramp' : 'lramp'));
         for (let i = 0; i < n; i++) {
           const k = (i / n + t * (hot ? 0.5 : 0.15)) % 1;
           const p = rampPoint(r, k);
@@ -1055,23 +1081,38 @@ export class Renderer {
     d.clearRect(0, 0, DMD_W, DMD_H);
     if (v.dmdDraw) v.dmdDraw(d, DMD_W, DMD_H);
     const img = d.getImageData(0, 0, DMD_W, DMD_H).data;
-    // Bezel.
-    rrect(ctx, x - 3, y - 2.5, DMD_W * DMD_PX + 5, DMD_H * DMD_PX + 4, 2, '#1a0b04', C.ink, 1);
-    ctx.fillStyle = '#2e1507';
-    const dot = DMD_PX * 0.72;
-    for (let j = 0; j < DMD_H; j++) {
-      for (let i = 0; i < DMD_W; i++) {
-        if (img[(j * DMD_W + i) * 4 + 3] <= 40) ctx.fillRect(x + i * DMD_PX, y + j * DMD_PX, dot, dot);
+    // The bezel and dots are painted into a sprite, again only when the picture changes.
+    const M = 4; // margin round the dots, in table units
+    const w = DMD_W * DMD_PX + 2 * M, h = DMD_H * DMD_PX + 2 * M;
+    const last = this.dmdLast;
+    let same = last && last.length === img.length && this.dmdRS === this.RS;
+    for (let k = 0; same && k < img.length; k++) same = img[k] === last[k];
+    if (!same) {
+      this.dmdLast = img;
+      this.dmdRS = this.RS;
+      if (!this.dmdC || this.dmdC.width !== Math.round(w * this.RS)) this.dmdC = mk(w * this.RS, h * this.RS);
+      const g = this.dmdC.getContext('2d');
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, this.dmdC.width, this.dmdC.height);
+      g.setTransform(this.RS, 0, 0, this.RS, M * this.RS, M * this.RS);
+      rrect(g, -3, -2.5, DMD_W * DMD_PX + 5, DMD_H * DMD_PX + 4, 2, '#1a0b04', C.ink, 1);
+      g.fillStyle = '#2e1507';
+      const dot = DMD_PX * 0.72;
+      for (let j = 0; j < DMD_H; j++) {
+        for (let i = 0; i < DMD_W; i++) {
+          if (img[(j * DMD_W + i) * 4 + 3] <= 40) g.fillRect(i * DMD_PX, j * DMD_PX, dot, dot);
+        }
+      }
+      for (let j = 0; j < DMD_H; j++) {
+        for (let i = 0; i < DMD_W; i++) {
+          const k = (j * DMD_W + i) * 4;
+          if (img[k + 3] <= 40) continue;
+          g.fillStyle = `rgb(${img[k]} ${img[k + 1]} ${img[k + 2]})`;
+          g.fillRect(i * DMD_PX, j * DMD_PX, dot, dot);
+        }
       }
     }
-    for (let j = 0; j < DMD_H; j++) {
-      for (let i = 0; i < DMD_W; i++) {
-        const k = (j * DMD_W + i) * 4;
-        if (img[k + 3] <= 40) continue;
-        ctx.fillStyle = `rgb(${img[k]} ${img[k + 1]} ${img[k + 2]})`;
-        ctx.fillRect(x + i * DMD_PX, y + j * DMD_PX, dot, dot);
-      }
-    }
+    ctx.drawImage(this.dmdC, x - M, y - M, w, h);
   }
 
   // ---------------------------------------------------------------- side and bottom panels
@@ -1103,7 +1144,8 @@ export class Renderer {
     y += 9;
     this.bar(ctx, lx, y, 96, g.sectorScore / g.target, pal.a, g.sectorScore >= g.target);
     y += 9;
-    sText(ctx, `${fmt(g.sectorScore)} / ${fmt(g.target)}`.length > 16 ? fmt(g.target) : `${fmt(g.sectorScore)}`, lx, y, C.line);
+    const progress = `${fmt(g.sectorScore)} / ${fmt(g.target)}`;
+    sText(ctx, progress.length <= 16 ? progress : `NEED ${fmt(Math.max(0, g.target - g.sectorScore))}`, lx, y, C.line);
     y += 14;
     sText(ctx, 'STAR MASS', lx, y, C.muted);
     y += 9;
@@ -1127,8 +1169,8 @@ export class Renderer {
       sText(ctx, label, lx, y, hsl(t * 300 + y));
       y += 10;
     }
-    // Right: upgrades and controls.
-    let ry = L.ty;
+    // Right: upgrades and controls (below the menu buttons, if they're in the way).
+    let ry = L.hud && rx + 100 > L.hud.x ? Math.max(L.ty, Math.ceil(L.hud.bottom) + 4) : L.ty;
     sText(ctx, 'UPGRADES', rx, ry, C.muted);
     ry += 11;
     if (!g.upgrades.length) {

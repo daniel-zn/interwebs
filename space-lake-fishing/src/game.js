@@ -449,7 +449,7 @@ export class Game {
   }
 
   rodPoints(out = []) {
-    const shake = this.rodShake > 0 && !this.settings.reducedMotion ? (Math.random() - 0.5) * this.rodShake : 0;
+    const shake = this.rodShake > 0 && !this.store.reducedMotion ? (Math.random() - 0.5) * this.rodShake : 0;
     const a = this.rodAngle + shake;
     const dx = Math.cos(a), dy = Math.sin(a);
     out.length = 0;
@@ -553,7 +553,7 @@ export class Game {
       }
       return;
     }
-    if (this.state === 'reeling' || this.state === 'landing' || this.settings.reducedMotion) return;
+    if (this.state === 'reeling' || this.state === 'landing' || this.store.reducedMotion) return;
     this.jumpIn -= dt;
     if (this.jumpIn > 0) return;
     this.jumpIn = 8 + this.rng() * 12;

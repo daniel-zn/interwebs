@@ -17,7 +17,8 @@ function spriteInto(canvasEl, sprite, maxCss, maxScale = 8) {
 export class UI {
   constructor(store) {
     this.store = store;
-    this.mode = 'pointer';
+    // Phones and tablets get touch wording before the first tap.
+    this.mode = matchMedia('(pointer: coarse)').matches ? 'touch' : 'pointer';
     this.state = 'title';
     this.message = '';
     this.hint = $('hint');

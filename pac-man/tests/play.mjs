@@ -99,6 +99,9 @@ async function openGame(context, name, query = '?test&seed=4') {
   await page.keyboard.press('m');
   check((await page.getAttribute('#btn-sound', 'aria-pressed')) === 'false', 'M mutes');
   await page.keyboard.press('m');
+  await page.click('#btn-sound');
+  await page.click('#btn-sound');
+  check(!(await page.evaluate(() => !!document.activeElement.closest('button'))), 'clicked menu buttons leave the keys with the game');
 
   // Get caught on purpose until the game ends, then check the high score sticks.
   await page.evaluate(() => {
@@ -129,6 +132,7 @@ async function openGame(context, name, query = '?test&seed=4') {
   await sleep(200);
   s = await page.snap();
   check(s.state === 'title', 'Quit returns to the title');
+  check(await page.evaluate(() => document.getElementById('pause').returnValue === ''), 'the pause menu forgets "quit" once it has acted on it');
 
   const perf = await page.evaluate(() => window.__pac.perf);
   check(perf.worst < 50, 'frames are cheap', `worst ${perf.worst.toFixed(1)} ms over ${perf.frames} frames`);

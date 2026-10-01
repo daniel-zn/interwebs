@@ -15,9 +15,9 @@ const SPEED = params.has('fast') ? 2.5 : 1;
 let seed = params.has('seed') ? Number(params.get('seed')) >>> 0 : (Date.now() ^ (Math.random() * 1e9)) >>> 0;
 
 const store = loadStore();
-if (store.settings.reducedMotion === null) {
-  store.settings.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
+// The system's reduced-motion setting applies until the player picks one in the menu.
+const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+const reducedMotion = () => !!(store.settings.reducedMotion ?? motionQuery.matches);
 
 const canvas = document.getElementById('game');
 bleed(canvas);
@@ -43,17 +43,21 @@ let lastResult = null;
 // Render at a low internal resolution and scale by a whole number of device
 // pixels, so every game pixel is a crisp square on any screen.
 let scale = 1;
+const menu = document.querySelector('.hud .buttons');
 function resize() {
   const dpr = window.devicePixelRatio || 1;
   const vw = Math.round(window.innerWidth * dpr), vh = Math.round(window.innerHeight * dpr);
   const minW = vw < vh ? 220 : 320;
   scale = Math.max(1, Math.floor(Math.min(vw / minW, vh / 180)));
   const W = Math.ceil(vw / scale), H = Math.ceil(vh / scale);
+  // The CSS size follows the zoom level even when the pixel size doesn't change.
+  canvas.style.width = `${(W * scale) / dpr}px`;
+  canvas.style.height = `${(H * scale) / dpr}px`;
+  // Where the menu buttons start, in canvas pixels, so the HUD can keep clear of them.
+  renderer.menuLeft = (menu.getBoundingClientRect().left * dpr) / scale;
   if (W === canvas.width && H === canvas.height && renderer.W) return;
   canvas.width = W;
   canvas.height = H;
-  canvas.style.width = `${(W * scale) / dpr}px`;
-  canvas.style.height = `${(H * scale) / dpr}px`;
   ctx.imageSmoothingEnabled = false;
   renderer.resize(W, H);
 }
@@ -73,12 +77,12 @@ function startRun() {
   audio.unlock();
   ui.hideResult();
   run = createRun({ seed: seed++, gentle: store.settings.gentle });
-  renderer.camAlt = null;
+  renderer.reset();
   state = 'ride';
   paused = false;
   ui.setState('ride');
   audio.dropIn();
-  canvas.focus({ preventScroll: true });
+  focusGame();
   ui.alert(store.settings.gentle ? 'Dropping in, gentle mode.' : 'Dropping in.', 'start', 0);
 }
 
@@ -108,6 +112,19 @@ const DIVE_KEYS = new Set([' ', 'ArrowDown', 's', 'S']);
 const PULL_KEYS = new Set(['ArrowUp', 'w', 'W']);
 const openDialogs = () => document.querySelector('dialog[open]') !== null;
 const isControl = (el) => el && el !== canvas && el.closest && el.closest('button, input, a, dialog, select, textarea');
+
+// Whether the last input was a click or tap (rather than a key).
+let pointerUsed = false;
+window.addEventListener('pointerdown', () => (pointerUsed = true), true);
+window.addEventListener('keydown', () => (pointerUsed = false), true);
+/**
+ * Hands keyboard focus back to the game. After a click or tap it only takes focus off a
+ * button: focusing the canvas from script would frame the whole screen with the focus ring.
+ */
+function focusGame() {
+  if (!pointerUsed) canvas.focus({ preventScroll: true, focusVisible: false });
+  else if (isControl(document.activeElement)) document.activeElement.blur();
+}
 
 function currentInput() {
   let v = 0;
@@ -146,6 +163,11 @@ window.addEventListener('keydown', (e) => {
   if (openDialogs()) return;
   const k = e.key;
   const control = isControl(e.target);
+  if (e.repeat && control && (k === ' ' || k === 'Enter')) {
+    // A key still held from the ride mustn't press "Ride again" when the result card takes focus.
+    e.preventDefault();
+    return;
+  }
   if ((DIVE_KEYS.has(k) || PULL_KEYS.has(k) || k === 'Enter') && !control) {
     e.preventDefault();
     ui.setMode('key');
@@ -162,7 +184,10 @@ window.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
   const lk = k.toLowerCase();
   if (lk === 'p' || k === 'Escape') {
-    if (state === 'ride') pause();
+    if (state === 'ride') {
+      e.preventDefault(); // or this Esc would also close the menu it opens
+      pause();
+    }
   } else if (lk === 'm') toggleSound();
   else if (lk === 'h' || k === '?') openHelp();
   else if (lk === 'r' && state !== 'title') startRun();
@@ -213,8 +238,8 @@ function syncSettings() {
   soundBtn.setAttribute('aria-label', s.muted ? 'Sound is off. Turn sound on (M)' : 'Sound is on. Turn sound off (M)');
   optSound.checked = !s.muted;
   optGentle.checked = s.gentle;
-  optMotion.checked = s.reducedMotion;
-  document.documentElement.classList.toggle('reduced-motion', s.reducedMotion);
+  optMotion.checked = reducedMotion();
+  document.documentElement.classList.toggle('reduced-motion', reducedMotion());
 }
 
 function toggleSound(force) {
@@ -255,7 +280,7 @@ function resume() {
   if (openDialogs()) return;
   paused = false;
   last = performance.now();
-  canvas.focus({ preventScroll: true });
+  focusGame();
 }
 for (const dlg of [pauseDlg, helpDlg]) {
   dlg.addEventListener('click', (e) => {
@@ -263,6 +288,9 @@ for (const dlg of [pauseDlg, helpDlg]) {
   });
 }
 
+// A click on a menu button mustn't leave focus on it, or Space would press it again
+// instead of diving. (Keyboard users still Tab to them.)
+for (const btn of document.querySelectorAll('.hud button')) btn.addEventListener('mousedown', (e) => e.preventDefault());
 document.getElementById('btn-pause').addEventListener('click', () => (state === 'ride' ? pause() : null));
 document.getElementById('btn-help').addEventListener('click', openHelp);
 // Tapping anywhere on the result card rides again, like the hint says.
@@ -286,6 +314,7 @@ optMotion.addEventListener('change', () => {
   store.save();
   syncSettings();
 });
+motionQuery.addEventListener?.('change', syncSettings);
 syncSettings();
 
 document.addEventListener('visibilitychange', () => {
@@ -306,7 +335,7 @@ const INCOMING = {
 };
 
 function handleEvents() {
-  const rm = store.settings.reducedMotion;
+  const rm = reducedMotion();
   const live = state !== 'title';
   for (const e of run.events) {
     if (live) renderer.onEvent(e, run, rm);
@@ -356,6 +385,8 @@ function handleEvents() {
 const perf = { frames: 0, work: 0, max: 0 };
 let last = performance.now();
 function frame(now) {
+  // Next frame first: an error in this one must not stop the game for good.
+  requestAnimationFrame(frame);
   const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
   last = now;
   const t0 = performance.now();
@@ -382,7 +413,7 @@ function frame(now) {
   }
   const riding = state !== 'title' && run.phase === 'ride' && !paused;
   renderer.draw(ctx, dt, {
-    run, mode: state === 'title' ? 'title' : 'ride', rm: store.settings.reducedMotion, paused,
+    run, mode: state === 'title' ? 'title' : 'ride', rm: reducedMotion(), paused,
     best: store.best, gentle: store.settings.gentle, inputMode: ui.mode,
   });
   audio.tick(dt, riding ? {
@@ -393,7 +424,6 @@ function frame(now) {
   perf.frames++;
   perf.work += work;
   perf.max = Math.max(perf.max, work);
-  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
@@ -404,6 +434,7 @@ if (TEST) {
     get paused() { return paused; },
     get scale() { return scale; },
     get input() { return currentInput(); },
+    get reducedMotion() { return reducedMotion(); },
     snapshot: () => ({ ...snapshot(run), state, paused }),
     store, perf, renderer,
   };

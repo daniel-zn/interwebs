@@ -52,6 +52,16 @@ export class Renderer {
     this.emitAcc = 0;
     this.sparkAcc = 0;
     this.skyKey = '';
+    this.menuLeft = Infinity; // where the page's menu buttons start (main.js keeps it up to date)
+  }
+
+  /** A fresh start: the last run's flash, shake, particles and pop-ups don't carry over. */
+  reset() {
+    this.camAlt = null;
+    this.shake = 0;
+    this.flash = 0;
+    this.popups = [];
+    for (const p of this.p) p.on = false;
   }
 
   resize(W, H) {
@@ -142,6 +152,8 @@ export class Renderer {
       this.popup(`+${e.pts} ${e.text}`, bx, by - 26, '#f3c252');
     } else if (e.type === 'flow') {
       this.popup(`FLOW X${e.flow}`, bx, by - 34, '#8fffc0');
+    } else if (e.type === 'flowlost' && e.why === 'coast') {
+      this.popup('COASTING -FLOW', bx, by - 34, '#aeb8e2');
     } else if (e.type === 'boost') {
       this.popup('JET STREAM!', bx, by - 26, '#7ff4ff');
       if (!rm) this.shake = Math.max(this.shake, 1.5);
@@ -786,9 +798,11 @@ export class Renderer {
     const blink = view.rm ? true : (t * 4) % 1 < 0.55;
     const x = 6;
     let y = 6;
-    const narrowHud = W < 300;
+    // Score, flow and progress go top centre, or under the gauges on portrait and narrow
+    // screens, where the centre block would run into the gauges or the menu buttons.
+    const narrow = W < 300 || W < this.H || W / 2 + 76 > this.menuLeft;
     ctx.fillStyle = 'rgba(7,8,26,0.5)';
-    ctx.fillRect(2, 2, 104, narrowHud ? 78 : 44);
+    ctx.fillRect(2, 2, 104, narrow ? 78 : 44);
     this.gauge(ctx, x, y, 'HEAT', run.heat, run.warnHeat, blink, 'heat', view.rm);
     y += 11;
     this.gauge(ctx, x, y, 'SKIP', run.skip, run.warnSkip, blink, 'skip', view.rm);
@@ -797,8 +811,7 @@ export class Renderer {
     this.label(ctx, `ALT ${alt} KM`, x, y, '#aeb8e2');
     this.label(ctx, `SPD ${run.v.toFixed(1)}`, x, y + 8, '#aeb8e2');
 
-    // Score, flow and progress to the surface, top centre (under the gauges on narrow screens).
-    const narrow = W < 300;
+    // Score, flow and progress to the surface.
     const cx = narrow ? x : W / 2;
     const align = narrow ? 'l' : 'c';
     let sy = narrow ? y + 20 : 6;

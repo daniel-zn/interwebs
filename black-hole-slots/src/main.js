@@ -1,10 +1,13 @@
 import { SoundEngine } from './audio.js';
 import { bleed } from './bleed.js';
-import { CHARM_BY_ID, COLS, DAYS, EVENT_BY_ID, PATTERNS, PULSAR, ROWS, SYMBOLS, SYMBOL_BY_ID, VOID, WHEEL, debtFor, unlocked } from './data.js';
+import {
+  CHARM_BY_ID, COLS, DAYS, EVENT_BY_ID, OVERDRIVE_SPINS, PATTERNS, PULSAR, ROWS, SYMBOLS, SYMBOL_BY_ID, VOID, WHEEL, debtFor,
+  unlocked,
+} from './data.js';
 import { COLORS as C, CELL, LINE_COLORS, RX, RY, Renderer, fmt } from './render.js';
 import {
-  buy, choosePackage, createRun, finishDay, goEndless, markSeen, payDebt, pendingUnlocks, pickOffer, reroll, sell,
-  snapshot, spin, upgradeRun,
+  buy, choosePackage, createRun, earlyBonus, finishDay, goEndless, luckOf, markSeen, payDebt, pendingUnlocks, pickOffer,
+  reroll, rerollCost, sell, snapshot, spin, upgradeRun,
 } from './sim.js';
 import { loadStore } from './storage.js';
 
@@ -18,9 +21,6 @@ const SPEED = params.has('fast') ? 3 : 1;
 let seed = params.has('seed') ? Number(params.get('seed')) >>> 0 : (Date.now() ^ (Math.random() * 1e9)) >>> 0;
 
 const store = loadStore();
-if (store.settings.reducedMotion === null) {
-  store.settings.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
 
 const canvas = document.getElementById('game');
 bleed(canvas);
@@ -78,6 +78,15 @@ function skipAll() {
 
 // ---------------------------------------------------------------- sizing
 let scale = 1;
+const rootStyle = getComputedStyle(document.documentElement);
+const hudButtons = document.querySelector('.hud .buttons');
+/** The notch, the home bar and the sound and help buttons, in canvas pixels (k per CSS pixel). */
+function safeArea(k) {
+  const inset = (side) => Math.ceil((parseFloat(rootStyle.getPropertyValue(`--safe-${side}`)) || 0) * k);
+  // `buttons` is the buttons' bottom edge, drop shadow included.
+  const buttons = Math.ceil((hudButtons.getBoundingClientRect().bottom + 3) * k);
+  return { top: inset('top'), right: inset('right'), bottom: inset('bottom'), left: inset('left'), buttons };
+}
 function resize() {
   const dpr = window.devicePixelRatio || 1;
   const vw = Math.round(window.innerWidth * dpr), vh = Math.round(window.innerHeight * dpr);
@@ -86,13 +95,16 @@ function resize() {
   // so phones get the biggest machine that fits edge to edge.
   scale = Math.max(1, fit(400, 226), fit(192, 360));
   const W = Math.ceil(vw / scale), H = Math.ceil(vh / scale);
-  if (W === canvas.width && H === canvas.height && renderer.W) return;
-  canvas.width = W;
-  canvas.height = H;
+  // The CSS size follows the zoom level even when the pixel size doesn't change.
   canvas.style.width = `${(W * scale) / dpr}px`;
   canvas.style.height = `${(H * scale) / dpr}px`;
-  ctx.imageSmoothingEnabled = false;
-  renderer.resize(W, H);
+  if (W !== canvas.width || H !== canvas.height || !renderer.W) {
+    canvas.width = W;
+    canvas.height = H;
+    ctx.imageSmoothingEnabled = false;
+  }
+  // Lay out again even at the same size: the insets and buttons can move on their own.
+  renderer.resize(W, H, safeArea(dpr / scale));
 }
 let resizeQueued = false;
 window.addEventListener('resize', () => {
@@ -116,11 +128,14 @@ function alertSr(text) {
     srAlert.textContent = text;
   }, 30);
 }
+// Reduce motion follows the system until the player ticks or unticks it in help.
+const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
 function applyMotion() {
-  v.reducedMotion = !!store.settings.reducedMotion;
+  v.reducedMotion = store.settings.reducedMotion ?? motionQuery.matches;
   document.documentElement.classList.toggle('reduced-motion', v.reducedMotion);
 }
 applyMotion();
+motionQuery.addEventListener?.('change', applyMotion);
 const soundBtn = document.getElementById('btn-sound');
 function syncSound() {
   soundBtn.dataset.on = String(!store.settings.muted);
@@ -330,6 +345,26 @@ function updateParticles(dt) {
 }
 
 // ---------------------------------------------------------------- flow
+/** Clears what the last run left on screen, a spin still in the air included. */
+function freshView() {
+  spinning = false;
+  v.pending = null;
+  for (const reel of v.reels) reel.tease = false;
+  v.bulbs = 'idle';
+  v.gold = null;
+  v.odVisual = false;
+  v.shownOverdrive = null;
+  v.shownCharge = null;
+  v.shownLuck = null;
+  v.wheel = null;
+  v.swallow = 0;
+  v.banner = null;
+  v.led = 0;
+  tasks = [];
+  settle = null;
+  clearHot();
+}
+
 function startRun(resume = false) {
   audio.unlock();
   mode = 'run';
@@ -345,12 +380,7 @@ function startRun(resume = false) {
   v.shownTickets = run.tickets;
   v.shownSpins = null;
   v.newBest = false;
-  v.swallow = 0;
-  v.led = 0;
-  tasks = [];
-  settle = null;
-  clearHot();
-  v.banner = null;
+  freshView();
   audio.play('lever');
   pullLever();
   alertSr(resume ? `Run resumed. Round ${run.round}, day ${run.day}.` : `New run. The black hole wants ${run.debt} coins in ${DAYS} days.`);
@@ -386,20 +416,18 @@ function resumePhase() {
 
 function toTitle() {
   mode = 'title';
-  v.gold = null;
-  v.odVisual = false;
-  v.wheel = null;
   run = null;
   v.run = null;
-  v.panel = null;
-  v.swallow = 0;
-  v.banner = null;
-  v.led = 0;
-  tasks = [];
-  settle = null;
-  clearHot();
+  closePanel();
+  freshView();
   titleHint();
 }
+
+// A double click or tap that opens or closes a panel mustn't land on whatever comes up next.
+let clicksFrom = 0;
+const holdClicks = () => (clicksFrom = performance.now() + 300);
+// On touch, the shop card the first tap showed (the second tap buys it).
+let preview = null;
 
 const PANEL_FOCUS = { shop: 'shop:0', deadline: 'pay', transmit: 'offer:0', over: 'newrun', won: 'endless', unlock: 'gotit' };
 function openPanel(name) {
@@ -409,6 +437,8 @@ function openPanel(name) {
   v.focus = PANEL_FOCUS[name];
   v.hover = null;
   v.sellArm = -1;
+  preview = null;
+  holdClicks();
   if (name === 'transmit') v.nextDebt = debtFor(run.round + 1);
   if (name === 'shop') {
     setHint(run.round === 1 && run.day === 1 ? (touchFirst ? 'Tap a charm to buy it, then pick a deal' : 'Arrows + Enter to buy charms, then pick a deal') : '');
@@ -445,6 +475,7 @@ function closePanel() {
   v.panel = null;
   v.focus = null;
   v.sellArm = -1;
+  holdClicks();
 }
 
 function clearHot() {
@@ -480,9 +511,12 @@ function doSpin() {
   forcedGrid = null;
   forcedGold = null;
   v.gold = new Set(result.gold);
+  // The Bonus Wheel's prize stays a surprise until the wheel stops on it.
+  const prize = result.wheel ? result.wheel.kind : null;
   v.shownCharge = prevCharge;
-  v.shownOverdrive = result.overdriveStart ? 0 : run.overdrive;
+  v.shownOverdrive = result.overdriveStart ? 0 : run.overdrive - (prize === 'overdrive' ? OVERDRIVE_SPINS : 0);
   v.odVisual = result.overdrive || v.shownOverdrive > 0;
+  v.shownLuck = prize === 'luck' ? luckOf(run) - result.wheel.amount : null;
   if (result.overdrive) {
     heatTo(0.6);
     shockwave(machineAt().x + 81, machineAt().y + 96, C.pink, 160);
@@ -492,7 +526,7 @@ function doSpin() {
   clearHot();
   v.banner = null;
   v.led = 0;
-  v.shownSpins = run.spinsLeft - (result.free ? 1 : 0);
+  v.shownSpins = run.spinsLeft - (result.free ? 1 : 0) - (prize === 'spins' ? result.wheel.amount : 0);
   v.bulbs = 'spin';
   v.buttonDown = 0.15;
   pullLever();
@@ -527,7 +561,7 @@ function doSpin() {
       break;
     }
   }
-  if (v.reducedMotion) teaseFrom = Math.min(teaseFrom, 99);
+  if (v.reducedMotion) teaseFrom = 99;
   v.teaseColor = teaseColor;
   let extra = 0;
   for (let c = 0; c < COLS; c++) {
@@ -634,6 +668,8 @@ function updateReels(dt) {
 
 // ---------------------------------------------------------------- reveal
 function reveal(res) {
+  // The run may be gone (abandoned while the reels turned).
+  if (!run || !res) return;
   const lines = [...res.lines].sort((a, b) => a.pay - b.pay);
   const debt = run.debt;
   let at = 0.05;
@@ -647,6 +683,7 @@ function reveal(res) {
     v.shownCoins = finalCoins;
     v.shownTickets = finalTickets;
     v.shownSpins = finalSpins;
+    v.shownLuck = null;
     v.bulbs = 'idle';
     v.particles = v.particles.filter((p) => !p.path);
     v.wheel = null;
@@ -872,7 +909,8 @@ function wheelStep(res, at) {
       v.shownTickets = run.tickets;
       audio.play('ticket');
     }
-    if (w.kind === 'spins') v.shownSpins = run.spinsLeft;
+    if (w.kind === 'spins') v.shownSpins = run.spinsLeft - (res.free ? 1 : 0);
+    v.shownLuck = null;
     if (w.kind === 'coins') coinRain(30);
     if (w.kind === 'overdrive') later(D(0.6), () => overdriveBanner());
     alertSr(`Bonus Wheel: ${prize}.`);
@@ -1026,7 +1064,7 @@ function activate(id) {
       openPanel('transmit');
       break;
     case 'cashout':
-      store.record(run, true);
+      store.record(run);
       v.best = store.best;
       toTitle();
       break;
@@ -1082,7 +1120,7 @@ function payNow(early) {
 function swallowed() {
   audio.play('swallow');
   store.run = null;
-  const isBest = store.record(run, false);
+  const isBest = store.record(run);
   v.best = store.best;
   v.newBest = isBest;
   const t0 = clock;
@@ -1147,7 +1185,10 @@ function describeFocus() {
     text = `${c.name}: ${c.desc}`;
   } else if (kind === 'pkg') text = ['First deal', 'Second deal'][i];
   else if (kind === 'offer' && run.offers[i]) text = run.offers[i].text;
-  else text = id;
+  else if (kind === 'pay') text = run.coins >= run.debt ? `Pay the debt, ${run.debt} coins` : 'Face the void. You can\'t pay';
+  else if (kind === 'reroll') text = `Reroll the charms for sale, ${rerollCost(run)} ticket${rerollCost(run) > 1 ? 's' : ''}`;
+  else if (kind === 'early') text = `Pay the debt early for ${earlyBonus(run)} bonus tickets`;
+  else text = { gotit: 'Got it', newrun: 'New run', endless: 'Keep going in endless mode', cashout: 'Cash out' }[id] || '';
   srAlert.textContent = text;
 }
 
@@ -1215,9 +1256,16 @@ function regionAt(p) {
 }
 let downAt = null;
 canvas.addEventListener('pointerdown', (e) => {
+  // Right and middle clicks do nothing.
+  if (e.button !== 0) return;
   audio.unlock();
-  canvas.focus({ preventScroll: true });
+  canvas.focus({ preventScroll: true, focusVisible: false });
+  // The release comes back here even off the canvas, so no press is left over.
+  canvas.setPointerCapture?.(e.pointerId);
   downAt = toCanvas(e);
+});
+canvas.addEventListener('pointercancel', () => {
+  downAt = null;
 });
 canvas.addEventListener('pointermove', (e) => {
   if (e.pointerType !== 'mouse') return;
@@ -1240,12 +1288,13 @@ canvas.addEventListener('pointerup', (e) => {
   const p = toCanvas(e);
   downAt = null;
   if (v.swallow && !v.panel) return;
+  if (performance.now() < clicksFrom) return;
   const r = regionAt(p);
   if (v.panel) {
     if (r && r.nav) {
-      if (e.pointerType !== 'mouse' && r.id.startsWith('shop:') && v.focus !== r.id) {
+      if (e.pointerType !== 'mouse' && r.id.startsWith('shop:') && (preview !== r.id || v.focus !== r.id)) {
         // On touch, the first tap on a charm shows what it does; the second buys it.
-        v.focus = r.id;
+        v.focus = preview = r.id;
         audio.play('move');
         return;
       }
@@ -1289,13 +1338,17 @@ function toggleSound() {
   syncSound();
   document.getElementById('opt-sound').checked = !store.settings.muted;
 }
-soundBtn.addEventListener('click', toggleSound);
+soundBtn.addEventListener('click', (e) => {
+  toggleSound();
+  // After a click or tap (not a key press), Space and Enter go back to the game.
+  if (e.detail) canvas.focus({ preventScroll: true, focusVisible: false });
+});
 function openHelp() {
   if (helpDlg.open) return;
   document.getElementById('opt-sound').checked = !store.settings.muted;
   document.getElementById('opt-fast').checked = !!store.settings.fast;
   document.getElementById('opt-music').checked = !!store.settings.music;
-  document.getElementById('opt-motion').checked = !!store.settings.reducedMotion;
+  document.getElementById('opt-motion').checked = v.reducedMotion;
   document.getElementById('btn-abandon').hidden = !(mode === 'run' && run && run.phase !== 'over' && !v.swallow);
   helpDlg.showModal();
 }
@@ -1303,7 +1356,7 @@ helpDlg.addEventListener('close', () => {
   if (helpDlg.returnValue === 'abandon' && mode === 'run' && run && !v.swallow) {
     skipAll();
     store.run = null;
-    store.record(run, false);
+    store.record(run);
     v.best = store.best;
     toTitle();
   }
@@ -1328,6 +1381,12 @@ document.getElementById('opt-motion').addEventListener('change', (e) => {
   store.save();
   applyMotion();
 });
+
+// A hidden page goes quiet: the hum, motor and tease tone would whine on in a background tab.
+const followVisibility = () => (document.hidden ? audio.suspend() : audio.resume());
+document.addEventListener('visibilitychange', followVisibility);
+window.addEventListener('pagehide', () => audio.suspend());
+window.addEventListener('pageshow', followVisibility);
 
 // ---------------------------------------------------------------- title attract
 let demoNext = 1.2;

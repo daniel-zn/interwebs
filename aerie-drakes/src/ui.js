@@ -295,8 +295,7 @@ export class UI {
       else if (id === 'card') await this.cardScreen(game);
       else if (id === 'save') {
         this.closePanel();
-        game.save();
-        await this.say('Progress saved to your Linker ID.');
+        await this.say(game.save() ? 'Progress saved to your Linker ID.' : 'Couldn\'t save. This browser is blocking storage, or it\'s full.');
       } else if (id === 'settings') await this.settingsScreen(game);
     }
     this.closePanel();
@@ -676,7 +675,8 @@ export class UI {
           continue;
         }
         const i = await this.partyScreen(game, 'pick', { title: 'Deposit which?' });
-        if (i >= 0) {
+        if (i >= 0 && !game.s.party.some((m, k) => k !== i && m.hp > 0)) await this.say('You need to keep a drake that can battle with you.');
+        else if (i >= 0) {
           const [mon] = game.s.party.splice(i, 1);
           game.s.box.push(mon);
           this.audio.sfx('door');
@@ -734,7 +734,7 @@ export class UI {
       const rows = [
         ['Sound', st.muted ? 'Off' : 'On'],
         ['Text speed', ['Slow', 'Normal', 'Fast', 'Instant'][st.textSpeed]],
-        ['Reduce motion', st.reduced ? 'On' : 'Off'],
+        ['Reduce motion', game.reduced ? 'On' : 'Off'],
         ['Battle animations', st.fastBattle ? 'Quick' : 'Full'],
         ['Back', ''],
       ];
@@ -751,7 +751,7 @@ export class UI {
       if (idx < 0 || idx === 4) break;
       if (idx === 0) st.muted = !st.muted;
       if (idx === 1) st.textSpeed = (st.textSpeed + 1) % 4;
-      if (idx === 2) st.reduced = !st.reduced;
+      if (idx === 2) st.reduced = !game.reduced;
       if (idx === 3) st.fastBattle = !st.fastBattle;
       game.applySettings();
     }

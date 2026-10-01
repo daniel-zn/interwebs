@@ -14,9 +14,6 @@ for (const type of ['gesturestart', 'gesturechange']) document.addEventListener(
 const params = new URLSearchParams(location.search);
 const seed = params.has('seed') ? Number(params.get('seed')) >>> 0 : (Date.now() ^ (Math.random() * 1e9)) >>> 0;
 const store = loadStore();
-if (store.settings.reducedMotion === null) {
-  store.settings.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
 
 const canvas = document.getElementById('game');
 bleed(canvas);
@@ -34,16 +31,25 @@ ui.onState('title');
 const MIN_W = 204; // the bubble may crop slightly on narrow screens; the island never does
 const MIN_H = SCENE_BOTTOM - SCENE_TOP + 16;
 let scale = 1;
+const hudItems = [...document.querySelectorAll('.hud > *')];
 function resize() {
   const dpr = window.devicePixelRatio || 1;
   const vw = Math.round(window.innerWidth * dpr), vh = Math.round(window.innerHeight * dpr);
   scale = Math.max(1, Math.floor(Math.min(vw / MIN_W, vh / MIN_H)));
   const W = Math.ceil(vw / scale), H = Math.ceil(vh / scale);
+  // The CSS size follows the zoom level even when the pixel size doesn't change.
+  canvas.style.width = `${(W * scale) / dpr}px`;
+  canvas.style.height = `${(H * scale) / dpr}px`;
+  // The title keeps clear of the HUD row (the catch counter and the menu buttons,
+  // with their 3px shadow), so the scene wants it in canvas pixels.
+  const px = dpr / scale;
+  scene.hud = hudItems.map((el) => {
+    const r = el.getBoundingClientRect();
+    return { left: r.left * px, right: r.right * px, bottom: (r.bottom + 3) * px };
+  });
   if (W === canvas.width && H === canvas.height && scene.bg) return;
   canvas.width = W;
   canvas.height = H;
-  canvas.style.width = `${(W * scale) / dpr}px`;
-  canvas.style.height = `${(H * scale) / dpr}px`;
   ctx.imageSmoothingEnabled = false;
   scene.resize(W, H);
 }
@@ -61,11 +67,12 @@ resize();
 // ---------------------------------------------------------------- input
 const openDialogs = () => document.querySelector('dialog[open]') !== null;
 
+// No preventDefault: the press focuses the canvas, taking focus back from a menu
+// button (where Space would press it again) without a keyboard focus ring.
 canvas.addEventListener('pointerdown', (e) => {
   if (e.button !== 0 || openDialogs()) return;
   ui.setMode(e.pointerType === 'touch' || e.pointerType === 'pen' ? 'touch' : 'pointer');
   canvas.setPointerCapture?.(e.pointerId);
-  e.preventDefault();
   game.press();
 });
 const up = (e) => {
@@ -75,13 +82,17 @@ const up = (e) => {
 canvas.addEventListener('pointerup', up);
 canvas.addEventListener('pointercancel', up);
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-// The catch card sits above the canvas; taps on it keep fishing too.
-document.getElementById('card').addEventListener('pointerdown', (e) => {
+// The catch card sits above the canvas; taps on it keep fishing too (other mouse
+// buttons don't, and it has no context menu, like the canvas).
+const card = document.getElementById('card');
+card.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return;
   ui.setMode(e.pointerType === 'touch' ? 'touch' : 'pointer');
   e.preventDefault();
   game.press();
 });
-document.getElementById('card').addEventListener('pointerup', () => game.release());
+card.addEventListener('pointerup', () => game.release());
+card.addEventListener('contextmenu', (e) => e.preventDefault());
 
 const ACTION_KEYS = new Set([' ', 'Enter']);
 const isControl = (el) => el && el !== canvas && el.closest && el.closest('button, input, a, dialog, select, textarea');
@@ -119,9 +130,11 @@ function syncSettings() {
   soundBtn.setAttribute('aria-label', s.muted ? 'Sound is off. Turn sound on (M)' : 'Sound is on. Turn sound off (M)');
   optSound.checked = !s.muted;
   optGentle.checked = s.gentle;
-  optMotion.checked = s.reducedMotion;
-  document.documentElement.classList.toggle('reduced-motion', s.reducedMotion);
+  optMotion.checked = store.reducedMotion;
+  document.documentElement.classList.toggle('reduced-motion', store.reducedMotion);
 }
+// Until the player picks a setting, reduce motion follows the OS one, live.
+matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => syncSettings());
 
 function toggleSound(force) {
   store.settings.muted = force === undefined ? !store.settings.muted : !force;
@@ -158,6 +171,11 @@ for (const dlg of document.querySelectorAll('dialog')) {
 document.getElementById('btn-journal').addEventListener('click', () => openDialog('journal'));
 document.getElementById('btn-help').addEventListener('click', () => openDialog('help'));
 soundBtn.addEventListener('click', () => toggleSound());
+// A click leaves focus on the menu button, where Space and Enter would press it
+// again instead of fishing: hand focus back to the game (dialogs do on close).
+document.querySelector('.hud .buttons').addEventListener('click', (e) => {
+  if (e.detail && !openDialogs()) canvas.focus({ preventScroll: true, focusVisible: false });
+});
 optSound.addEventListener('change', () => toggleSound(optSound.checked));
 optGentle.addEventListener('change', () => {
   store.settings.gentle = optGentle.checked;
@@ -189,6 +207,8 @@ document.addEventListener('visibilitychange', () => {
 const perf = { frames: 0, work: 0 };
 let last = performance.now();
 function frame(now) {
+  // Next frame first: an error in this one must not stop the game for good.
+  requestAnimationFrame(frame);
   const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
   last = now;
   const t0 = performance.now();
@@ -200,7 +220,6 @@ function frame(now) {
   audio.tick(dt);
   perf.frames++;
   perf.work += performance.now() - t0;
-  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 

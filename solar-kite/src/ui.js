@@ -11,7 +11,8 @@ const SUBS = {
 /** DOM side of the game: the hint line, screen-reader announcements and the result card. */
 export class UI {
   constructor() {
-    this.mode = 'pointer';
+    // Phones and tablets get touch wording before the first tap.
+    this.mode = matchMedia('(pointer: coarse)').matches ? 'touch' : 'pointer';
     this.state = 'title';
     this.hint = $('hint');
     this.alertEl = $('sr-alert');
@@ -99,7 +100,9 @@ export class UI {
     card.classList.remove('show');
     void card.offsetWidth;
     card.classList.add('show');
-    $('btn-again').focus({ preventScroll: true });
+    // A focus ring only for keyboard players (browsers that ignore focusVisible
+    // go by the last input).
+    $('btn-again').focus({ preventScroll: true, focusVisible: this.mode === 'key' });
     this.alert(`Sunset. Score ${result.score}, rank ${result.rating}.${isBest ? ' New best.' : ''}`, 'result', 0);
   }
 

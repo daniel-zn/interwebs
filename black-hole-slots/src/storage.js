@@ -23,13 +23,14 @@ export function loadStore() {
       }
     },
     /** Records a finished run; says whether it beat the best round reached. */
-    record(run, escaped) {
+    record(run) {
       const b = this.best;
       b.runs++;
-      const reached = escaped ? run.round + 1 : run.round;
+      // Leaving from the escape screen counts the round just paid off.
+      const reached = run.phase === 'won' ? run.round + 1 : run.round;
       const isBest = reached > b.round;
       b.round = Math.max(b.round, reached);
-      if (escaped) b.escaped++;
+      if (run.escaped) b.escaped++;
       b.win = Math.max(b.win, run.stats.bestWin);
       this.run = null;
       this.save();

@@ -73,7 +73,9 @@ async function toCommands(page) {
     const u = await uiState(page);
     if (!u.battle) return false;
     if (u.cmds === 4) return true;
-    await page.keyboard.press(u.panel ? 'x' : 'z');
+    // A Z meant for a message can land on the command menu as it appears and
+    // open Fight: back out of the move list rather than pick a move.
+    await page.keyboard.press(u.panel || u.moves ? 'x' : 'z');
     await sleep(40);
   }
   return false;

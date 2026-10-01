@@ -26,7 +26,7 @@ npm start            # zero-dependency server on http://127.0.0.1:8080/
 | --- | --- | --- | --- |
 | Steer | Arrows or **W A S D** | Swipe (keep your finger down and keep swiping to steer) | D-pad or left stick |
 | Start / play again | **Enter** or **Space** | Tap | **A** or **Start** |
-| Pause | **P** or **Esc** | ❚❚ button | **Start** |
+| Pause | **P** or **Esc** | ❚❚ button | **Start** (**Start** or **A** resumes) |
 | Sound / help | **M** / **H** | Buttons, top right | – |
 
 Turns are buffered: press a direction early and Charmander takes the next gap that

@@ -264,7 +264,7 @@ async function waitResult(page) {
     Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked'); } });
   });
   const page = await openGame(context, 'landscape-reduced', '?test&fast&seed=5&session=40');
-  check(await page.evaluate(() => window.__kite.store.settings.reducedMotion), 'prefers-reduced-motion respected');
+  check(await page.evaluate(() => window.__kite.store.reducedMotion), 'prefers-reduced-motion respected');
   await page.keyboard.press('Enter');
   await sleep(800);
   check((await page.snap()).state === 'fly', 'Enter starts and the game runs without localStorage');

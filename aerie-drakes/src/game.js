@@ -5,6 +5,7 @@ import { personSheet } from './art/people.js';
 import { TS, drawAnim, paintMap } from './art/tiles.js';
 import { Battle, learnMove } from './battle.js';
 import { ITEMS } from './data/items.js';
+import { MOVES, STATUS_INFO } from './data/moves.js';
 import { SPECIES_BY_ID } from './data/species.js';
 import { evolve, healMon, makeMon, monName } from './monster.js';
 import { SCRIPTS, onTrigger } from './story.js';
@@ -29,6 +30,20 @@ export function newState(name = 'Rook') {
   };
 }
 
+/** A stored drake with everything battles, menus and level-ups read from it. */
+const validMon = (m) => !!SPECIES_BY_ID[m?.sp] && [m.lv, m.xp, m.hp].every(Number.isFinite)
+  && ['hp', 'atk', 'def', 'spc', 'spd'].every((k) => Number.isFinite(m.stats?.[k])) && Array.isArray(m.iv) && m.iv.length === 5
+  && (!m.status || !!STATUS_INFO[m.status]) && Array.isArray(m.moves) && m.moves.length >= 1 && m.moves.length <= 4
+  && m.moves.every((mv) => !!MOVES[mv?.id] && Number.isFinite(mv.pp));
+
+/** Checks a loaded save: its places exist, and its party and box are whole drakes. */
+function validSave(s, maps) {
+  const place = (id, x, y) => !!maps[id] && Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < maps[id].w && y < maps[id].h;
+  return place(s.map, s.x, s.y) && !!DV[s.dir] && place(s.respawn?.map, s.respawn?.x, s.respawn?.y)
+    && [s.bag, s.flags, s.seen, s.caught, s.legends].every((o) => o && typeof o === 'object') && Object.keys(s.bag).every((id) => ITEMS[id])
+    && Array.isArray(s.party) && Array.isArray(s.box) && s.party.length <= 6 && [...s.party, ...s.box].every(validMon);
+}
+
 export class Game {
   constructor({ audio, input, ui, rng, fast = false }) {
     this.audio = audio;
@@ -50,15 +65,29 @@ export class Game {
     this.stepCount = 0;
     this.t = 0;
     this.weather = [];
-    this.settings = { muted: false, textSpeed: 1, reduced: false, fastBattle: false };
+    this.menuQueued = false;
+    // reduced: null follows the system setting until the player picks one.
+    this.settings = { muted: false, textSpeed: 1, reduced: null, fastBattle: false };
     try {
       Object.assign(this.settings, JSON.parse(localStorage.getItem(SET_KEY) || '{}'));
     } catch {
       // Private mode or bad data: use defaults.
     }
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches && localStorage.getItem(SET_KEY) === null) this.settings.reduced = true;
+    // Track the system setting through its change event. (Reading .matches every frame
+    // instead would make Chrome skip the event, and the page's styles wouldn't follow.)
+    const motion = matchMedia('(prefers-reduced-motion: reduce)');
+    this.osReduced = motion.matches;
+    motion.addEventListener?.('change', (e) => {
+      this.osReduced = e.matches;
+      this.applySettings();
+    });
     this.applySettings();
     input.onWorld = (act) => this.onAction(act);
+  }
+
+  /** Reduced motion: the player's choice, or the system setting until they make one. */
+  get reduced() {
+    return this.settings.reduced ?? this.osReduced;
   }
 
   personSheet(look) {
@@ -70,7 +99,7 @@ export class Game {
     this.audio.setMuted(st.muted);
     this.ui.textSpeed = this.fast ? 3 : st.textSpeed;
     this.ui.fastBattle = st.fastBattle || this.fast;
-    document.body.classList.toggle('reduced', st.reduced);
+    document.body.classList.toggle('reduced', this.reduced);
     document.getElementById('btn-sound')?.setAttribute('aria-pressed', String(!st.muted));
     try {
       localStorage.setItem(SET_KEY, JSON.stringify(st));
@@ -103,9 +132,12 @@ export class Game {
 
   load() {
     try {
-      const s = JSON.parse(localStorage.getItem(SAVE_KEY));
-      if (!s || s.v !== 1) return false;
-      this.s = Object.assign(newState(), s);
+      const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
+      if (!saved || saved.v !== 1) return false;
+      const s = Object.assign(newState(), saved);
+      // A save this game can't use (a bad write, another version) means a new game, not a crash.
+      if (!validSave(s, this.maps)) return false;
+      this.s = s;
       return true;
     } catch {
       return false;
@@ -216,7 +248,11 @@ export class Game {
   onAction(act) {
     if (this.mode !== 'world' || this.busy) return;
     if (act === 'a') this.run(() => this.interact());
-    else if (act === 'b' || act === 'start') this.run(() => this.ui.pauseMenu(this));
+    else if (act === 'b' || act === 'start') {
+      // Mid-step, the menu waits until the step lands (doors, story, wild drakes).
+      if (this.player.moving) this.menuQueued = true;
+      else this.run(() => this.ui.pauseMenu(this));
+    }
   }
 
   /** Runs an async script with the overworld paused. */
@@ -291,6 +327,11 @@ export class Game {
       return;
     }
     if (this.busy) return;
+    if (this.menuQueued) {
+      this.menuQueued = false;
+      this.run(() => this.ui.pauseMenu(this));
+      return;
+    }
     const dir = this.input.dir;
     if (!dir) {
       p.turnT = 0;
@@ -370,7 +411,8 @@ export class Game {
       n.y += dy;
       n.moving = true;
       n.prog = 0;
-      while (n.moving) await sleep(16);
+      // update() only moves NPCs on the current map; a blackout mid-script leaves this one behind.
+      while (n.moving && this.npcs.includes(n)) await sleep(16);
     }
   }
 
@@ -521,6 +563,11 @@ export class Game {
   }
 
   async startBattle(opts) {
+    // Whatever starts a battle should have checked this; a battle with nobody to send out can't run.
+    if (!this.s.party.some((m) => m.hp > 0)) {
+      await this.ui.say('You have no drakes that can battle.');
+      return 'none';
+    }
     this.audio.sfx('encounter');
     this.audio.music(opts.music ?? 'battle');
     await this.battleWipe();
@@ -534,6 +581,7 @@ export class Game {
     } finally {
       this.battle = null;
       this.mode = 'world';
+      this.hud.show(false); // already hidden, unless the battle broke
     }
     if (result === 'lose' && opts.canLose) this.healParty();
     else if (result === 'lose') await this.blackout();

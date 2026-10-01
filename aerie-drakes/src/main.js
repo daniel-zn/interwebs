@@ -35,11 +35,12 @@ function resize() {
   const scale = Math.max(1, Math.floor(Math.min(vw / MIN_W, vh / MIN_H)));
   W = Math.ceil(vw / scale);
   H = Math.ceil(vh / scale);
+  // The CSS size follows the zoom level even when the pixel size doesn't change.
+  canvas.style.width = `${(W * scale) / dpr}px`;
+  canvas.style.height = `${(H * scale) / dpr}px`;
   if (canvas.width === W && canvas.height === H) return;
   canvas.width = W;
   canvas.height = H;
-  canvas.style.width = `${(W * scale) / dpr}px`;
-  canvas.style.height = `${(H * scale) / dpr}px`;
   ctx.imageSmoothingEnabled = false;
 }
 window.addEventListener('resize', () => requestAnimationFrame(resize));
@@ -73,7 +74,9 @@ async function titleMenu() {
   if (input.mode !== 'touch') field.focus();
   const name = await new Promise((resolve) => {
     const pop = input.push((act) => {
-      if (act === 'a' && document.activeElement !== field) {
+      // Keys typed in the field never get here (Enter submits the form), so this is
+      // Z/Enter with the field unfocused, or a gamepad's A, which can't type.
+      if (act === 'a') {
         pop();
         resolve(field.value);
       }
@@ -130,11 +133,13 @@ document.addEventListener('visibilitychange', () => (document.hidden ? audio.sus
 const perf = { frames: 0, ms: 0 };
 let last = performance.now();
 function frame(now) {
+  // Next frame first: an error in this one must not stop the game for good.
+  requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   const t0 = performance.now();
   input.poll();
-  const reduced = game.settings.reduced;
+  const reduced = game.reduced;
   if (game.mode === 'title') {
     game.t += dt;
     game.renderTitle(ctx, W, H, reduced);
@@ -144,7 +149,6 @@ function frame(now) {
   }
   perf.frames++;
   perf.ms = perf.ms * 0.95 + (performance.now() - t0) * 0.05;
-  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 titleMenu();
