@@ -278,8 +278,9 @@ const watch = (page) => {
       body: getComputedStyle(document.body).backgroundColor,
       height: document.documentElement.scrollHeight - document.querySelector('footer').getBoundingClientRect().bottom - scrollY,
     }));
-    // A solid base colour (on html or body) is what Safari tints its bars with.
-    check(!home.theme && home.html === 'nonergba(0, 0, 0, 0)' && home.body === 'rgba(0, 0, 0, 0)', 'home page: Safari\'s bars stay see-through over the page\'s own background', JSON.stringify(home));
+    // Safari fills the strip behind the clock with the page's base colour (black
+    // if there's none): it should match the purple at the top of the glow.
+    check(!home.theme && home.html === 'nonergba(0, 0, 0, 0)' && home.body === 'rgb(20, 19, 65)', 'home page: the strip behind the clock matches the top of the page', JSON.stringify(home));
     check(home.height < 40, 'home page: nothing scrolls on past the footer', `${Math.round(home.height)} px`);
     await page.close();
   }
