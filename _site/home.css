@@ -26,7 +26,11 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   color: var(--line);
-  background: radial-gradient(120% 80% at 50% 0%, #1a1650 0%, var(--bg-2) 45%, var(--bg) 100%) no-repeat fixed var(--bg);
+  /* No solid base colour: Safari tints its bars with one if there is, and
+     leaves them see-through if not. The glow covers the whole page and
+     doesn't repeat, so the dark end never shows up above the top. */
+  background: radial-gradient(120% 80% at 50% 0%, #1a1650 0%, var(--bg-2) 45%, var(--bg) 100%) no-repeat fixed;
+  background-size: 100% 100%;
   font: 15px/1.5 var(--font);
   -webkit-font-smoothing: antialiased;
   display: flex;
