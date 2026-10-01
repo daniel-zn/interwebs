@@ -245,11 +245,27 @@ test('nudging too much tilts the table', () => {
 test('ball save relaunches a ball lost straight after launch', () => {
   const g = createGame({ seed: 2 });
   run(g, 30, { ...NONE, launch: true });
-  run(g, 2);
+  run(g, 60);
+  assert.equal(g.phase, 'play', 'the ball is out of the shooter lane');
   Object.assign(g.balls[0], { x: CX, y: 420, vx: 0, vy: 200 });
   const ev = run(g, 30);
   assert.ok(types(ev).includes('ballSaved'));
   assert.equal(g.ballsLeft, 3);
+});
+
+test('a weak plunge that rolls back keeps the ball save and skill shot for the real one', () => {
+  const g = createGame({ seed: 2 });
+  run(g, 2, { ...NONE, launch: true });
+  const ev = run(g, 60 * 3);
+  assert.ok(types(ev).includes('launch'));
+  assert.equal(g.phase, 'launch', 'still waiting on the plunger');
+  assert.equal(g.ballSaveT, 0);
+  assert.ok(Math.abs(g.balls[0].y - PLUNGER.y) < 2, 'the ball rolled back');
+  run(g, 50, { ...NONE, launch: true });
+  run(g, 40);
+  assert.equal(g.phase, 'play');
+  assert.ok(g.ballSaveT > 7, `ball save ${g.ballSaveT.toFixed(1)}`);
+  assert.ok(g.skillT > 4);
 });
 
 test('reaching the target warps to the next sector with an upgrade and a ball back', () => {

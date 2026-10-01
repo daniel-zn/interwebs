@@ -167,7 +167,7 @@ async function openGame(context, name, query = '?test&seed=4') {
   await sleep(600);
   const pull = await page.evaluate(() => window.__pin.game().plunger);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await sleep(600);
+  await sleep(900);
   s = await page.snap();
   check(pull > 0.5 && s.phase === 'play', 'holding a finger pulls the plunger; letting go launches', pull.toFixed(2));
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 60, y: 700, id: 1 }, { x: 330, y: 700, id: 2 }] });
@@ -179,6 +179,39 @@ async function openGame(context, name, query = '?test&seed=4') {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth || document.documentElement.scrollHeight > window.innerHeight);
   check(!overflow, 'no scrolling on the phone');
   check(page.errors.length === 0, 'no console errors (phone)', page.errors.join(' | '));
+  await context.close();
+}
+
+// ------------------------------------------------------------------ a tap isn't a pull on the plunger
+// (At 1x, so headless frames are quick: on slow frames a touch can't be told from a hold.)
+{
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await openGame(context, 'tap');
+  await page.touchscreen.tap(195, 500);
+  await sleep(300);
+  const cdp = await context.newCDPSession(page);
+  // A quick tap (say, to move the skill shot lane) flips but doesn't fire the plunger.
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 60, y: 700 }] });
+  await sleep(60);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await sleep(400);
+  const s = await page.snap();
+  check(s.phase === 'launch' && s.balls[0].y > 460, 'a quick tap leaves the ball on the plunger', `${s.phase}, y ${s.balls[0].y}`);
+  check(page.errors.length === 0, 'no console errors (tap)', page.errors.join(' | '));
+  await context.close();
+}
+
+// ------------------------------------------------------------------ a small phone
+{
+  const context = await browser.newContext({ viewport: { width: 320, height: 568 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const page = await openGame(context, 'small');
+  const r = await page.evaluate(() => ['btn-pause', 'btn-help'].map((id) => {
+    const b = document.getElementById(id).getBoundingClientRect();
+    return [b.left, b.top, b.right, b.bottom].map(Math.round);
+  }));
+  check(r.every(([l, t, rr]) => l >= 0 && t >= 0 && rr <= 320), 'the buttons by the display stay on screen', JSON.stringify(r));
+  await page.shot('title');
+  check(page.errors.length === 0, 'no console errors (small phone)', page.errors.join(' | '));
   await context.close();
 }
 

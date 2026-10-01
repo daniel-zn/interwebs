@@ -11,7 +11,7 @@ import { mkdir } from 'node:fs/promises';
 import { serve } from '../tools/serve.mjs';
 
 const { chromium } = await import('playwright-core').catch(() => import('playwright'));
-const PORT = 8766;
+const PORT = 8772;
 const OUT = new URL('../test-results/', import.meta.url).pathname;
 await mkdir(OUT, { recursive: true });
 
@@ -195,6 +195,12 @@ async function holdUntilEnd(page, press, release) {
   await page.keyboard.press('Escape');
   await sleep(100);
   check(!(await page.snap()).paused, 'Esc resumes');
+  await page.keyboard.press('Escape');
+  check(await page.isVisible('#pause') && (await page.snap()).paused, 'Esc pauses too');
+  await page.keyboard.press('Escape');
+  await page.click('#btn-sound');
+  await page.click('#btn-sound');
+  check(!(await page.evaluate(() => !!document.activeElement.closest('button'))), 'clicked menu buttons leave the keys with the game');
   await page.keyboard.press('m');
   check((await page.getAttribute('#btn-sound', 'aria-pressed')) === 'false', 'M mutes (aria-pressed=false)');
   await page.keyboard.press('m');
@@ -271,7 +277,7 @@ async function holdUntilEnd(page, press, release) {
     Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked'); } });
   });
   const page = await openGame(context, 'landscape-reduced');
-  check(await page.evaluate(() => window.__surf.store.settings.reducedMotion), 'prefers-reduced-motion respected');
+  check(await page.evaluate(() => window.__surf.reducedMotion), 'prefers-reduced-motion respected');
   await page.keyboard.press('Enter');
   await sleep(800);
   check((await page.snap()).state === 'ride', 'Enter starts and the game runs without localStorage');

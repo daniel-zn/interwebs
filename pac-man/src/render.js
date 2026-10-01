@@ -319,7 +319,8 @@ export class Renderer {
       this.sprite(ctx, this.hero[p.dir < 0 ? LEFT : p.dir][walk][open ? 1 : 0][flame], p.x, p.y);
     }
     if (hideGhosts) return;
-    const flash = flashing(g);
+    // With reduced motion the warning that they're about to recover is a steady white.
+    const flash = flashing(g, view.reducedMotion);
     for (const gh of g.ghosts) {
       if (g.eaten && g.eaten.ghost === gh.i) continue;
       const frame = Math.floor(gh.anim * 2.5) % 2;
@@ -355,7 +356,8 @@ export class Renderer {
     // The attract demo's score never counts towards the high score.
     const high = String(view.mode === 'title' ? view.high : Math.max(view.high, g.score)).padStart(2, '0');
     const oneUp = view.mode === 'title' || Math.floor(view.time / 0.27) % 2 === 0 || view.reducedMotion;
-    const lives = view.mode === 'title' ? 0 : Math.max(0, g.lives - (g.phase === 'dying' || g.phase === 'over' ? 0 : 1));
+    // Spare lives: the one in play isn't shown, and a lost one goes when the next starts.
+    const lives = view.mode === 'title' ? 0 : Math.max(0, g.lives - 1);
     const fruits = [];
     for (let l = Math.max(1, g.level - 6); l <= g.level; l++) fruits.push(fruitFor(l).kind);
 

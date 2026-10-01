@@ -87,6 +87,9 @@ button:focus-visible, input:focus-visible {
   gap: 8px;
   z-index: 5;
 }
+/* Width that things along the top keep clear of these buttons (with margins). */
+:root { --hud-w: 122px; }
+body:has(#btn-full:not([hidden])) { --hud-w: 174px; }
 
 .icon-btn {
   width: 44px;
@@ -105,11 +108,13 @@ button:focus-visible, input:focus-visible {
 #btn-sound[aria-pressed="true"] .cross { display: none; }
 #btn-sound[aria-pressed="false"] .waves { display: none; }
 body.on-title #btn-menu { display: none; }
+body.on-title .hud-buttons { z-index: 12; } /* the title screen covers the rest */
 
 .banner {
   position: absolute;
   top: max(10px, env(safe-area-inset-top));
   left: max(10px, env(safe-area-inset-left));
+  max-width: calc(100% - var(--hud-w));
   margin: 0;
   padding: 8px 14px;
   background: rgba(10, 6, 32, 0.85);
@@ -150,7 +155,8 @@ body.on-title #btn-menu { display: none; }
 .toast.show { animation: toast 2.4s ease forwards; }
 @keyframes toast { 0% { opacity: 0; } 10%, 80% { opacity: 1; } 100% { opacity: 0; } }
 
-.reduced .banner.show, .reduced .toast.show { animation-duration: 3s; }
+/* !important beats the reduced-motion speed-up further down, which would make them vanish at once. */
+.reduced .banner.show, .reduced .toast.show { animation-duration: 3s !important; }
 
 /* ------------------------------------------------------------------ dialog */
 .dialog {
@@ -254,10 +260,12 @@ button:disabled, .dim { opacity: 0.45; }
 }
 
 .panel h2 { margin: 0; font-size: 18px; color: var(--cyan); letter-spacing: 0.04em; }
-.keyhint { color: var(--muted); font-size: 12px; }
+.keyhint { color: var(--muted); font-size: 12px; margin-left: auto; }
 .panel .close { width: 44px; height: 44px; background: var(--panel-2); border: 2px solid #3a2f7a; border-radius: 8px; }
 body[data-input="touch"] .keyhint { display: none; }
-body:not([data-input="touch"]) .panel .close { display: none; }
+/* Off touch, ☰ backs out of panels too, except in the Codex, where it flips tabs:
+   that one keeps its ✕ for the mouse. */
+body:not([data-input="touch"]) .panel:not(.codex) .close { display: none; }
 
 .panel .body {
   flex: 1;
@@ -411,7 +419,7 @@ body:not([data-input="touch"]) .panel .close { display: none; }
   left: 0;
   right: 0;
   bottom: 0;
-  height: calc(var(--panel-h) + env(safe-area-inset-bottom));
+  min-height: calc(var(--panel-h) + env(safe-area-inset-bottom)); /* taller if the moves need it */
   padding: 12px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   background: linear-gradient(180deg, #1c1446, #0a0620);
   border-top: 3px solid var(--pink);
@@ -439,6 +447,21 @@ body:not([data-input="touch"]) .panel .close { display: none; }
 .eff.down { color: #ff9a7a; }
 .move.back { grid-column: 1 / -1; text-align: center; align-items: center; border-left-color: var(--muted); min-height: 36px; }
 
+/* Short screens: the moves get the whole panel ("What will … do?" comes back with the
+   menu), packed a little closer, so it rarely has to grow into the scene. */
+@media (max-height: 700px) {
+  .b-panel:has(.move) .b-msg { display: none; }
+  .b-cmds.moves { gap: 6px; }
+  .move { padding-block: 4px; gap: 1px; }
+}
+/* Short, wide screens: above the panel, the player's HUD would cover the foe, so it
+   moves into the panel's spare width instead. */
+@media (max-height: 540px) and (min-aspect-ratio: 3/2) {
+  .battle { --me-w: min(260px, 34vw); }
+  .bh-me { width: var(--me-w); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 1; }
+  .b-panel { padding-right: calc(var(--me-w) + 2 * max(12px, env(safe-area-inset-right))); }
+}
+
 /* ------------------------------------------------------------------ evolution & ending */
 .evolve, .ending {
   position: absolute;
@@ -456,7 +479,7 @@ body:not([data-input="touch"]) .panel .close { display: none; }
 }
 
 .evolve[hidden], .ending[hidden], .title[hidden] { display: none; }
-.evolve canvas { width: min(256px, 60vw); height: min(256px, 60vw); image-rendering: pixelated; }
+.evolve canvas { width: min(256px, 60vw, 100vh - 230px); height: min(256px, 60vw, 100vh - 230px); image-rendering: pixelated; }
 .evolve p { font-size: 18px; margin: 0; }
 .ending { z-index: 12; padding-bottom: 24px; }
 .ending h2 { color: var(--pink); font-size: 32px; margin: 0 0 8px; text-shadow: 0 0 16px var(--pink); }
@@ -581,7 +604,7 @@ body:has(#dialog:not([hidden])) .touch { display: none; }
   display: grid;
   grid-template-columns: auto auto;
   grid-template-areas: "run run" "b a";
-  gap: 10px;
+  gap: 16px 10px; /* rows: room for A's lift, so it doesn't cover RUN */
   pointer-events: auto;
   touch-action: none;
   align-items: end;
@@ -614,9 +637,11 @@ body:has(#dialog:not([hidden])) .touch { display: none; }
   html, body { font-size: 14px; }
   .dialog .text { font-size: 15px; }
   .bh { width: min(230px, 62vw); padding: 6px 10px 8px; }
+  .bh-foe { max-width: calc(100% - var(--hud-w)); }
 }
 
 .reduced * { animation-duration: 0.01s !important; transition: none !important; }
+.reduced .dialog .more, .reduced .b-msg::after { animation: none !important; } /* a steady ▼, not a strobe */
 
 body:has(#battle:not([hidden])) .banner { display: none; }
 @media (max-aspect-ratio: 3/4) {
@@ -634,8 +659,12 @@ body { background: transparent; }
   width: 100%;
   height: 110vh;
   z-index: -1;
-  filter: blur(6px);
   pointer-events: none;
+}
+/* Softened on phones, where they show behind Safari's bars. (A blur on layers
+   this big is costly without GPU compositing, and on desktop they're hidden.) */
+@media (pointer: coarse) {
+  .bleed { filter: blur(6px); }
 }
 .bleed-top { top: -60vh; }
 .bleed-bottom { top: 50vh; }

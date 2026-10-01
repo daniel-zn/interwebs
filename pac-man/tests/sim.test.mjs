@@ -205,6 +205,19 @@ test('clearing the maze moves on to the next level', () => {
   assert.equal(g.phase, 'ready');
 });
 
+test('eating the last dot clears the level, even if a ghost reaches him on the same tick', () => {
+  const g = playing({ lives: 1 });
+  parkGhosts(g);
+  g.dots.fill(0);
+  g.dots[23 * COLS + 12] = 1;
+  g.dotsLeft = 1;
+  Object.assign(g.pac, { x: 13.05, y: 23.5, dir: LEFT, want: LEFT });
+  Object.assign(g.ghosts[0], { state: 'active', fright: false, x: 12.35, y: 23.5, dir: RIGHT });
+  step(g);
+  assert.equal(g.phase, 'clear');
+  assert.equal(g.lives, 1);
+});
+
 test('fruit appears after 70 dots and pays by level', () => {
   const g = playing();
   parkGhosts(g);

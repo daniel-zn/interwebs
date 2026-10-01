@@ -12,6 +12,9 @@
   --red: #ff6b4a;
   --green: #8fffc0;
   --font: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  /* Read by main.js so the canvas HUD keeps clear of the notch and the status bar. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
   color-scheme: dark;
 }
 
@@ -140,6 +143,7 @@ html, body {
   background: var(--panel);
   border: 3px solid var(--line);
   box-shadow: 0 0 0 3px var(--ink), 6px 6px 0 3px rgb(0 0 0 / 0.5);
+  cursor: pointer;
 }
 .result.show { animation: pop 0.4s steps(5) both; }
 @keyframes pop {
@@ -264,6 +268,21 @@ dialog::backdrop { background: rgb(7 8 26 / 0.7); }
   .result h2 { font-size: 22px; }
   .stats { grid-template-columns: 1fr; }
 }
+/* Landscape phones: a tighter result card, so Fly again fits without scrolling. */
+@media (max-height: 460px) {
+  .result { padding: 10px 16px; }
+  .result h2 { margin: 0 0 2px; font-size: 22px; }
+  .sub { margin-bottom: 6px; font-size: 13px; line-height: 1.35; }
+  .rank-row { margin: 2px 0 6px; }
+  .rank { width: 48px; height: 48px; font-size: 30px; }
+  .stats { gap: 2px 12px; margin-bottom: 6px; }
+  .stats div { padding: 1px 0; }
+  .best { margin-bottom: 8px; }
+  .cta { margin-top: 6px; }
+}
+@media (max-height: 340px) {
+  .result .sub { display: none; }
+}
 
 .reduced-motion .hint.title,
 .reduced-motion .result.show { animation: none; }
@@ -282,8 +301,12 @@ body { background: transparent; }
   width: 100%;
   height: 110vh;
   z-index: -1;
-  filter: blur(6px);
   pointer-events: none;
+}
+/* Softened on phones, where they show behind Safari's bars. (A blur on layers
+   this big is costly without GPU compositing, and on desktop they're hidden.) */
+@media (pointer: coarse) {
+  .bleed { filter: blur(6px); }
 }
 .bleed-top { top: -60vh; }
 .bleed-bottom { top: 50vh; }

@@ -128,7 +128,7 @@ export function stepBall(b, table, dt, gravity, hit) {
     b.x = q.x + nx * BALL_R;
     b.y = q.y + ny * BALL_R;
     const vIn = bounce(b, nx, ny, s.e);
-    if (s.kind === 'sling' && vIn > 40) {
+    if (s.kind === 'sling' && vIn > 40 && !table.dead) {
       // Slingshots kick back hard along their face's normal.
       const kick = table.slingKick || 330;
       b.vx += nx * kick;
@@ -149,8 +149,8 @@ export function stepBall(b, table, dt, gravity, hit) {
     b.x = c.x + nx * rr;
     b.y = c.y + ny * rr;
     const vIn = bounce(b, nx, ny, c.e, c.vx || 0, c.vy || 0);
-    if (c.kick) {
-      // Pop bumpers fire the ball away however softly it touched them.
+    if (c.kick && !table.dead) {
+      // Pop bumpers fire the ball away however softly it touched them (unless the table has tilted).
       const vn = b.vx * nx + b.vy * ny;
       const want = c.kick * (table.bumperPower || 1);
       if (vn < want) {
@@ -229,7 +229,12 @@ export function stepBall(b, table, dt, gravity, hit) {
     if ((py - sp2.y) * (b.y - sp2.y) <= 0 && py !== b.y && b.x > sp2.x0 && b.x < sp2.x1) hit('spinner', sp2, Math.abs(b.vy), b);
   }
   for (const l of table.lanes) {
-    if (py > l.y && b.y <= l.y && b.x > l.x0 && b.x < l.x1) hit('lane', l, Math.abs(b.vy), b);
+    // Through a lane either way counts, once per pass.
+    if ((py - l.y) * (b.y - l.y) > 0 || py === b.y || b.x <= l.x0 || b.x >= l.x1) continue;
+    if (b.lane === l.id && b.age - b.laneAt < 0.5) continue;
+    b.lane = l.id;
+    b.laneAt = b.age;
+    hit('lane', l, Math.abs(b.vy), b);
   }
   for (const r of table.ramps) {
     const mo = r.mouth;

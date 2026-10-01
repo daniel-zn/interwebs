@@ -279,8 +279,9 @@ export class SoundEngine {
   }
 
   bell(freq, at = 0, vol = 0.07, dur = 0.6) {
-    // Inharmonic partials make a metallic ding.
+    // Inharmonic partials make a metallic ding (the ones too high to play are left out).
     for (const [k, v] of [[1, 1], [2.76, 0.5], [5.4, 0.25], [8.9, 0.12]]) {
+      if (freq * k > this.ctx.sampleRate * 0.45) break;
       this.tone(freq * k, dur / k ** 0.3, { type: 'sine', vol: vol * v, at, attack: 0.002 });
     }
   }

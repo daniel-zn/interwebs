@@ -272,6 +272,7 @@ export class Scene {
     this.shoot = null;
     this.shootIn = 6;
     this.titleFade = 1;
+    this.hud = []; // the page's HUD row, in canvas pixels (set by main.js)
     const rng = mulberry32(seed ^ 0x3a7e);
     this.dashes = Array.from({ length: 20 }, () => ({
       y: Math.round((rng() * 2 - 1) * (WATER.ry - 2)), off: rng(), len: 2 + Math.floor(rng() * 5),
@@ -298,7 +299,7 @@ export class Scene {
   }
 
   update(dt, game) {
-    const reduced = game.settings.reducedMotion;
+    const reduced = game.store.reducedMotion;
     const drift = reduced ? 0.2 : 1;
     for (const s of this.stars) {
       s.x -= (0.5 + s.layer * 1.3) * dt * drift;
@@ -326,7 +327,7 @@ export class Scene {
 
   draw(ctx, game) {
     const t = game.t;
-    const reduced = game.settings.reducedMotion;
+    const reduced = game.store.reducedMotion;
     ctx.drawImage(this.bg, 0, 0);
     this.drawStars(ctx, t, reduced);
     this.drawShootingStar(ctx);
@@ -339,7 +340,7 @@ export class Scene {
     this.drawBubble(ctx, ox, oy, t, reduced, false);
     this.drawVines(ctx, ox, oy, t, reduced);
     ctx.drawImage(this.island.canvas, ox - IOX, oy - IOY);
-    this.drawCrystalGlow(ctx, ox, oy, t);
+    this.drawCrystalGlow(ctx, ox, oy, t, reduced);
     this.drawWater(ctx, ox, oy, game);
     ctx.drawImage(this.props, ox - IOX, oy - IOY);
     this.drawLampGlow(ctx, ox, oy, t, reduced);
@@ -354,7 +355,7 @@ export class Scene {
     this.drawExclaim(ctx, ox, oy, game);
     this.drawTexts(ctx, ox, oy, game);
     this.drawBubble(ctx, ox, oy, t, reduced, true);
-    if (this.titleFade > 0) this.drawTitle(ctx, ox, oy, t);
+    if (this.titleFade > 0) this.drawTitle(ctx, ox, oy, t, reduced);
   }
 
   // --- sky ------------------------------------------------------------------
@@ -426,10 +427,10 @@ export class Scene {
     }
   }
 
-  drawCrystalGlow(ctx, ox, oy, t) {
+  drawCrystalGlow(ctx, ox, oy, t, reduced) {
     ctx.fillStyle = P.crystal;
     for (const c of this.island.crystals) {
-      const pulse = 0.5 + 0.5 * Math.sin(t * 1.3 + c.ph);
+      const pulse = reduced ? 0.5 : 0.5 + 0.5 * Math.sin(t * 1.3 + c.ph);
       ctx.globalAlpha = 0.12 + pulse * 0.18;
       ctx.fillRect(ox + c.x - 2, oy + c.y - 1, 5, 3);
       ctx.fillRect(ox + c.x - 1, oy + c.y - 3, 3, 7);
@@ -496,13 +497,13 @@ export class Scene {
       if (w < d.len + 2) continue;
       const span = w * 2 - d.len;
       const x = -w + Math.floor(((d.off * span + t * d.speed) % span + span) % span);
-      const tw = game.settings.reducedMotion ? 0.5 : Math.sin(t * 1.3 + d.ph);
+      const tw = game.store.reducedMotion ? 0.5 : Math.sin(t * 1.3 + d.ph);
       if (tw < -0.4) continue;
       ctx.fillStyle = tw > 0.75 ? P.foam : P.waterLight;
       ctx.fillRect(ox + wx + x, oy + wy + d.y, d.len, 1);
     }
     for (const g of this.glints) {
-      const tw = Math.sin(t * 2 + g.ph);
+      const tw = game.store.reducedMotion ? 0.5 : Math.sin(t * 2 + g.ph);
       if (tw < 0.3) continue;
       ctx.fillStyle = tw > 0.85 ? P.white : P.starDim;
       ctx.fillRect(ox + g.x, oy + g.y, 1, 1);
@@ -567,7 +568,7 @@ export class Scene {
     const t = game.t;
     const s = this.sprites.astronaut;
     const ax = ox + ASTRO.x, ay = oy + ASTRO.y;
-    const reduced = game.settings.reducedMotion;
+    const reduced = game.store.reducedMotion;
     // Dangling legs, gently swinging.
     for (let leg = 0; leg < 2; leg++) {
       const swing = reduced ? 0 : Math.sin(t * 1.3 + leg * 2.1);
@@ -631,7 +632,7 @@ export class Scene {
     const x = Math.round(ox + b.x), y = Math.round(oy + b.y);
     if (b.under) {
       // Only a flicker of red shows while the fish holds it under.
-      const jit = game.settings.reducedMotion ? 0 : Math.round(Math.sin(game.t * 30));
+      const jit = game.store.reducedMotion ? 0 : Math.round(Math.sin(game.t * 30));
       ctx.fillStyle = P.red;
       if (game.state === 'bite') ctx.fillRect(x + jit, y - 1, 2, 1);
       return;
@@ -774,16 +775,18 @@ export class Scene {
     }
   }
 
-  drawTitle(ctx, ox, oy, t) {
+  drawTitle(ctx, ox, oy, t, reduced) {
     const title = 'ORBIT POND';
     const scale = this.W >= 300 ? 3 : 2;
     const w = measureText(title, scale);
     const space = oy + SCENE_TOP;
-    const y = space > 5 * scale + 30 ? Math.round(space / 2 - 12) : 6;
+    let y = space > 5 * scale + 30 ? Math.round(space / 2 - 12) : 6;
     const x = Math.round(this.W / 2 - w / 2);
+    // Short screens leave no room above the island: below the HUD row, not under it.
+    for (const r of this.hud) if (x < r.right && x + w + scale > r.left && y < r.bottom) y = Math.ceil(r.bottom) + 2;
     const fade = this.titleFade;
     if (fade < 1 && Math.floor(t * 20) % 2 && fade < 0.5) return;
-    const wave = (i) => Math.round(Math.sin(t * 2 + i * 0.6) * 1.2);
+    const wave = reduced ? null : (i) => Math.round(Math.sin(t * 2 + i * 0.6) * 1.2);
     drawText(ctx, title, x + scale, y + scale, P.neb2, scale, wave);
     drawText(ctx, title, x, y, P.star, scale, wave);
     const sub = 'A QUIET LAKE ADRIFT';

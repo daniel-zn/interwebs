@@ -203,6 +203,22 @@ const LOSE = grid('mpcra', 'crmpg', 'mpcra');
   s = await page.snap();
   check(s.round === 1 && s.panel === 'shop', 'NEW RUN starts over', `r${s.round}`);
 
+  // Abandoning while the reels still turn (two void eyes make the last ones tease).
+  await page.evaluate(() => window.__slots.act('pkg:0'));
+  await page.idle();
+  await page.evaluate(() => {
+    window.__slots.store.settings.fast = false;
+    window.__slots.force([['void', 'moon', 'comet'], ['void', 'planet', 'gem'], ['comet', 'rocket', 'alien'], ['gem', 'rocket', 'alien'], ['seven', 'rocket', 'comet']]);
+  });
+  await page.keyboard.press(' ');
+  await page.keyboard.press('h');
+  await page.click('#btn-abandon');
+  await page.waitForFunction(() => window.__slots.snapshot().mode === 'title', null, { timeout: 4000 });
+  s = await page.snap();
+  const turning = await page.evaluate(() => window.__slots.view().reels.some((r) => !r.stopped));
+  check(turning && !s.busy, 'abandoning mid-spin goes back to the title', `reels turning ${turning}, busy ${s.busy}`);
+  await sleep(1200);
+
   const perf = await page.evaluate(() => window.__slots.perf);
   check(perf.worst < 60, 'frames are cheap', `worst ${perf.worst.toFixed(1)} ms`);
   check(page.errors.length === 0, 'no console errors (desktop)', page.errors.join(' | '));
@@ -326,11 +342,16 @@ const LOSE = grid('mpcra', 'crmpg', 'mpcra');
   }, id);
   const m = await box('machine');
   await page.touchscreen.tap(m.x, m.y);
-  await sleep(100);
+  // Taps just after a panel opens count as the end of a double tap and are ignored.
+  await sleep(400);
   let s = await page.snap();
   check(s.panel === 'shop', 'tapping the machine starts a run', s.panel);
   await page.shot('shop');
   await page.evaluate(() => (window.__slots.run().tickets = 10));
+  const first = await box('shop:0');
+  await page.touchscreen.tap(first.x, first.y);
+  s = await page.snap();
+  check(s.charms.length === 0 && s.focus === 'shop:0', 'first tap on the first charm only shows it too', `${s.charms}`);
   const card = await box('shop:2');
   await page.touchscreen.tap(card.x, card.y);
   s = await page.snap();
@@ -340,8 +361,11 @@ const LOSE = grid('mpcra', 'crmpg', 'mpcra');
   check(s.charms.length === 1, 'second tap buys it');
   const deal = await box('pkg:1');
   await page.touchscreen.tap(deal.x, deal.y);
+  await sleep(120);
+  await page.touchscreen.tap(deal.x, deal.y);
   s = await page.snap();
-  check(s.phase === 'spin', 'tapping a deal starts the day');
+  const spun = await page.evaluate(() => window.__slots.run().stats.spins);
+  check(s.phase === 'spin' && spun === 0, 'double-tapping a deal starts the day without spinning too', `${s.phase}, ${spun} spins`);
   await page.idle();
   await page.evaluate((g) => window.__slots.force(g), grid('ggggg', 'mpcra', 'crmpg'));
   const lever = await box('lever');
@@ -363,8 +387,8 @@ const LOSE = grid('mpcra', 'crmpg', 'mpcra');
 {
   const context = await browser.newContext({ viewport: { width: 800, height: 600 }, reducedMotion: 'reduce' });
   const page = await openGame(context, 'calm');
-  const rm = await page.evaluate(() => window.__slots.store.settings.reducedMotion);
-  check(rm === true, 'reduced motion is picked up from the system');
+  const rm = await page.evaluate(() => ({ on: window.__slots.view().reducedMotion, saved: window.__slots.store.settings.reducedMotion }));
+  check(rm.on === true && rm.saved === null, 'reduced motion follows the system (and isn\'t saved)', JSON.stringify(rm));
   await page.keyboard.press('Enter');
   await page.evaluate(() => window.__slots.act('pkg:0'));
   await page.idle();

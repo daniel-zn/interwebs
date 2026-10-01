@@ -34,6 +34,8 @@ export class Input {
       this.order = [];
       this.run = false;
     });
+    // A touch anywhere brings up the touch controls, even where a mouse is the main pointer.
+    window.addEventListener('pointerdown', (e) => e.pointerType === 'touch' && this.setMode('touch'));
     this.pad = { prev: {} };
   }
 
@@ -100,7 +102,8 @@ export class Input {
         this.fire(k);
       }
     }
-    this.run = now.run || this.run;
+    // Hold X to run: follow the button only when it changes, so Shift and the RUN toggle still work.
+    if (now.run !== !!this.pad.prev.run) this.run = now.run;
     this.pad.prev = now;
   }
 
@@ -124,6 +127,11 @@ export class Input {
     // The overlay hides while dialogs and menus are up, which can swallow the
     // finger's pointerup; let go of the pad so the player doesn't walk on.
     this.clearTouch = () => set(null);
+    // Losing focus (an app switch) lets go of everything; show it on the pad and RUN.
+    window.addEventListener('blur', () => {
+      set(null);
+      root.querySelector('[data-act="run"]')?.classList.remove('on');
+    });
     dpad.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       this.setMode('touch');

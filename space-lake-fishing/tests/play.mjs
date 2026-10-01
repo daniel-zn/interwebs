@@ -210,7 +210,7 @@ async function playOnce(page, press, release, { power = 0.55, shots = false } = 
     Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked'); } });
   });
   const page = await openGame(context, 'landscape-reduced');
-  check(await page.evaluate(() => window.__pond.store.settings.reducedMotion), 'prefers-reduced-motion respected');
+  check(await page.evaluate(() => window.__pond.store.reducedMotion), 'prefers-reduced-motion respected');
   await page.keyboard.press('Enter');
   check((await page.snap()).state === 'idle', 'Enter works and game runs without localStorage');
   await page.shot('idle');

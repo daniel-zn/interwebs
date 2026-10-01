@@ -16,9 +16,6 @@ const LENGTH = params.has('session') ? Math.max(10, Number(params.get('session')
 let seed = params.has('seed') ? Number(params.get('seed')) >>> 0 : (Date.now() ^ (Math.random() * 1e9)) >>> 0;
 
 const store = loadStore();
-if (store.settings.reducedMotion === null) {
-  store.settings.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
 
 const canvas = document.getElementById('game');
 bleed(canvas);
@@ -45,17 +42,25 @@ let lastTurn = 0;
 // Render at a low internal resolution and scale by a whole number of device
 // pixels, so every game pixel is a crisp square on any screen.
 let scale = 1;
+const rootStyle = getComputedStyle(document.documentElement);
+const menu = document.querySelector('.hud .buttons');
 function resize() {
   const dpr = window.devicePixelRatio || 1;
   const vw = Math.round(window.innerWidth * dpr), vh = Math.round(window.innerHeight * dpr);
   const minW = vw < vh ? 220 : 320;
   scale = Math.max(1, Math.floor(Math.min(vw / minW, vh / 180)));
   const W = Math.ceil(vw / scale), H = Math.ceil(vh / scale);
+  // The CSS size follows the zoom level even when the pixel size doesn't change.
+  canvas.style.width = `${(W * scale) / dpr}px`;
+  canvas.style.height = `${(H * scale) / dpr}px`;
+  // The HUD keeps clear of the notch, the status bar and the menu buttons (and
+  // their 3px shadow); the renderer wants them in canvas pixels.
+  const px = dpr / scale, b = menu.getBoundingClientRect();
+  const inset = (side) => (parseFloat(rootStyle.getPropertyValue(`--safe-${side}`)) || 0) * px;
+  renderer.setChrome({ top: inset('top'), left: inset('left') }, { left: b.left * px, bottom: (b.bottom + 3) * px });
   if (W === canvas.width && H === canvas.height && renderer.W) return;
   canvas.width = W;
   canvas.height = H;
-  canvas.style.width = `${(W * scale) / dpr}px`;
-  canvas.style.height = `${(H * scale) / dpr}px`;
   ctx.imageSmoothingEnabled = false;
   renderer.resize(W, H);
 }
@@ -71,7 +76,8 @@ window.addEventListener('resize', () => {
 resize();
 
 // ---------------------------------------------------------------- flow
-function startRun() {
+/** `pointer`: started by a click or tap (rather than a key or the gamepad). */
+function startRun(pointer = false) {
   audio.unlock();
   ui.hideResult();
   run = createRun({ seed: seed++, gentle: store.settings.gentle, session: LENGTH });
@@ -82,7 +88,11 @@ function startRun() {
   releaseAll();
   ui.setState('fly');
   audio.canOpen();
-  canvas.focus({ preventScroll: true });
+  // Keys must reach the game. After a click or tap the browser focuses the canvas
+  // itself, without a keyboard focus ring round the whole game, so only make sure
+  // focus isn't left on a button.
+  if (!pointer) canvas.focus({ preventScroll: true });
+  else if (isControl(document.activeElement)) document.activeElement.blur();
   ui.alert(`Kite up${store.settings.gentle ? ', gentle mode' : ''}. The sun sets in ${LENGTH === SESSION ? 'two and a half minutes' : `${LENGTH} seconds`}.`, 'start', 0);
 }
 
@@ -135,18 +145,19 @@ function updateAim() {
   aim = latest ? latest.at : null;
 }
 
+// No preventDefault: the press focuses the canvas, taking focus back from a menu
+// button (where Space would press it again) without a keyboard focus ring.
 canvas.addEventListener('pointerdown', (e) => {
   if (e.button !== 0 || openDialogs()) return;
   ui.setMode(e.pointerType === 'touch' || e.pointerType === 'pen' ? 'touch' : 'pointer');
   canvas.setPointerCapture?.(e.pointerId);
-  e.preventDefault();
   audio.unlock();
   if (state === 'title') {
-    startRun();
+    startRun(true);
     return;
   }
   if (state === 'end') {
-    if (canRestart()) startRun();
+    if (canRestart()) startRun(true);
     return;
   }
   if (state !== 'fly') return;
@@ -197,7 +208,11 @@ window.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
   const lk = k.toLowerCase();
   if (lk === 'p' || k === 'Escape') {
-    if (state === 'fly') pause();
+    if (state === 'fly') {
+      // Otherwise this same Esc press closes the pause dialog it opens.
+      e.preventDefault();
+      pause();
+    }
   } else if (lk === 'm') toggleSound();
   else if (lk === 'h' || k === '?') openHelp();
   else if (lk === 'r' && state !== 'title') startRun();
@@ -252,9 +267,11 @@ function syncSettings() {
   soundBtn.setAttribute('aria-label', s.muted ? 'Sound is off. Turn sound on (M)' : 'Sound is on. Turn sound off (M)');
   optSound.checked = !s.muted;
   optGentle.checked = s.gentle;
-  optMotion.checked = s.reducedMotion;
-  document.documentElement.classList.toggle('reduced-motion', s.reducedMotion);
+  optMotion.checked = store.reducedMotion;
+  document.documentElement.classList.toggle('reduced-motion', store.reducedMotion);
 }
+// Until the player picks a setting, reduce motion follows the OS one, live.
+matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => syncSettings());
 
 function toggleSound(force) {
   store.settings.muted = force === undefined ? !store.settings.muted : !force;
@@ -304,15 +321,20 @@ for (const dlg of [pauseDlg, helpDlg]) {
 
 document.getElementById('btn-pause').addEventListener('click', () => (state === 'fly' ? pause() : null));
 document.getElementById('btn-help').addEventListener('click', openHelp);
-// Tapping anywhere on the result card flies again, like the hint says.
-document.getElementById('result').addEventListener('pointerdown', (e) => {
-  if (e.target.closest('button')) return;
-  ui.setMode(e.pointerType === 'touch' || e.pointerType === 'pen' ? 'touch' : 'pointer');
-  e.preventDefault();
-  if (canRestart()) startRun();
+// A click leaves focus on the menu button, where Space and the arrows would press
+// it again instead of flying: hand focus back to the game (dialogs do on close).
+menu.addEventListener('click', (e) => {
+  if (e.detail && !openDialogs()) canvas.focus({ preventScroll: true, focusVisible: false });
 });
-document.getElementById('btn-again').addEventListener('click', () => {
-  if (canRestart()) startRun();
+// Tapping anywhere on the result card flies again, like the hint says. On click,
+// so a drag to scroll a card that doesn't fit the screen doesn't.
+const resultCard = document.getElementById('result');
+resultCard.addEventListener('pointerdown', (e) => ui.setMode(e.pointerType === 'touch' || e.pointerType === 'pen' ? 'touch' : 'pointer'));
+resultCard.addEventListener('click', (e) => {
+  if (!e.target.closest('button') && canRestart()) startRun(true);
+});
+document.getElementById('btn-again').addEventListener('click', (e) => {
+  if (canRestart()) startRun(e.detail > 0);
 });
 soundBtn.addEventListener('click', () => toggleSound());
 optSound.addEventListener('change', () => toggleSound(optSound.checked));
@@ -340,7 +362,7 @@ document.addEventListener('visibilitychange', () => {
 
 // ---------------------------------------------------------------- events
 function handleEvents() {
-  const rm = store.settings.reducedMotion;
+  const rm = store.reducedMotion;
   const live = state !== 'title';
   for (const e of run.events) {
     if (!live) continue;
@@ -412,6 +434,8 @@ const perf = { frames: 0, work: 0, max: 0 };
 let last = performance.now();
 let lastPose = 'rest';
 function frame(now) {
+  // Next frame first: an error in this one must not stop the game for good.
+  requestAnimationFrame(frame);
   const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
   last = now;
   const t0 = performance.now();
@@ -454,7 +478,7 @@ function frame(now) {
   }
   const flying = state === 'fly' && run.phase === 'fly' && !paused;
   renderer.draw(ctx, dt, {
-    run, mode: state === 'title' ? 'title' : 'fly', rm: store.settings.reducedMotion, paused,
+    run, mode: state === 'title' ? 'title' : 'fly', rm: store.reducedMotion, paused,
     best: store.best, inputMode: ui.mode,
   });
   audio.tick(dt, flying ? {
@@ -465,7 +489,6 @@ function frame(now) {
   perf.frames++;
   perf.work += work;
   perf.max = Math.max(perf.max, work);
-  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 

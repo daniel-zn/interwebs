@@ -59,6 +59,18 @@ export function smooth(points, step = 2) {
   return out;
 }
 
+/** A smooth path through the points, with its length, for rampPoint(). */
+export function makePath(points) {
+  const path = smooth(points);
+  const lens = [0];
+  let len = 0;
+  for (let i = 1; i < path.length; i++) {
+    len += Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]);
+    lens.push(len);
+  }
+  return { path, lens, len };
+}
+
 // Ramps: the ball is carried along a path over the playfield.
 export const RAMPS = [
   {
@@ -70,17 +82,8 @@ export const RAMPS = [
     control: [[158, 188], [160, 160], [168, 140], [184, 124], [202, 118], [213, 130], [214, 150], [213.5, 172]],
   },
 ];
-for (const r of RAMPS) {
-  r.path = smooth(r.control);
-  let len = 0;
-  r.lens = [0];
-  for (let i = 1; i < r.path.length; i++) {
-    len += Math.hypot(r.path[i][0] - r.path[i - 1][0], r.path[i][1] - r.path[i - 1][1]);
-    r.lens.push(len);
-  }
-  r.len = len;
-}
-/** A point along a ramp, 0..1. */
+for (const r of RAMPS) Object.assign(r, makePath(r.control));
+/** A point along a ramp (or any makePath() path), 0..1. */
 export function rampPoint(r, k) {
   const d = Math.max(0, Math.min(1, k)) * r.len;
   let lo = 1, hi = r.lens.length - 1;

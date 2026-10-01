@@ -21,6 +21,8 @@ const DRAG0 = 0.028, DRAG1 = 0.085;
 const HEAT_K = 0.085, COOL = 0.1;
 const SKIP_K = 0.14, SKIP_DRAIN = 0.3;
 const FLOW_EVERY = 5, FLOW_MAX = 5;
+const COAST = 25;            // seconds without a fresh press before flow starts to fade
+const AFTERGLOW = 20;        // seconds the ending plays out before it holds still
 
 export const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const clamp01 = (v) => clamp(v, 0, 1);
@@ -39,7 +41,7 @@ export function createRun({ seed = 1, gentle = false } = {}) {
     t: 0, x: 0, v: V0, vy: -1.2, a: 0, input: 0,
     phase: 'ride', endT: 0,
     heat: 0, skip: 0, plasma: 0, depth: 8,
-    score: 0, flow: 1, flowT: 0, edge: '', edgeT: 0,
+    score: 0, flow: 1, flowT: 0, coastT: 0, edge: '', edgeT: 0,
     // Gentle mode widens the corridor downwards: the heat starts deeper, but
     // the air (and so the skip-off line) is where it always is.
     shift: gentle ? 4 : 0,
@@ -145,6 +147,8 @@ function objectEnd(o) {
  * an analogue value in between also works (gamepad stick).
  */
 export function step(run, dt, input = 0) {
+  // After the ride, the ending plays out and then holds still behind the result card.
+  if (run.phase !== 'ride' && run.t - run.endT >= AFTERGLOW) return;
   run.t += dt;
   if (run.phase === 'ride') ride(run, dt, input);
   else afterglow(run, dt);
@@ -152,6 +156,9 @@ export function step(run, dt, input = 0) {
 
 function ride(run, dt, input) {
   const rng = run.rng;
+  // A fresh press (dive or pull) counts as carving; coasting hands-off lets flow fade.
+  if (input && Math.sign(input) !== Math.sign(run.input)) run.coastT = 0;
+  else run.coastT += dt;
   run.input = input;
   const target = input < 0 ? RIDE_ANGLE + (DIVE_ANGLE - RIDE_ANGLE) * -input : RIDE_ANGLE + (PULL_ANGLE - RIDE_ANGLE) * input;
   const da = target - run.a;
@@ -288,7 +295,12 @@ function ride(run, dt, input) {
     addScore(run, 30 * run.flow * dt);
   }
   run.edgeT = run.edge ? run.edgeT + dt : 0;
-  if (inBand && run.heat < 0.9 && run.skip < 0.9) {
+  if (run.coastT >= COAST) {
+    // Hands off for too long: flow stops building and fades a step every 5 s.
+    run.flowT = 0;
+    const fades = (c) => Math.floor((c - COAST) / FLOW_EVERY);
+    if (fades(run.coastT) > fades(run.coastT - dt)) loseFlow(run, false, 'coast');
+  } else if (inBand && run.heat < 0.9 && run.skip < 0.9) {
     run.flowT += dt;
     if (run.flowT >= FLOW_EVERY && run.flow < FLOW_MAX) {
       run.flow++;
@@ -334,11 +346,11 @@ function ride(run, dt, input) {
   }
 }
 
-function loseFlow(run, all) {
+function loseFlow(run, all, why = '') {
   const before = run.flow;
   run.flow = all ? 1 : Math.max(1, run.flow - 1);
   run.flowT = 0;
-  if (run.flow < before) emit(run, 'flowlost', { flow: run.flow });
+  if (run.flow < before) emit(run, 'flowlost', { flow: run.flow, why });
 }
 
 function end(run, outcome) {

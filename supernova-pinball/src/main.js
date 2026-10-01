@@ -15,11 +15,12 @@ const params = new URLSearchParams(location.search);
 const TEST = params.has('test');
 const AUTO = params.has('auto'); // the autopilot plays real games too (for tests)
 const SPEED = params.has('fast') ? 3 : 1;
-const START_SECTOR = Math.max(1, Number(params.get('sector')) || 1);
+const START_SECTOR = Math.max(1, Math.floor(Number(params.get('sector'))) || 1);
 let seed = params.has('seed') ? Number(params.get('seed')) >>> 0 : (Date.now() ^ (Math.random() * 1e9)) >>> 0;
 
 const store = loadStore();
-if (store.settings.reducedMotion === null) store.settings.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Reduced motion follows the system setting until the player picks one in help.
+const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
 
 // The game is laid out in table units; the canvas holds `RS` device pixels
 // per unit (a whole number, near the real scale) so shapes are drawn sharp,
@@ -59,43 +60,75 @@ function demoGame() {
 }
 
 // ---------------------------------------------------------------- sizing
-let scale = 1, RS = 1, W = 0, H = 0;
+// The screen's safe area, in CSS pixels: the notch and home indicator, or the
+// status bar when the game runs as a home-screen app.
+const safeProbe = document.createElement('div');
+safeProbe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+document.body.append(safeProbe);
+function safeArea() {
+  const cs = getComputedStyle(safeProbe);
+  return { top: parseFloat(cs.paddingTop) || 0, right: parseFloat(cs.paddingRight) || 0, bottom: parseFloat(cs.paddingBottom) || 0, left: parseFloat(cs.paddingLeft) || 0 };
+}
+
+let scale = 1, RS = 1, W = 0, H = 0, insetKey = '';
 function resize() {
   const dpr = window.devicePixelRatio || 1;
   const vw = Math.round(window.innerWidth * dpr), vh = Math.round(window.innerHeight * dpr);
+  const sa = safeArea();
+  const aw = vw - (sa.left + sa.right) * dpr, ah = vh - (sa.top + sa.bottom) * dpr;
   // The table (with its display on top) fills the height, or on a phone the
-  // width; wide screens get side panels either side.
+  // width; wide screens get side panels either side. All inside the safe
+  // area; the backdrop still fills the whole screen.
   const tall = DMD_HEIGHT + 3 + TH + 2;
-  const side = Math.min(vw / (TW + 224), vh / tall);
-  const narrow = Math.min(vw / (TW + 10), vh / tall);
+  const side = Math.min(aw / (TW + 224), ah / tall);
+  const narrow = Math.min(aw / (TW + 10), ah / tall);
   scale = Math.max(0.5, side >= narrow * 0.93 ? side : narrow);
   const nW = Math.ceil(vw / scale), nH = Math.ceil(vh / scale);
   const nRS = Math.max(1, Math.min(4, Math.ceil(scale - 0.05)));
-  if (nW === W && nH === H && nRS === RS && renderer.W) return;
+  const k = dpr / scale; // table units per CSS pixel
+  const inset = { top: sa.top * k, right: sa.right * k, bottom: sa.bottom * k, left: sa.left * k };
+  const key = JSON.stringify(sa);
+  // The CSS size (and the buttons by the display) follow the zoom level even
+  // when the pixel size doesn't change.
+  canvas.style.width = `${vw / dpr}px`;
+  canvas.style.height = `${vh / dpr}px`;
+  if (nW === W && nH === H && nRS === RS && key === insetKey && renderer.W) {
+    placeHud(scale / dpr, sa);
+    return;
+  }
   W = nW;
   H = nH;
   RS = nRS;
+  insetKey = key;
   canvas.width = W * RS;
   canvas.height = H * RS;
-  canvas.style.width = `${vw / dpr}px`;
-  canvas.style.height = `${vh / dpr}px`;
-  renderer.resize(W, H, RS);
-  placeHud(scale / dpr);
+  renderer.resize(W, H, RS, inset);
+  placeHud(scale / dpr, sa);
 }
 
-/** On a phone the menu buttons sit either side of the display. */
-function placeHud(unit) {
+/**
+ * On a phone the menu buttons sit either side of the display (on screen, and
+ * clear of its bezel where there's room). With side panels they sit in the
+ * corner, and the right-hand panel starts below them.
+ */
+function placeHud(unit, sa) {
   const L = renderer.L;
   hud.classList.toggle('flank', !L.side);
-  const btns = { 'btn-pause': L.tx + 18, 'btn-help': L.tx + TW - 18 };
+  const half = 21 / unit, pad = 2 / unit; // the flanking buttons are 42 px
+  const btns = {
+    'btn-pause': Math.max(sa.left / unit + half + pad, Math.min(L.tx + 18, L.dmdX - 3 - half - pad)),
+    'btn-help': Math.min(W - sa.right / unit - half - pad, Math.max(L.tx + TW - 18, L.dmdX + L.dmdW + 2 + half + pad)),
+  };
   for (const b of hud.querySelectorAll('.icon-btn')) {
     if (L.side || !(b.id in btns)) {
       b.style.left = b.style.top = '';
       continue;
     }
     b.style.left = `${btns[b.id] * unit}px`;
-    b.style.top = `${(L.dy + 2 + DMD_HEIGHT / 2 - 2) * unit}px`;
+    b.style.top = `${Math.max(sa.top + 23, (L.dy + 2 + DMD_HEIGHT / 2 - 2) * unit)}px`;
   }
+  const r = hud.querySelector('.buttons').getBoundingClientRect();
+  L.hud = L.side ? { x: r.left / unit, bottom: r.bottom / unit } : null;
 }
 let resizeQueued = false;
 window.addEventListener('resize', () => {
@@ -120,10 +153,11 @@ function alertSr(text) {
   }, 30);
 }
 function applyMotion() {
-  v.reducedMotion = !!store.settings.reducedMotion;
+  v.reducedMotion = store.settings.reducedMotion ?? motionQuery.matches;
   document.documentElement.classList.toggle('reduced-motion', v.reducedMotion);
 }
 applyMotion();
+motionQuery.addEventListener('change', applyMotion);
 const soundBtn = document.getElementById('btn-sound');
 function syncSound() {
   soundBtn.dataset.on = String(!store.settings.muted);
@@ -230,9 +264,14 @@ function drawDmd(d, W, H) {
   }
   // Idle screens.
   if (mode === 'title') {
-    const pages = ['SUPERNOVA', 'PINBALL', `HIGH ${fmt(store.high)}`, touchFirst ? 'TAP TO PLAY' : 'PRESS SPACE'];
+    // SUPERNOVA is too wide for the display in the big letters.
+    const pages = [['SUPERNOVA', 'PINBALL'], ['PINBALL'], [`HIGH ${fmt(store.high)}`], [touchFirst ? 'TAP TO PLAY' : 'PRESS SPACE']];
     const i = Math.floor(t / 2) % pages.length;
-    dmdText(d, pages[i], i < 2 ? 3 : 5, DMD_ON, i < 2 ? 2 : 1, W);
+    const [top, sub] = pages[i];
+    if (sub) {
+      dmdText(d, top, 1, DMD_HI, 1, W);
+      dmdText(d, sub, 9, DMD_ON, 1, W);
+    } else dmdText(d, top, i === 1 ? 3 : 5, DMD_ON, i === 1 ? 2 : 1, W);
     return;
   }
   dmdText(d, fmt(g.score), 1, DMD_HI, 1, W);
@@ -368,7 +407,8 @@ function onEvents(g) {
         audio.play('missionHit', e.n);
         sparks(e.x, e.y, 14, [C.pink, '#fff', C.gold], 120);
         shock(e.x, e.y, C.pink, 26, 0.4);
-        dmd({ text: `${e.n} OF ${e.need}`, sub: fmt(e.pts), big: true, urgent: true, dur: 1.1 });
+        // (Big Bang hits have no total to count towards.)
+        dmd({ text: e.need ? `${e.n} OF ${e.need}` : `HIT ${e.n}`, sub: fmt(e.pts), big: true, urgent: true, dur: 1.1 });
         break;
       case 'missionDone':
         audio.play('missionDone');
@@ -411,7 +451,7 @@ function onEvents(g) {
         lightShow(2);
         flash(0.4, C.gold);
         shake(3);
-        dmd({ text: 'SUPERNOVA', sub: 'SPELLED! 75,000', big: true, burst: true, hi: true, urgent: true, dur: 2 });
+        dmd({ text: 'SUPERNOVA', sub: 'SPELLED! 75,000', burst: true, hi: true, urgent: true, dur: 2 });
         alertSr('You spelled SUPERNOVA!');
         break;
       case 'asteroid':
@@ -638,6 +678,14 @@ function onEvents(g) {
         v.lightShow = 0;
         dmd({ text: 'STAR REBORN', dur: 1.4 });
         break;
+      case 'multiballEnd':
+        audio.play('novaEnd');
+        dmd({ text: 'MULTIBALL OVER', dur: 1.4 });
+        alertSr('Multiball over.');
+        break;
+      case 'plunger':
+        audio.play('plunger', e.power);
+        break;
       case 'launch':
         audio.play('launch', e.power);
         if (!e.auto && hint.textContent && !hint.classList.contains('title')) setTimeout(() => mode === 'play' && setHint(''), 1500);
@@ -657,6 +705,7 @@ function onEvents(g) {
         break;
       case 'drain':
         audio.play('drain');
+        v.lightShow = 0;
         shake(2);
         dmd({ text: g.tilted ? 'TILT' : 'BONUS', big: true, dur: 0.8, urgent: true });
         alertSr('Ball lost.');
@@ -711,7 +760,7 @@ function onEvents(g) {
         break;
       case 'nudge':
         audio.play('nudge');
-        v.nudgeX = (Math.random() < 0.5 ? -1 : 1) * 3;
+        if (!v.reducedMotion) v.nudgeX = (Math.random() < 0.5 ? -1 : 1) * 3;
         break;
       case 'warning':
         audio.play('warning');
@@ -794,10 +843,11 @@ window.addEventListener('keydown', (e) => {
   if (openDialogs() || e.ctrlKey || e.metaKey || e.altKey) return;
   const c = e.code;
   if (v.panel === 'upgrade') {
+    // Picking takes a fresh press, not a key held down since before the cards came up.
     if (['ArrowUp', 'ArrowLeft', 'KeyW', 'KeyA'].includes(c)) moveFocus(-1);
     else if (['ArrowDown', 'ArrowRight', 'KeyS', 'KeyD'].includes(c)) moveFocus(1);
-    else if (['Enter', 'Space'].includes(c)) activate(v.focus);
-    else if (['Digit1', 'Digit2', 'Digit3'].includes(c)) activate(`up:${Number(c.slice(-1)) - 1}`);
+    else if (['Enter', 'Space'].includes(c) && !e.repeat) activate(v.focus);
+    else if (['Digit1', 'Digit2', 'Digit3'].includes(c) && !e.repeat) activate(`up:${Number(c.slice(-1)) - 1}`);
     e.preventDefault();
     return;
   }
@@ -812,8 +862,10 @@ window.addEventListener('keydown', (e) => {
   }
   if (KEYS_LEFT.has(c)) held.left = true;
   else if (KEYS_RIGHT.has(c)) held.right = true;
-  else if (KEYS_LAUNCH.has(c)) held.launch = true;
-  else if (KEYS_NUDGE.has(c)) {
+  else if (KEYS_LAUNCH.has(c)) {
+    // A key still held from the menus (auto-repeating) isn't a pull on the plunger.
+    if (!e.repeat) held.launch = true;
+  } else if (KEYS_NUDGE.has(c)) {
     if (!e.repeat) nudgeQueued = true;
   } else if (c === 'KeyP' || c === 'Escape') pause();
   else if (c === 'KeyM') toggleSound();
@@ -829,8 +881,12 @@ window.addEventListener('keyup', (e) => {
 });
 
 // Touch and mouse: left half flips left, right half flips right. Holding
-// anywhere pulls the plunger when a ball is waiting. A quick swipe up nudges.
+// anywhere pulls the plunger when a ball is waiting (a quick tap, say to move
+// the skill shot lane, only flips). A quick swipe up nudges.
 const pointers = new Map();
+// Real time, not the game clock, which only moves on a frame (and slow frames would turn taps into holds).
+const HOLD = 150; // ms before a touch counts as holding
+const pointerLaunch = () => [...pointers.values()].some((p) => !p.panel && performance.now() - p.down > HOLD);
 function toCanvas(e) {
   const r = canvas.getBoundingClientRect();
   return { x: ((e.clientX - r.left) / r.width) * W, y: ((e.clientY - r.top) / r.height) * H };
@@ -846,20 +902,21 @@ function syncPointers() {
   held.left = held.right = false;
   for (const p of pointers.values()) {
     if (p.side === 'left') held.left = true;
-    else held.right = true;
+    else if (p.side === 'right') held.right = true;
   }
-  held.launch = pointers.size > 0;
 }
 canvas.addEventListener('pointerdown', (e) => {
   audio.unlock();
   canvas.focus({ preventScroll: true });
   const p = toCanvas(e);
   if (mode === 'title' || v.panel) {
-    pointers.set(e.pointerId, { panel: true, ...p });
+    // Remember which screen it went down on: a touch that began on the warp
+    // screen mustn't pick whichever upgrade card appears under it.
+    pointers.set(e.pointerId, { panel: v.panel || 'title', ...p });
     return;
   }
   const mid = renderer.L.tx + TW / 2;
-  pointers.set(e.pointerId, { side: p.x < mid ? 'left' : 'right', x: p.x, y: p.y, t: clock });
+  pointers.set(e.pointerId, { side: p.x < mid ? 'left' : 'right', x: p.x, y: p.y, t: clock, down: e.timeStamp });
   try {
     canvas.setPointerCapture(e.pointerId);
   } catch {
@@ -884,7 +941,7 @@ const endPointer = (e) => {
   const q = pointers.get(e.pointerId);
   pointers.delete(e.pointerId);
   syncPointers();
-  if (q && q.panel && e.type === 'pointerup') {
+  if (q && q.panel && q.panel === v.panel && e.type === 'pointerup') {
     const r = regionAt(toCanvas(e));
     if (r) activate(r.id);
   }
@@ -894,24 +951,50 @@ canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 let padPrev = {};
+// An A press that started the game, picked an upgrade or pressed a menu
+// button isn't a pull on the plunger: it has to be let go first.
+let padHoldA = false;
 function pollPad() {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   const pad = [...pads].find((p) => p && p.connected);
-  if (!pad || openDialogs()) return null;
+  if (!pad) {
+    // Unplugged (maybe mid-press): nothing is held any more.
+    padPrev = {};
+    return null;
+  }
   const b = (i) => !!(pad.buttons[i] && pad.buttons[i].pressed);
-  const now = { left: b(4) || b(6) || b(14), right: b(5) || b(7) || b(15), a: b(0), start: b(9), nudge: b(3) || b(12), up: b(12), down: b(13) };
-  if (v.panel === 'upgrade') {
-    if (now.up && !padPrev.up) moveFocus(-1);
-    if (now.down && !padPrev.down) moveFocus(1);
-    if (now.a && !padPrev.a) activate(v.focus);
+  const now = { left: b(4) || b(6) || b(14), right: b(5) || b(7) || b(15), a: b(0), b: b(1), start: b(9), nudge: b(3) || b(12), up: b(12), down: b(13) };
+  const pressed = (k) => now[k] && !padPrev[k];
+  if (!now.a) padHoldA = false;
+  if (pressed('a') && (openDialogs() || mode === 'title' || v.panel)) padHoldA = true;
+  if (openDialogs()) padMenu(pressed);
+  else if (v.panel === 'upgrade') {
+    if (pressed('up')) moveFocus(-1);
+    if (pressed('down')) moveFocus(1);
+    if (pressed('a')) activate(v.focus);
   } else if (mode === 'title' || v.panel === 'over') {
-    if ((now.a && !padPrev.a) || (now.start && !padPrev.start)) pressStart();
+    if (pressed('a') || pressed('start')) pressStart();
   } else {
-    if (now.nudge && !padPrev.nudge) nudgeQueued = true;
-    if (now.start && !padPrev.start) pause();
+    if (pressed('nudge')) nudgeQueued = true;
+    if (pressed('start')) pause();
   }
   padPrev = now;
   return now;
+}
+
+/** The pause and help menus on a gamepad: the D-pad moves, A presses, B or Start closes. */
+function padMenu(pressed) {
+  const dlg = document.querySelector('dialog[open]');
+  if (pressed('b') || pressed('start')) {
+    dlg.close(dlg === pauseDlg ? 'resume' : 'close');
+    return;
+  }
+  const items = [...dlg.querySelectorAll('button, input')];
+  const i = items.indexOf(document.activeElement);
+  const go = (k) => items[(k + items.length) % items.length].focus({ focusVisible: true });
+  if (pressed('up') || pressed('left')) go(Math.max(0, i) - 1);
+  else if (pressed('down') || pressed('right')) go(i + 1);
+  else if (pressed('a') && i >= 0) items[i].click();
 }
 
 function moveFocus(d) {
@@ -929,6 +1012,7 @@ function activate(id) {
   else if (id === 'again') startGame();
   else if (id.startsWith('up:')) {
     if (pickUpgrade(game, Number(id.slice(3)))) {
+      held.launch = false;
       audio.play('select');
       onEvents(game);
     }
@@ -943,6 +1027,7 @@ function pause() {
   paused = true;
   audio.suspend();
   held.left = held.right = held.launch = false;
+  pauseDlg.returnValue = '';
   if (!pauseDlg.open) pauseDlg.showModal();
 }
 function resume() {
@@ -975,7 +1060,7 @@ function openHelp() {
   document.getElementById('opt-sound').checked = !store.settings.muted;
   document.getElementById('opt-music').checked = !!store.settings.music;
   document.getElementById('opt-relaxed').checked = !!store.settings.relaxed;
-  document.getElementById('opt-motion').checked = !!store.settings.reducedMotion;
+  document.getElementById('opt-motion').checked = v.reducedMotion;
   helpDlg.showModal();
 }
 helpDlg.addEventListener('close', () => {
@@ -1003,6 +1088,12 @@ document.getElementById('opt-motion').addEventListener('change', (e) => {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) pause();
 });
+window.addEventListener('blur', () => {
+  // Keys and fingers held as the window lost focus never report letting go.
+  held.left = held.right = held.launch = false;
+  pointers.clear();
+  pause();
+});
 
 // ---------------------------------------------------------------- loop
 function tick() {
@@ -1010,7 +1101,7 @@ function tick() {
   if (mode === 'title' || AUTO) input = autopilot(game, 0.97);
   else {
     const pad = padPrev;
-    input = { left: held.left || !!pad.left, right: held.right || !!pad.right, launch: held.launch || !!pad.a, nudge: nudgeQueued };
+    input = { left: held.left || !!pad.left, right: held.right || !!pad.right, launch: held.launch || pointerLaunch() || (!!pad.a && !padHoldA), nudge: nudgeQueued };
     nudgeQueued = false;
   }
   step(game, input);
@@ -1073,7 +1164,8 @@ function frame(now) {
   audio.setHum(mode === 'play' ? game.mass / 100 : 0.1);
   const ballSpeed = mode === 'play' ? Math.max(0, ...game.balls.map((b) => (b.held ? 0 : Math.hypot(b.vx, b.vy)))) : 0;
   audio.setMotor(Math.min(1, ballSpeed / 700));
-  audio.setTease(mode === 'play' && game.mass > 70 && game.supernovaT === 0, (game.mass - 70) / 30);
+  const live = mode === 'play' && (game.phase === 'play' || game.phase === 'launch');
+  audio.setTease(live && game.mass > 70 && game.supernovaT === 0, (game.mass - 70) / 30);
   audio.update();
   regions = renderer.draw(ctx, game, v);
   perf.frames++;

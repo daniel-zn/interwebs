@@ -6,7 +6,7 @@ import {
 } from './data.js';
 import { SUBSTEPS, collideBalls, makeBall, stepBall, stepCaptive, stepFlippers, stepPendulum } from './physics.js';
 import {
-  BALL_R, BINARY, CANNON, CX, DRAIN_Y, LANE_X, LEFT_PLUNGER, PLUNGER, QUASAR_SPOTS, SAUCER, SHOTS, STAR, WHITE_HOLE, buildTable, rampPoint,
+  BALL_R, BINARY, CANNON, CX, DRAIN_Y, LANE_X, LEFT_PLUNGER, PLUNGER, QUASAR_SPOTS, SAUCER, SHOTS, STAR, WHITE_HOLE, buildTable, m, makePath, rampPoint,
 } from './table.js';
 
 // Missions: started at the wormhole once the I O N targets light one.
@@ -83,6 +83,7 @@ function startSector(g, n, first = false) {
   g.sectorScore = 0;
   g.table = buildTable();
   applyUpgradesToTable(g);
+  g.table.star.r = 6 + (g.mass / 100) * 5; // the star's mass carries over
   g.lanes = [false, false, false, false];
   g.locks = 0;
   g.multiball = false;
@@ -104,7 +105,14 @@ function startSector(g, n, first = false) {
 
 function applyUpgradesToTable(g) {
   const t = g.table;
-  if (has(g, 'long_flippers')) for (const f of t.flippers) f.len = f.baseLen * 1.15;
+  if (has(g, 'long_flippers')) {
+    for (const f of t.flippers) {
+      f.len = f.baseLen * 1.15;
+      // The main flippers grow back from the tip, so the gap between the tips
+      // stays a ball wide and the middle still drains.
+      if (!f.mini) f.px -= Math.cos(f.rest) * (f.len - f.baseLen);
+    }
+  }
   t.bumperPower = has(g, 'mega_bumpers') ? 1.2 : 1;
 }
 
@@ -123,6 +131,7 @@ function serveBall(g) {
   g.ballNo++;
   g.tilt = 0;
   g.tilted = false;
+  g.table.dead = false;
   g.kickbackUsed = false;
   g.magnaUsed = false;
   g.ballSaveArmed = true;
@@ -164,6 +173,7 @@ function award(g, base, x, y, label = null) {
 
 /** Major shots build combos and count for missions. */
 function shot(g, name, x, y) {
+  if (g.tilted) return;
   missionShot(g, name, x, y);
   if (g.snipeT > 0) {
     // Straight from the plasma cannon.
@@ -205,7 +215,7 @@ function startMission(g) {
 /** A named shot was made: does the running mission want it? */
 function missionShot(g, id, x, y) {
   const ms = g.mission;
-  if (!ms || !ms.lit.has(id)) return;
+  if (!ms || !ms.lit.has(id) || g.tilted) return;
   ms.n++;
   const f = g.sector;
   if (ms.def.id === 'bigbang') {
@@ -245,11 +255,18 @@ function stepMission(g) {
   }
 }
 
-function addMass(g, m) {
-  if (g.supernovaT > 0) return;
-  g.mass = Math.min(100, g.mass + m * 0.3 * (has(g, 'heavy_star') ? 2 : 1));
+function addMass(g, n) {
+  if (g.supernovaT > 0 || g.tilted) return;
+  g.mass = Math.min(100, g.mass + n * 0.3 * (has(g, 'heavy_star') ? 2 : 1));
   g.table.star.r = 6 + (g.mass / 100) * 5;
   if (g.mass >= 100) supernova(g);
+}
+
+/** The star settles back down: the supernova is over and its mass is spent. */
+function endNova(g) {
+  g.supernovaT = 0;
+  g.mass = 0;
+  g.table.star.r = 6;
 }
 
 function supernova(g) {
@@ -264,7 +281,12 @@ function supernova(g) {
 }
 
 // ---------------------------------------------------------------- contacts
+// A tilted table is dead: the ball still bounces about, but nothing else
+// scores, lights up or counts until it drains.
+const PHYSICAL = new Set(['flipper', 'post', 'rubber', 'wall', 'guide', 'apron', 'laneguide']);
+
 function onHit(g, kind, obj, strength, ball) {
+  if (g.tilted && !PHYSICAL.has(kind)) return;
   const t = g.table;
   g.src = kind;
   switch (kind) {
@@ -747,23 +769,18 @@ export function step(g, input) {
   // Plunger.
   const onPlunger = g.balls.find((b) => b.x > LANE_X && b.y > PLUNGER.y - 8 && Math.abs(b.vy) < 30);
   if (onPlunger && input.launch) {
+    const before = g.plunger;
     g.plunger = Math.min(1, g.plunger + DT * 1.4);
+    if (Math.floor(g.plunger * 5) > Math.floor(before * 5)) emit(g, 'plunger', { power: g.plunger });
     g.launchHeld = true;
   } else if (g.launchHeld && !input.launch) {
+    // The ball save and skill shot start once the ball is out of the lane
+    // (below), so a weak plunge that rolls back costs nothing.
     g.launchHeld = false;
     if (onPlunger) {
       const p = Math.max(0.15, g.plunger);
       onPlunger.vy = -(280 + p * 700);
       emit(g, 'launch', { power: p });
-      if (g.phase === 'launch') {
-        g.phase = 'play';
-        g.phaseT = 0;
-        g.skillT = 5;
-      }
-      if (g.ballSaveArmed) {
-        g.ballSaveT = BALL_SAVE + (has(g, 'ball_saver') ? 8 : 0);
-        g.ballSaveArmed = false;
-      }
     }
     g.plunger = 0;
   } else if (!input.launch) g.launchHeld = false;
@@ -787,6 +804,7 @@ export function step(g, input) {
     emit(g, 'nudge', { tilt: g.tilt });
     if (g.tilt >= 1) {
       g.tilted = true;
+      t.dead = true; // bumpers and slings stop kicking too
       t.flippers.forEach((f) => (f.held = false));
       emit(g, 'tilt');
     } else if (g.tilt > 0.55) emit(g, 'warning');
@@ -804,7 +822,7 @@ export function step(g, input) {
     for (const r of t.rotors) r.a += r.omega * dt;
     for (const b of g.balls) stepBall(b, t, dt, gravity, hit);
     stepCaptive(t.captive, dt, gravity, hit);
-    if (stepPendulum(t.pendulum, dt, gravity) && g.t - (t.pendulum.swingT || -9) > 2) {
+    if (stepPendulum(t.pendulum, dt, gravity) && !g.tilted && g.t - (t.pendulum.swingT || -9) > 2) {
       t.pendulum.swingT = g.t;
       const pts = award(g, 10000 * g.sector, t.pendulum.x, t.pendulum.y - 30, 'FULL SWING');
       addMass(g, 5);
@@ -814,10 +832,11 @@ export function step(g, input) {
   }
   for (const b of g.balls) b.age += DT;
 
-  // Ball search: a ball that has stopped dead somewhere gets kicked loose.
+  // Ball search: a ball that has stopped dead somewhere gets kicked loose
+  // (but not one the player is holding on a raised flipper).
   for (const b of g.balls) {
     const onPlunger = (b.x > LANE_X || b.x < 17) && b.y > PLUNGER.y - 8;
-    if (b.held || onPlunger || Math.hypot(b.vx, b.vy) > 8) {
+    if (b.held || onPlunger || Math.hypot(b.vx, b.vy) > 8 || cradled(t, b)) {
       b.still = 0;
       continue;
     }
@@ -831,6 +850,16 @@ export function step(g, input) {
   }
   checkCaptures(g);
   g.balls = g.balls.filter((b) => !b.gone);
+  // Out of the top of the shooter lane: the ball is in play.
+  if (g.phase === 'launch' && g.balls.some((b) => !b.held && b.y < 140)) {
+    g.phase = 'play';
+    g.phaseT = 0;
+    g.skillT = 5;
+    if (g.ballSaveArmed) {
+      g.ballSaveT = BALL_SAVE + (has(g, 'ball_saver') ? 8 : 0);
+      g.ballSaveArmed = false;
+    }
+  }
   checkOrbit(g);
   checkOutlanes(g);
 
@@ -856,18 +885,17 @@ export function step(g, input) {
   if (g.supernovaT > 0) {
     g.supernovaT -= DT;
     if (g.supernovaT <= 0) {
-      g.supernovaT = 0;
-      g.mass = 0;
-      t.star.r = 6;
+      endNova(g);
       emit(g, 'novaEnd');
     }
   }
 
-  // Drains.
+  // Drains. Each is told how many others went down with it, so two balls
+  // lost in the same moment end the ball once.
   const drained = g.balls.filter((b) => !b.held && b.y > DRAIN_Y);
   if (drained.length) {
     g.balls = g.balls.filter((b) => !drained.includes(b));
-    for (const b of drained) onDrain(g, b);
+    drained.forEach((b, i) => onDrain(g, b, drained.length - 1 - i));
   }
   if (g.multiball && g.balls.length <= 1) {
     g.multiball = false;
@@ -879,16 +907,33 @@ export function step(g, input) {
   if (g.sectorScore >= g.target && g.phase === 'play') {
     g.phase = 'warp';
     g.phaseT = 0;
-    g.ballsLeft = Math.min(MAX_BALLS, g.ballsLeft + 1);
+    ballBack(g, 1);
     for (const b of g.balls) b.held = 'warp';
-    g.supernovaT = 0;
+    // A supernova still going ends here, so the next sector starts calm.
+    if (g.supernovaT > 0) endNova(g);
     emit(g, 'sectorClear', { sector: g.sector });
   }
 }
 
-function onDrain(g, b) {
+/** Gives balls back (for clearing a sector), up to the cap, but never takes any away. */
+function ballBack(g, n) {
+  g.ballsLeft = Math.max(g.ballsLeft, Math.min(MAX_BALLS, g.ballsLeft + n));
+}
+
+/** The ball is cradled on a raised flipper. */
+function cradled(t, b) {
+  return t.flippers.some((f) => {
+    if (!f.held) return false;
+    const dx = Math.cos(f.angle) * f.len, dy = Math.sin(f.angle) * f.len;
+    const k = Math.max(0, Math.min(1, ((b.x - f.px) * dx + (b.y - f.py) * dy) / (dx * dx + dy * dy)));
+    return Math.hypot(b.x - f.px - dx * k, b.y - f.py - dy * k) < BALL_R + f.r0 + 1;
+  });
+}
+
+/** A ball went down the drain; `more` others went in the same moment. */
+function onDrain(g, b, more = 0) {
   void b;
-  if (g.balls.length > 0) {
+  if (g.balls.length + more > 0) {
     // Multiball (or supernova) ball save sends every lost ball back.
     if (g.ballSaveT > 0 && !g.tilted) {
       addBall(g);
@@ -905,7 +950,7 @@ function onDrain(g, b) {
     g.ballSaveT = 0;
     return;
   }
-  if (has(g, 'ghost_ball') && !g.ghostUsed) {
+  if (has(g, 'ghost_ball') && !g.ghostUsed && !g.tilted) {
     g.ghostUsed = true;
     g.balls.push(Object.assign(makeBall(PLUNGER.x, PLUNGER.y - 6, g.nextBallId++), { vy: -880 }));
     emit(g, 'ghost');
@@ -918,10 +963,14 @@ function onDrain(g, b) {
     g.mission = null;
     g.missionLit = true;
   }
-  g.supernovaT = 0;
-  g.mass = Math.max(0, g.mass - 20);
-  g.table.star.r = 6 + (g.mass / 100) * 5;
+  // Losing the ball costs the star some mass (all of it mid-supernova).
+  if (g.supernovaT > 0) endNova(g);
+  else {
+    g.mass = Math.max(0, g.mass - 20);
+    g.table.star.r = 6 + (g.mass / 100) * 5;
+  }
   g.multiball = false;
+  g.jackpotLit = false;
   g.phase = 'bonus';
   g.phaseT = 0;
   const bb = g.bonus;
@@ -956,8 +1005,8 @@ function stepBonus(g) {
     g.bonusCount = null;
     g.ballsLeft--;
     if (g.sectorScore >= g.target) {
-      // The bonus finished the sector.
-      g.ballsLeft = Math.min(MAX_BALLS, g.ballsLeft + 2);
+      // The bonus finished the sector: this ball back, and one more.
+      ballBack(g, 2);
       g.phase = 'warp';
       g.phaseT = 0;
       emit(g, 'sectorClear', { sector: g.sector });
@@ -988,12 +1037,26 @@ function checkCaptures(g) {
         b.held = null;
         b.vx = 0;
         b.vy = 160;
+        if (g.tilted) continue;
         g.rampRun = g.t - (g.lastRampT || -9) < 5 ? (g.rampRun || 0) + 1 : 1;
         g.lastRampT = g.t;
         const pts = award(g, POINTS.ramp * g.rampRun, b.x, b.y - 20, g.rampRun > 1 ? `RAMP X${g.rampRun}` : 'RAMP');
         shot(g, r.id ? 'rramp' : 'lramp', b.x, b.y);
         addMass(g, 4);
         emit(g, 'ramp', { id: r.id, n: g.rampRun, pts, x: b.x, y: b.y });
+      }
+      continue;
+    }
+    if (b.held === 'ride') {
+      // Kicked back up an outlane (see checkOutlanes).
+      b.rideK += (DT * b.ride.speed) / b.ride.len;
+      const p = rampPoint(b.ride, b.rideK);
+      b.x = p.x;
+      b.y = p.y;
+      if (b.rideK >= 1) {
+        b.held = null;
+        [b.vx, b.vy] = b.ride.out;
+        b.ride = null;
       }
       continue;
     }
@@ -1009,8 +1072,8 @@ function checkCaptures(g) {
         emit(g, 'kickout', { x: b.x, y: b.y });
       }
       if (b.held === 'saucer' && b.holdT <= 0) {
-        // The award lands, then the saucer kicks the ball out to the left.
-        applyMystery(g, g.mystery);
+        // The award lands (unless the table tilted), then the saucer kicks the ball out to the left.
+        if (!g.tilted) applyMystery(g, g.mystery);
         g.mystery = null;
         b.held = null;
         b.x = SAUCER.x - 6;
@@ -1027,6 +1090,8 @@ function checkCaptures(g) {
       }
       continue;
     }
+    // Nothing catches the ball on a tilted table.
+    if (g.tilted) continue;
     // Wormholes.
     const w = t.wormholes.find((q) => (b.x - q.x) ** 2 + (b.y - q.y) ** 2 < 36);
     if (w && Math.hypot(b.vx, b.vy) < 420) {
@@ -1046,7 +1111,8 @@ function checkCaptures(g) {
       } else if (g.missionLit && !g.mission && !g.multiball) {
         startMission(g);
         b.holdT = 2;
-      } else if (g.sector >= 2 && !g.multiball) {
+      } else if (g.sector >= 2 && !g.multiball && !g.balls.some((q) => q !== b && !q.gone)) {
+        // Only a lone ball locks (not with supernova or Big Bang balls about).
         g.locks++;
         if (g.locks >= 2) {
           startMultiball(g);
@@ -1244,22 +1310,30 @@ function checkOrbit(g) {
   }
 }
 
-// Kickback and magna-save in the outlanes.
+// Kickback and magna-save in the outlanes. The outlane is roofed by the
+// orbit's steer, so the ball is carried back up it, round the end of the
+// steer and over the post, and dropped into the inlane.
 function checkOutlanes(g) {
   for (const b of g.balls) {
-    if (b.held || b.y < 400 || b.y > 450) continue;
-    if (b.x > 17 && b.x < 30.5 && has(g, 'kickback') && !g.kickbackUsed && b.vy > 0) {
+    if (b.held || g.tilted || b.y < 400 || b.y > 450 || b.vy <= 0) continue;
+    let side = 0;
+    if (b.x > 17 && b.x < 30.5 && has(g, 'kickback') && !g.kickbackUsed) {
       g.kickbackUsed = true;
-      b.vy = -760;
-      b.vx = 20;
+      side = 1;
       emit(g, 'kickback');
-    }
-    if (b.x > 209.5 && b.x < LANE_X && has(g, 'magna') && !g.magnaUsed && b.vy > 0) {
+    } else if (b.x > m(30.5) && b.x < LANE_X && has(g, 'magna') && !g.magnaUsed) {
       g.magnaUsed = true;
-      b.vy = -700;
-      b.vx = -120;
+      side = -1;
       emit(g, 'magna');
-    }
+    } else continue;
+    const X = (x) => (side === 1 ? x : m(x));
+    b.held = 'ride';
+    b.vx = b.vy = 0;
+    b.rideK = 0;
+    b.ride = Object.assign(makePath([[b.x, b.y], [X(23.6), 380], [X(23.4), 358], [X(24.2), 347], [X(28.4), 341.9], [X(34), 340.5]]), {
+      speed: side === 1 ? 420 : 300, // the kickback fires; the magnet pulls
+      out: [side * 30, 30],
+    });
   }
 }
 

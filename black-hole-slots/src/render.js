@@ -3,7 +3,7 @@
 // Each frame returns the clickable regions for input and keyboard focus.
 import { CHARM_BY_ID, COLS, DAYS, EVENT_BY_ID, FINAL_ROUND, MAX_CHARMS, PACKAGES, RARITY, ROWS, SYMBOLS, SYMBOL_BY_ID, UNLOCKS, WHEEL } from './data.js';
 import { drawText, measureText, wrap } from './font.js';
-import { baseMult, canPayEarly, earlyBonus, rerollCost, sellValue, spinsFor, symbolValue } from './sim.js';
+import { baseMult, canPayEarly, earlyBonus, luckOf, rerollCost, sellValue, spinsFor, symbolValue } from './sim.js';
 import { buildSprites } from './sprites.js';
 
 export const CW = 162; // cabinet width
@@ -95,6 +95,8 @@ export class Renderer {
     this.S = buildSprites();
     this.W = 0;
     this.H = 0;
+    // The notch, the home bar and the HTML buttons' bottom edge, in canvas pixels.
+    this.safe = { top: 0, right: 0, bottom: 0, left: 0, buttons: 0 };
     this.mc = mkCanvas(MW, MH);
     this.mg = this.mc.getContext('2d');
     this.reelBg = this.makeReelBg();
@@ -119,7 +121,13 @@ export class Renderer {
     return c;
   }
 
-  resize(W, H) {
+  resize(W, H, safe = this.safe) {
+    this.safe = safe;
+    if (W !== this.W || H !== this.H) this.makeStars(W, H);
+    this.layout();
+  }
+
+  makeStars(W, H) {
     this.W = W;
     this.H = H;
     this.stars = mkCanvas(W, H);
@@ -140,20 +148,20 @@ export class Renderer {
         g.fillRect(x, y, 1, 1);
       }
     }
-    this.layout();
   }
 
   layout() {
-    const { W, H } = this;
+    const { W, H, safe: s } = this;
     const L = (this.L = {});
     L.portrait = H >= W * 1.2;
     if (L.portrait) {
       const hudH = 46;
       const stripH = 28;
       const infoH = 36;
-      // Centre the machine itself; the HUD sits above it and charms below.
+      // Centre the machine itself; the HUD sits above it and charms below. The HUD
+      // also keeps below the sound and help buttons (and the notch) if there's room.
       const spare = H - (hudH + 10 + MH + 6 + stripH + infoH);
-      const top = Math.max(2, Math.floor(spare / 2));
+      const top = Math.max(2, Math.floor(spare / 2), Math.min(spare, s.buttons - 1));
       L.hud = { x: 4, y: top + 2, w: W - 8, h: hudH - 2 };
       L.mx = Math.max(0, Math.floor((W - MW) / 2) + 4);
       L.my = top + hudH + 10;
@@ -162,10 +170,12 @@ export class Renderer {
     } else {
       L.mx = Math.floor((W - CW) / 2) - 2;
       L.my = Math.max(4, Math.floor((H - MH) / 2) + 4);
-      L.hud = { x: 6, y: L.my, w: L.mx - 16, h: MH };
+      // Clear of a notch at either side; the right column starts below the sound and help buttons.
+      L.hud = { x: 6 + s.left, y: L.my, w: L.mx - 16 - s.left, h: MH };
       const rx = L.mx + CW + 34;
-      L.charms = { x: rx, y: L.my + 12, cols: 3, w: W - rx - 6 };
-      L.info = { x: rx, y: L.my + 12 + 2 * 22 + 6, w: W - rx - 6 };
+      const ry = Math.max(L.my, s.buttons + 1);
+      L.charms = { x: rx, y: ry + 12, cols: 3, w: W - rx - 6 - s.right };
+      L.info = { x: rx, y: ry + 12 + 2 * 22 + 6, w: W - rx - 6 - s.right };
     }
     // The black hole sits behind the marquee.
     L.bh = { x: L.mx + CW / 2, y: L.my + 30 };
@@ -215,7 +225,8 @@ export class Renderer {
       this.drawCharms(ctx, v, regions);
     }
     this.drawBanner(ctx, v);
-    this.drawPopups(ctx, v);
+    // Pop-ups go over a panel ("NOT ENOUGH TICKETS" in the shop), and under the wheel otherwise.
+    if (!v.panel) this.drawPopups(ctx, v);
 
     if (v.flash > 0) {
       ctx.globalAlpha = Math.min(1, v.flash);
@@ -224,7 +235,10 @@ export class Renderer {
       ctx.globalAlpha = 1;
     }
     if (v.wheel) this.drawWheel(ctx, v);
-    if (v.panel) this.drawPanel(ctx, v, regions);
+    if (v.panel) {
+      this.drawPanel(ctx, v, regions);
+      this.drawPopups(ctx, v);
+    }
     return regions;
   }
 
@@ -587,7 +601,7 @@ export class Renderer {
           for (let k = 0; k < CELL - 4; k++) if (sh + k * 0.5 >= 0 && sh + k * 0.5 < CELL - 4) g.fillRect(rx + 2 + Math.floor(sh + k * 0.5), y - 3 + dy + k, 2, 1);
         }
         if (hl) {
-          const fc = Math.floor(v.time * 8) % 2 ? v.hotColor || C.gold : '#fff';
+          const fc = v.reducedMotion || Math.floor(v.time * 8) % 2 ? v.hotColor || C.gold : '#fff';
           g.fillStyle = fc;
           g.fillRect(rx + 1, y - 4 + dy, CELL - 2, CELL - 2);
           g.fillStyle = v.hotColor === C.red ? '#3a0a12' : '#fff8e0';
@@ -684,7 +698,7 @@ export class Renderer {
     drawText(g, 'SPINS', RX + RW - 30, y + 3, '#8a5a12');
     const win = Math.floor(v.led || 0);
     const digits = Math.min(99999999, win).toString().padStart(8, ' ');
-    const hot = v.ledHot && Math.floor(v.time * 12) % 2 === 0;
+    const hot = v.ledHot && (v.reducedMotion || Math.floor(v.time * 12) % 2 === 0);
     const rainbow = (v.heat || 0) > 0.8 && !v.reducedMotion;
     for (let i = 0; i < 8; i++) this.seg(g, RX + 22 + i * 7, y + 3, digits[i], rainbow ? hsl(v.time * 500 + i * 40, 100, 65) : hot ? '#fff3a8' : '#ff3b4e', '#3a0d16');
     const spins = v.run ? String(Math.min(99, v.shownSpins ?? v.run.spinsLeft)).padStart(2, ' ') : '  ';
@@ -771,7 +785,7 @@ export class Renderer {
     const full = k >= 1;
     for (let i = 0; i < segs; i++) {
       const lit = i < Math.round(k * segs);
-      const hot = lit && (full || i === Math.round(k * segs) - 1) && Math.floor(t * 8) % 2 === 0;
+      const hot = lit && (full || i === Math.round(k * segs) - 1) && !v.reducedMotion && Math.floor(t * 8) % 2 === 0;
       g.fillStyle = lit ? (hot ? '#fff' : i < 4 ? C.cyan : i < 8 ? '#b35cff' : C.pink) : '#241035';
       g.fillRect(Math.round(x + 1 + i * (sw + 1)), y + 1, Math.round(sw), 4);
     }
@@ -977,7 +991,9 @@ export class Renderer {
       const age = v.time - p.t0;
       const y = Math.round(p.y - age * 14);
       const w = measureText(p.text, p.scale || 1);
-      oText(ctx, p.text, Math.round(p.x - w / 2), y, p.color || C.gold, p.scale || 1);
+      // Kept on screen: a pop-up over the first or last shop card is wider than the card.
+      const x = Math.max(2, Math.min(this.W - w - 2, Math.round(p.x - w / 2)));
+      oText(ctx, p.text, x, y, p.color || C.gold, p.scale || 1);
     }
   }
 
@@ -1045,7 +1061,7 @@ export class Renderer {
     sText(ctx, `${v.shownSpins ?? run.spinsLeft} SPINS LEFT`, x, y, run.phase === 'spin' ? C.cyan : C.dim);
     y += 14;
     const mult = baseMult(run);
-    sText(ctx, `LUCK ${run.luck}`, x, y, C.green);
+    sText(ctx, `LUCK ${v.shownLuck ?? luckOf(run)}`, x, y, C.green);
     y += 9;
     sText(ctx, `MULT X${+mult.toFixed(2)}`, x, y, C.orange);
     if (run.event && y + 30 < h.y + h.h + 10) {
@@ -1056,7 +1072,7 @@ export class Renderer {
       nameLines.forEach((l, i) => sText(ctx, l, x, y + 9 + i * 9, Math.floor(t * 3) % 2 ? C.pink : C.cyan));
       let dy = y + 9 + nameLines.length * 9;
       for (const l of wrap(e.desc.toUpperCase(), Math.floor(w / 6))) {
-        if (dy > this.H - 8) break;
+        if (dy > this.H - 8 - this.safe.bottom) break;
         sText(ctx, l, x, dy, C.dim);
         dy += 8;
       }
@@ -1131,7 +1147,7 @@ export class Renderer {
     ctx.fillRect(x - 1, y - 1 + lift, 22, 22);
     ctx.fillStyle = focus ? '#fff' : col;
     ctx.fillRect(x, y + lift, 20, 20);
-    ctx.fillStyle = pulse && Math.floor(v.time * 16) % 2 ? col : C.panel2;
+    ctx.fillStyle = pulse && (v.reducedMotion || Math.floor(v.time * 16) % 2) ? col : C.panel2;
     ctx.fillRect(x + 1, y + 1 + lift, 18, 18);
     ctx.drawImage(this.S.charm[id], x + 2, y + 2 + lift);
   }
@@ -1160,9 +1176,9 @@ export class Renderer {
         sText(ctx, text, L.hud.x, y, col);
         y += 9;
       }
-      // Paytable on the right.
+      // Paytable on the right, where the charms go in a run.
       const px = L.charms.x;
-      let py = L.my + 4;
+      let py = L.charms.y - 8;
       sText(ctx, 'PAYTABLE', px, py, C.muted);
       py += 10;
       for (const s of SYMBOLS) {
@@ -1171,8 +1187,8 @@ export class Renderer {
         py += 17;
         if (py > L.my + MH - 10) break;
       }
-      ctx.drawImage(S.sym.void, px + 40, L.my + 14);
-      wrap('3 VOID EYES EAT YOUR COINS', 10).forEach((l, i) => sText(ctx, l, px + 40, L.my + 34 + i * 8, C.pink));
+      ctx.drawImage(S.sym.void, px + 40, L.charms.y + 2);
+      wrap('3 VOID EYES EAT YOUR COINS', 10).forEach((l, i) => sText(ctx, l, px + 40, L.charms.y + 22 + i * 8, C.pink));
     } else {
       const y = L.charms.y + 2;
       const gap = Math.min(30, Math.floor((this.W - 8) / SYMBOLS.length));
@@ -1338,8 +1354,10 @@ export class Renderer {
         lines = wrap(e.desc, cols);
       }
     }
-    if (head) sText(ctx, head.toUpperCase(), x + 12, cy + 4, headCol);
-    lines.slice(0, 3).forEach((l, i) => sText(ctx, l.toUpperCase(), x + 12, cy + 13 + i * 8, C.line));
+    // Narrow screens: a long description squeezes up so the sell prompt after it still shows.
+    const tight = lines.length > 3;
+    if (head) sText(ctx, head.toUpperCase(), x + 12, cy + (tight ? 3 : 4), headCol);
+    lines.slice(0, 4).forEach((l, i) => sText(ctx, l.toUpperCase(), x + 12, cy + (tight ? 11 + i * 7 : 13 + i * 8), C.line));
     cy += dh + 6;
 
     // Reroll and pay early.
@@ -1424,9 +1442,10 @@ export class Renderer {
     const u = UNLOCKS.find((x) => x.id === v.unlock) || UNLOCKS[0];
     const w = Math.min(this.W - 6, 240);
     const h = 150;
-    const { x, y } = this.panelBox(ctx, w, h, Math.floor(v.time * 4) % 2 ? C.pink : C.gold);
-    const cx = x + w / 2;
     const t = v.time;
+    const blink = !v.reducedMotion && Math.floor(t * 4) % 2;
+    const { x, y } = this.panelBox(ctx, w, h, blink ? C.pink : C.gold);
+    const cx = x + w / 2;
     // Burst behind the card's title.
     if (!v.reducedMotion) {
       for (let i = 0; i < 16; i++) {
@@ -1434,7 +1453,7 @@ export class Renderer {
         g2(ctx, cx + Math.cos(a) * (40 + ((t * 40 + i * 9) % 30)), y + 26 + Math.sin(a) * 12, i % 2 ? C.gold : C.pink);
       }
     }
-    cText(ctx, 'NEW MECHANIC UNLOCKED', cx, y + 8, Math.floor(t * 4) % 2 ? C.pink : C.gold);
+    cText(ctx, 'NEW MECHANIC UNLOCKED', cx, y + 8, blink ? C.pink : C.gold);
     const scale = measureText(u.name, 3) <= w - 16 ? 3 : 2;
     const nw = measureText(u.name, scale);
     for (let i = 0; i < u.name.length; i++) {
@@ -1525,14 +1544,15 @@ export class Renderer {
       }
       ctx.globalAlpha = 1;
     }
-    // Chasing bulbs round the rim.
+    // Chasing bulbs round the rim (standing still with reduced motion).
+    const still = v.reducedMotion;
     for (let i = 0; i < 24; i++) {
       const a = (i / 24) * Math.PI * 2;
-      const on = (i + Math.floor(t * (k < 1 ? 20 : 8))) % 3 === 0;
+      const on = (i + (still ? 0 : Math.floor(t * (k < 1 ? 20 : 8)))) % 3 === 0;
       const bx = Math.round(cx + Math.cos(a) * (R + 6)), by = Math.round(cy + Math.sin(a) * (R + 6));
       ctx.fillStyle = C.ink;
       ctx.fillRect(bx - 2, by - 2, 5, 5);
-      ctx.fillStyle = on ? (k >= 1 ? hsl(i * 30 + t * 500) : C.gold) : '#3b2458';
+      ctx.fillStyle = on ? (k >= 1 && !still ? hsl(i * 30 + t * 500) : C.gold) : '#3b2458';
       ctx.fillRect(bx - 1, by - 1, 3, 3);
     }
     ctx.save();
@@ -1559,7 +1579,7 @@ export class Renderer {
       ctx.fillStyle = r < 2 ? '#fff' : C.red;
       ctx.fillRect(cx - 5 + Math.floor(r * 0.6), py + r, 11 - Math.floor(r * 1.2), 1);
     }
-    cText(ctx, 'BONUS WHEEL', cx, cy - R - 26, Math.floor(t * 6) % 2 ? C.gold : C.pink, 2, oText);
+    cText(ctx, 'BONUS WHEEL', cx, cy - R - 26, still || Math.floor(t * 6) % 2 ? C.gold : C.pink, 2, oText);
     const label = k >= 1 ? wv.prize : WHEEL[wv.current || 0].label;
     cText(ctx, label, cx, cy + R + 12, k >= 1 ? (v.reducedMotion ? C.gold : hsl(t * 400)) : C.line, k >= 1 ? 2 : 1, oText);
   }

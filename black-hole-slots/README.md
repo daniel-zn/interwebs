@@ -68,7 +68,7 @@ and **Double Down** (all wins ×2, fewer spins).
 `npm run balance` plays thousands of runs with two simple bots and prints how
 far they get. The debts are tuned so a bot that buys charms at random usually
 dies around rounds 5 to 7, and a slightly smarter one escapes about one run in
-six. A human who builds around a synergy should do better.
+seven. A human who builds around a synergy should do better.
 
 ## Controls
 

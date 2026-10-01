@@ -112,6 +112,18 @@ test('void eyes get more common each round, and charms change that', () => {
   assert.ok(Math.abs(symbolWeights(run).void - w6 * 0.25) < 1e-9);
 });
 
+test('Horseshoe Magnet adds 2 luck while you hold it', async () => {
+  const { luckOf } = await import('../src/sim.js');
+  const run = createRun();
+  run.charms.push('horseshoe');
+  const lucky = createRun();
+  lucky.luck = 2;
+  assert.equal(luckOf(run), 2);
+  assert.deepEqual(symbolWeights(run), symbolWeights(lucky));
+  run.charms = [];
+  assert.equal(luckOf(run), 0);
+});
+
 test('charms: doublers, pattern boosts, echo, finale, double down, tip jar', () => {
   let run = spinRun();
   run.charms.push('comet_tail', 'horizon');
@@ -152,6 +164,19 @@ test('scaling charms grow with wins and reset or keep as described', () => {
   spin(run, lose);
   assert.equal(run.streak, 0);
   assert.equal(run.darkMatter, 2);
+});
+
+test('a paying Event Horizon is a win: the streak goes on and Wormhole never frees it', () => {
+  for (let seed = 1; seed <= 30; seed++) {
+    const run = createRun({ seed });
+    run.charms.push('event_horizon', 'wormhole', 'streak');
+    choosePackage(run, 0);
+    run.streak = 4;
+    const res = spin(run, grid('mpcvp', 'mvcra', 'crmpv'));
+    assert.equal(res.total, 66);
+    assert.equal(res.free, false);
+    assert.equal(run.streak, 5);
+  }
 });
 
 test('the shop: buying, selling, rerolling, full slots', () => {
@@ -246,6 +271,25 @@ test('paying the last debt escapes; endless mode keeps going', () => {
   assert.ok(run.debt > debtFor(FINAL_ROUND));
 });
 
+test('an escape is recorded even if endless mode swallows you later', async () => {
+  const { loadStore } = await import('../src/storage.js');
+  const store = loadStore();
+  const run = createRun();
+  run.round = FINAL_ROUND;
+  run.debt = debtFor(FINAL_ROUND);
+  run.phase = 'deadline';
+  run.coins = run.debt;
+  payDebt(run);
+  goEndless(run);
+  pickOffer(run, 0);
+  run.phase = 'deadline';
+  run.coins = 0;
+  payDebt(run);
+  store.record(run);
+  assert.equal(store.best.escaped, 1);
+  assert.equal(store.best.round, FINAL_ROUND + 1);
+});
+
 test('debts rise every round', () => {
   for (let r = 1; r < 14; r++) assert.ok(debtFor(r + 1) > debtFor(r), `round ${r}`);
 });
@@ -334,6 +378,28 @@ test('three pulsars spin the bonus wheel, and pulsars never make lines', () => {
   if (w.kind === 'luck') assert.equal(run.luck, before.luck + 1);
   if (w.kind === 'overdrive') assert.equal(run.overdrive, 3);
   assert.equal(findLines(run, grid('mmmcr', 'rcagp', 'gprac').map((col, c) => (c === 1 ? ['pulsar', col[1], col[2]] : col))).length, 0);
+});
+
+test('Grand Finale pays once a day, even when the wheel adds spins to the last one', () => {
+  const win = grid('sssmp', 'mpcra', 'crmpg');
+  const wheel = grid('sssmp', 'mpcra', 'crmpg');
+  wheel[3] = ['pulsar', 'pulsar', 'pulsar'];
+  for (let seed = 1; seed < 200; seed++) {
+    const run = createRun({ seed });
+    run.round = 4;
+    run.charms.push('finale');
+    choosePackage(run, 0);
+    run.spinsLeft = 1;
+    const res = spin(run, wheel);
+    if (!res.wheel || res.wheel.kind !== 'spins') continue;
+    assert.equal(res.last, false);
+    assert.equal(res.total, 7, 'not the last spin after all');
+    let finales = 0;
+    while (run.phase === 'spin') if (spin(run, win).tags.includes('FINALE X3')) finales++;
+    assert.equal(finales, 1);
+    return;
+  }
+  assert.fail('no wheel landed on +3 spins');
 });
 
 test('every wheel slice pays what it says', async () => {

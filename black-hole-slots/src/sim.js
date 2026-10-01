@@ -64,6 +64,7 @@ export function createRun({ seed = 1 } = {}) {
     shop: [],
     rerolls: 0,
     offers: [],
+    escaped: false, // paid the last debt (endless mode may still swallow you)
     endless: false,
     // Stats for the end screen.
     stats: { spins: 0, earned: 0, bestWin: 0, jackpots: 0, voids: 0, wheels: 0, overdrives: 0 },
@@ -74,7 +75,7 @@ export function createRun({ seed = 1 } = {}) {
 
 /** Fills in fields added since a saved run was made, so old saves keep working. */
 export function upgradeRun(run) {
-  const fresh = { charge: 0, overdrive: 0, event: null, seen: [] };
+  const fresh = { charge: 0, overdrive: 0, event: null, seen: [], escaped: run.endless || run.phase === 'won' };
   for (const [k, v] of Object.entries(fresh)) if (run[k] === undefined) run[k] = v;
   // A save from before unlocks existed has already been through earlier rounds' cards.
   if (!run.seenInit) {
@@ -88,6 +89,8 @@ export function upgradeRun(run) {
 
 export const has = (run, id) => run.charms.includes(id);
 export const eventIs = (run, id) => run.event === id;
+/** Luck from gifts and the wheel, plus the Horseshoe Magnet's +2 while you hold it. */
+export const luckOf = (run) => run.luck + (has(run, 'horseshoe') ? 2 : 0);
 
 /** Unlock cards the player hasn't seen yet, for rounds they've reached. */
 export function pendingUnlocks(run) {
@@ -108,9 +111,10 @@ export function spinsFor(run, pkg) {
 // ---------------------------------------------------------------- symbols
 export function symbolWeights(run) {
   const w = {};
+  const luck = luckOf(run);
   for (const s of SYMBOLS) {
     const rank = SYMBOL_BY_ID[s.id].rank;
-    let x = s.weight * (1 + run.luck * 0.07 * rank);
+    let x = s.weight * (1 + luck * 0.07 * rank);
     if (s.id === 'seven' && has(run, 'star_chart')) x *= 2;
     if ((s.id === 'seven' || s.id === 'gem') && eventIs(run, 'gravity')) x *= 2;
     w[s.id] = x;
@@ -171,7 +175,7 @@ export function rollGrid(run) {
 export function rollGold(run, grid) {
   const gold = [];
   if (!unlocked(run, 'gold')) return gold;
-  const p = goldChance(run.luck) * (eventIs(run, 'golden') ? 3 : 1);
+  const p = goldChance(luckOf(run)) * (eventIs(run, 'golden') ? 3 : 1);
   for (let c = 0; c < COLS; c++) {
     for (let r = 0; r < ROWS; r++) {
       if (rand(run) < p && grid[c][r] !== VOID && grid[c][r] !== PULSAR) gold.push(`${c},${r}`);
@@ -234,7 +238,6 @@ export function spin(run, forcedGrid = null, forcedGold = null) {
   run.spinsLeft--;
   run.spinsToday++;
   run.stats.spins++;
-  const last = run.spinsLeft === 0;
   const grid = forcedGrid || rollGrid(run);
   const gold = forcedGold || (forcedGrid ? [] : rollGold(run, grid));
   const goldSet = new Set(gold);
@@ -243,7 +246,7 @@ export function spin(run, forcedGrid = null, forcedGold = null) {
   const pulsars = countPulsars(grid);
   const result = {
     grid, gold, lines: [], voids, pulsars, voided: false, bite: 0, horizon: 0, base: 0, mult: 1, total: 0, tags: [],
-    free: false, last, overdrive: run.overdrive > 0, overdriveStart: false, wheel: null,
+    free: false, last: false, overdrive: run.overdrive > 0, overdriveStart: false, wheel: null,
   };
 
   for (const l of lines) {
@@ -274,10 +277,6 @@ export function spin(run, forcedGrid = null, forcedGold = null) {
       mult *= 2;
       result.tags.push('ECHO X2');
     }
-    if (last && has(run, 'finale')) {
-      mult *= 3;
-      result.tags.push('FINALE X3');
-    }
     if (has(run, 'double_down')) mult *= 2;
     if (eventIs(run, 'flare')) mult *= 1.5;
     if (result.overdrive) {
@@ -286,8 +285,6 @@ export function spin(run, forcedGrid = null, forcedGold = null) {
     }
   }
   if (result.overdrive) run.overdrive--;
-  result.mult = mult;
-  result.total = Math.round(result.base * mult) + result.horizon;
 
   if (result.voided) {
     result.bite = Math.floor(run.coins * VOID_BITE);
@@ -304,7 +301,8 @@ export function spin(run, forcedGrid = null, forcedGold = null) {
     if (run.charge >= OVERDRIVE_MAX && run.overdrive === 0) startOverdrive(run, result);
   }
 
-  if (won) {
+  // A paying Event Horizon is a win too, not a loss.
+  if (won || result.horizon > 0) {
     if (has(run, 'streak')) run.streak++;
     if (has(run, 'dark_matter')) run.darkMatter++;
   } else {
@@ -321,6 +319,15 @@ export function spin(run, forcedGrid = null, forcedGold = null) {
     const i = WHEEL.indexOf(pickWeighted(run, WHEEL, (s) => s.weight));
     result.wheel = applyWheel(run, i, result);
   }
+
+  // Grand Finale: only the day's real last spin, after any spins the wheel or a wormhole added.
+  result.last = run.spinsLeft === 0;
+  if (won && result.last && has(run, 'finale')) {
+    mult *= 3;
+    result.tags.push('FINALE X3');
+  }
+  result.mult = mult;
+  result.total += Math.round(result.base * mult) + result.horizon;
 
   result.jackpot = result.lines.some((l) => l.kind === 'jackpot');
   if (result.jackpot) run.stats.jackpots++;
@@ -471,6 +478,7 @@ export function payDebt(run, early = false) {
   run.tickets += bonus;
   if (run.round >= FINAL_ROUND && !run.endless) {
     run.phase = 'won';
+    run.escaped = true;
   } else {
     run.phase = 'transmit';
     run.offers = makeOffers(run);

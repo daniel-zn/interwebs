@@ -70,13 +70,18 @@ function valueNoise(x, y, cell, s) {
   return lerp(lerp(a, b, u), lerp(c, d, u), v);
 }
 
+const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+
 const SUN_RAMP = [
   [0.95, '#fffbe8'], [0.86, '#fff0b0'], [0.76, '#ffd870'], [0.64, '#ffb040'], [0.52, '#ff8a2a'], [-1, '#e0561e'],
-];
+].map(([min, c]) => [min, rgb(c)]);
 function sunColor(i) {
   for (const [min, c] of SUN_RAMP) if (i >= min) return c;
-  return '#e0561e';
+  return SUN_RAMP[SUN_RAMP.length - 1][1];
 }
+
+// The sun's textures are written straight into ImageData: a fillRect per pixel
+// took up to a couple of seconds on tall screens.
 
 /** The sun's disc: limb darkening, granulation and a few spots, dithered. */
 function makeSunTexture(R) {
@@ -85,6 +90,8 @@ function makeSunTexture(R) {
   c.width = size;
   c.height = size;
   const x = c.getContext('2d');
+  const img = x.createImageData(size, size);
+  const px = img.data;
   const rng = mulberry32(7);
   const spots = [];
   for (let i = 0; i < 5; i++) {
@@ -103,10 +110,14 @@ function makeSunTexture(R) {
         else if (d < sr * 1.8) I -= 0.12;
       }
       I += BAYER[(j & 3) * 4 + (i & 3)] * 0.08;
-      x.fillStyle = sunColor(I);
-      x.fillRect(i, j, 1, 1);
+      const col = sunColor(I), p = (j * size + i) * 4;
+      px[p] = col[0];
+      px[p + 1] = col[1];
+      px[p + 2] = col[2];
+      px[p + 3] = 255;
     }
   }
+  x.putImageData(img, 0, 0);
   return c;
 }
 
@@ -117,7 +128,10 @@ function makeGlow(R) {
   c.width = size;
   c.height = size;
   const x = c.getContext('2d');
-  const bands = [[1.06, '#ffb040', 0.55], [1.16, '#ff8a3a', 0.4], [1.32, '#e0603a', 0.28], [1.55, '#b03a48', 0.18], [1.8, '#6a2050', 0.12], [2, '#2a1030', 0.08]];
+  const img = x.createImageData(size, size);
+  const px = img.data;
+  const bands = [[1.06, '#ffb040', 0.55], [1.16, '#ff8a3a', 0.4], [1.32, '#e0603a', 0.28], [1.55, '#b03a48', 0.18], [1.8, '#6a2050', 0.12], [2, '#2a1030', 0.08]]
+    .map(([r, col, a]) => [r, rgb(col), Math.round(a * 255)]);
   for (let j = 0; j < size; j++) {
     for (let i = 0; i < size; i++) {
       const r = Math.hypot(i - G, j - G) / R;
@@ -128,11 +142,14 @@ function makeGlow(R) {
       const prev = k > 0 ? bands[k - 1][0] : 0.98;
       const f = (r - prev) / (bands[k][0] - prev);
       if (k < bands.length - 1 && f + BAYER[(j & 3) * 4 + (i & 3)] > 0.85) k++;
-      x.globalAlpha = bands[k][2];
-      x.fillStyle = bands[k][1];
-      x.fillRect(i, j, 1, 1);
+      const [, col, a] = bands[k], p = (j * size + i) * 4;
+      px[p] = col[0];
+      px[p + 1] = col[1];
+      px[p + 2] = col[2];
+      px[p + 3] = a;
     }
   }
+  x.putImageData(img, 0, 0);
   return c;
 }
 
@@ -163,6 +180,23 @@ export class Renderer {
     this.beer = { x: RIG.beerRest[0], y: RIG.beerRest[1] };
     this.yank = 0;
     this.comboShown = null;
+    this.inset = { top: 0, left: 0 };
+    this.menu = { left: Infinity, bottom: 0 };
+  }
+
+  /**
+   * Where the page's own chrome is, in canvas pixels: the notch and the status bar
+   * (inset.top, inset.left) and the menu buttons (menu.left, menu.bottom). The HUD
+   * and the title keep clear of both.
+   */
+  setChrome(inset, menu) {
+    this.inset = inset;
+    this.menu = menu;
+  }
+
+  /** No room top centre, left of the menu buttons: the clock sits beside the score. */
+  get narrow() {
+    return this.W < 290 || this.menu.left < this.W / 2 + 64;
   }
 
   resize(W, H) {
@@ -174,17 +208,20 @@ export class Renderer {
     this.gy = Math.round(H - Math.max(26, (H - 100 * k) * 0.2));
     // The astronaut's corner is the hero shot: draw it at 2x when there's room.
     this.ps = H >= 150 && W >= 300 ? 2 : 1;
-    this.narrow = W < 290;
     // Centre the field, but keep the parasol and cooler on screen.
     this.ox = Math.round(Math.max((W - 178 * k) / 2, 29 * this.ps + 2 - ANCHOR.x * k));
     this.yh = this.gy - Math.round(3 + k * 2);
-    this.R = Math.round(Math.max(W, H) * 0.42);
+    const R = Math.round(Math.max(W, H) * 0.42);
     const rng = mulberry32(99);
     this.stars = [];
     const n = Math.round((W * H) / 380);
     for (let i = 0; i < n; i++) this.stars.push({ x: (rng() * W) | 0, y: (rng() * this.yh) | 0, b: rng() });
-    this.sunTex = makeSunTexture(this.R);
-    this.glow = makeGlow(this.R);
+    // The sun only needs new textures when its size changes.
+    if (R !== this.R) {
+      this.R = R;
+      this.sunTex = makeSunTexture(R);
+      this.glow = makeGlow(R);
+    }
     this.ground = this.makeGround();
   }
 
@@ -336,6 +373,8 @@ export class Renderer {
   onEvent(e, run, rm) {
     const kx = this.sx(run.k.x), ky = this.sy(run.k.y);
     const n = rm ? 0.4 : 1;
+    // Big pop-ups (banked, lost) sit below the HUD.
+    const bigY = (this.narrow ? 100 : 44) + Math.round(this.inset.top);
     switch (e.type) {
       case 'trick': {
         const x = this.sx(e.x), y = this.sy(e.y);
@@ -345,14 +384,14 @@ export class Renderer {
       }
       case 'bank':
         if (e.total >= 1500) this.setPose('cheer', 1.6);
-        this.popup(`${e.total} BANKED`, this.W / 2, this.narrow ? 100 : 44, '#8fffc0', true);
+        this.popup(`${e.total} BANKED`, this.W / 2, bigY, '#8fffc0', true);
         break;
       case 'callDone':
         this.setPose('cheer', 1.8);
         this.popup(`RADIO +${e.pts}`, kx, ky - 22, '#7ff4ff');
         break;
       case 'drop':
-        if (e.pts) this.popup('COMBO LOST', this.W / 2, this.narrow ? 100 : 44, '#ff6b4a', true);
+        if (e.pts) this.popup('COMBO LOST', this.W / 2, bigY, '#ff6b4a', true);
         break;
       case 'crash':
         this.burst(kx, ky, Math.round(40 * n), 1, 50, 1.1, 60, 2);
@@ -775,12 +814,13 @@ export class Renderer {
   // ------------------------------------------------------------------ HUD
   drawHud(ctx, run, o) {
     const { W } = this;
-    const pad = 4;
+    // Clear of the notch (landscape) and the status bar (home-screen web app).
+    const pad = 4 + Math.round(this.inset.left), top = 4 + Math.round(this.inset.top);
     // Score.
-    this.plate(ctx, 'SCORE', pad + 2, pad + 2, '#aeb8e2', 1);
-    this.plate(ctx, String(run.score), pad + 2, pad + 10, '#ffffff', 2);
+    this.plate(ctx, 'SCORE', pad + 2, top + 2, '#aeb8e2', 1);
+    this.plate(ctx, String(run.score), pad + 2, top + 10, '#ffffff', 2);
     // Wind gauge.
-    const wy = pad + 24;
+    const wy = top + 24;
     ctx.fillStyle = 'rgba(7,8,26,0.72)';
     ctx.fillRect(pad, wy - 2, 58, 9);
     this.text(ctx, 'WIND', pad + 2, wy, '#aeb8e2');
@@ -832,17 +872,21 @@ export class Renderer {
     const clockCol = low && Math.floor(this.t * 4) % 2 ? '#ff6b4a' : '#ffd23f';
     if (this.narrow) {
       // Phones: the menu buttons own the top right, so the clock sits beside the score.
-      this.plate(ctx, 'SUNSET', pad + 66, pad + 2, '#aeb8e2', 1);
-      this.plate(ctx, clock, pad + 66, pad + 10, clockCol, 2);
+      this.plate(ctx, 'SUNSET', pad + 66, top + 2, '#aeb8e2', 1);
+      this.plate(ctx, clock, pad + 66, top + 10, clockCol, 2);
     } else {
-      this.plate(ctx, 'SUNSET IN', cxm, pad + 2, '#aeb8e2', 1, 'c');
-      this.plate(ctx, clock, cxm, pad + 10, clockCol, 2, 'c');
+      this.plate(ctx, 'SUNSET IN', cxm, top + 2, '#aeb8e2', 1, 'c');
+      this.plate(ctx, clock, cxm, top + 10, clockCol, 2, 'c');
     }
-    // Current combo.
+    // Current combo (on narrow screens below the menu buttons too).
     const c = run.combo;
     if (c.count) {
-      const names = c.names.slice(this.narrow ? -2 : -3).join(' + ');
-      const y = this.narrow ? ly + 14 : pad + 26;
+      const y = this.narrow ? Math.max(ly + 14, Math.ceil(this.menu.bottom) + 4) : top + 26;
+      // Fewer trick names if the line would run under the menu buttons.
+      const fits = (s) => y - 2 >= this.menu.bottom || cxm + measureText(s) / 2 + 2 <= this.menu.left;
+      let n = this.narrow ? 2 : 3;
+      while (n > 1 && !fits(c.names.slice(-n).join(' + '))) n--;
+      const names = c.names.slice(-n).join(' + ');
       this.plate(ctx, names, cxm, y, '#ffe08a', 1, 'c');
       this.plate(ctx, `${c.pts} X${comboMult(c)}`, cxm, y + 10, '#ffffff', 2, 'c');
       const bw = 50;
@@ -862,10 +906,12 @@ export class Renderer {
     const scale = W >= 300 ? 4 : 3;
     const title = 'SOLAR KITE';
     const cx = Math.round(W / 2);
-    const y = Math.round(this.W < this.H ? 44 : Math.min(this.H * 0.16, 30));
-    const wv = (i) => Math.round(Math.sin(this.t * 3 + i * 0.6) * 2);
     const w = measureText(title, scale);
     const x0 = cx - w / 2;
+    // Below the status bar, and below the menu buttons when it would reach under them.
+    let y = Math.max(Math.round(this.W < this.H ? 44 : Math.min(this.H * 0.16, 30)), 4 + Math.round(this.inset.top));
+    if (x0 + w + scale > this.menu.left) y = Math.max(y, Math.ceil(this.menu.bottom) + 4);
+    const wv = (i) => (o.rm ? 0 : Math.round(Math.sin(this.t * 3 + i * 0.6) * 2));
     for (let i = 0; i < title.length; i++) {
       const ch = title[i];
       this.text(ctx, ch, x0 + i * 6 * scale + scale, y + wv(i) + scale, '#07081a', scale);

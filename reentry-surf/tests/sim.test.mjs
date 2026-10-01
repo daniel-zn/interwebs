@@ -107,6 +107,34 @@ test('debris hits add heat and reset flow; coolant vents heat', () => {
   assert.ok(run.heat < 0.5);
 });
 
+test('flow fades when you coast hands-off, so letting go for good scores far less', () => {
+  const run = createRun({ seed: 9 });
+  run.flow = 4;
+  run.coastT = 24.995;
+  step(run, DT, 0);
+  assert.equal(run.flow, 3);
+  assert.ok(run.events.some((e) => e.type === 'flowlost' && e.why === 'coast'));
+  step(run, DT, -1);
+  assert.equal(run.coastT, 0, 'a fresh dive counts as carving');
+  let active = 0, lazy = 0;
+  for (let seed = 1; seed <= 4; seed++) {
+    active += play(seed, pilot).result.score;
+    lazy += play(seed, (r, mem) => (r.t < 20 ? pilot(r, mem) : 0)).result.score;
+  }
+  assert.ok(lazy < active * 0.6, `hands-off after 20 s: ${lazy}, riding it out: ${active}`);
+});
+
+test('after a skip-out the ending plays out, then holds still', () => {
+  const run = play(2, () => 1);
+  assert.equal(run.phase, 'skipped');
+  for (let i = 0; i < 120 / DT; i++) step(run, DT, 0); // two minutes on the result card
+  const { t, alt } = run;
+  step(run, DT, 0);
+  assert.equal(run.t, t);
+  assert.equal(run.alt, alt);
+  assert.ok(alt > thinAt(run, run.x), 'still up in space, not back down in the heat');
+});
+
 test('every hazard kind can spawn and the director keeps events coming', () => {
   const run = createRun({ seed: 12 });
   for (const kind of ['debris', 'updraft', 'storm', 'jet', 'coolant']) spawn(run, kind);

@@ -553,6 +553,15 @@ function playStep(g) {
     eatAt(g, wrapX(Math.floor(p.x)), Math.floor(p.y));
   }
 
+  // The last dot clears the level at once: a ghost that reaches him on the same tick is too late.
+  if (g.dotsLeft === 0) {
+    g.phase = 'clear';
+    g.phaseT = 0;
+    g.frightT = 0;
+    g.events.push('clear');
+    return;
+  }
+
   if (collide(g)) return;
 
   // Ghosts in the house: leave when their dot count is reached, or when Pac-Man stops eating.
@@ -584,21 +593,14 @@ function playStep(g) {
       g.fruit = null;
     }
   }
-
-  if (g.dotsLeft === 0) {
-    g.phase = 'clear';
-    g.phaseT = 0;
-    g.frightT = 0;
-    g.events.push('clear');
-  }
 }
 
 // ------------------------------------------------------------------ helpers
 
-/** True while frightened ghosts should flash white. */
-export function flashing(g) {
+/** True while frightened ghosts should flash white (or, when steady, stay white). */
+export function flashing(g, steady = false) {
   const n = frightFlashes(g.level);
-  return g.frightT > 0 && g.frightT < n * 0.4 && Math.floor(g.frightT / 0.2) % 2 === 0;
+  return g.frightT > 0 && g.frightT < n * 0.4 && (steady || Math.floor(g.frightT / 0.2) % 2 === 0);
 }
 
 /** A plain summary for tests and debugging. */

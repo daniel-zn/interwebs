@@ -92,7 +92,11 @@ export class Battle {
         const a = { side: 'me', slot: act.slot }, b = { side: 'foe', id: foeMove };
         order.push(...(meFirst ? [a, b] : [b, a]));
       } else if (act.kind !== 'run' || !result) order.push({ side: 'foe', id: foeMove });
+      // Only the drakes that started the turn act in it: one sent out after a
+      // faint waits for the next turn (it didn't pick the fainted one's move).
+      const meIdx = this.meIdx, foeIdx = this.foeIdx;
       for (const o of order) {
+        if (this.meIdx !== meIdx || this.foeIdx !== foeIdx) break;
         const user = o.side === 'me' ? this.me : this.foe;
         if (user.hp <= 0) continue;
         const target = o.side === 'me' ? this.foe : this.me;

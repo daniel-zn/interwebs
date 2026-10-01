@@ -126,6 +126,18 @@ export class SoundEngine {
     if (this.master) this.master.gain.setTargetAtTime(m ? 0 : 0.5, this.ctx.currentTime, 0.03);
   }
 
+  /** Silences everything (the hum, motor and tease tone included) while the page is hidden. */
+  suspend() {
+    this.held = true;
+    if (this.ctx && this.ctx.state === 'running') this.ctx.suspend().catch(() => {});
+  }
+
+  /** Back from hiding. A muted game stays suspended until it's unmuted. */
+  resume() {
+    this.held = false;
+    if (!this.muted) this.wake();
+  }
+
   setMusic(on) {
     this.musicOn = on;
     if (this.music) this.music.gain.setTargetAtTime(on ? 0.32 : 0, this.ctx.currentTime, 0.1);
