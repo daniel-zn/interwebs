@@ -190,10 +190,12 @@ async function openGame(context, name, query = '?test&seed=4') {
   await page.touchscreen.tap(195, 500);
   await sleep(300);
   const cdp = await context.newCDPSession(page);
-  // A quick tap (say, to move the skill shot lane) flips but doesn't fire the plunger.
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 60, y: 700 }] });
+  // A quick tap (say, to move the skill shot lane) flips but doesn't fire the
+  // plunger. The touch carries its own times, 60 ms apart, however slow the frames.
+  const t0 = Date.now() / 1000;
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 60, y: 700 }], timestamp: t0 });
   await sleep(60);
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: t0 + 0.06 });
   await sleep(400);
   const s = await page.snap();
   check(s.phase === 'launch' && s.balls[0].y > 460, 'a quick tap leaves the ball on the plunger', `${s.phase}, y ${s.balls[0].y}`);

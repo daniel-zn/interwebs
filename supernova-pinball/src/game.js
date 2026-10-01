@@ -766,7 +766,11 @@ export function step(g, input) {
   }
   for (const f of t.flippers) f.held = f.side === 1 ? L : R;
 
-  // Plunger.
+  // Plunger. (A tap that was taken for a hold lets go without firing.)
+  if (input.tap && g.launchHeld && !input.launch) {
+    g.launchHeld = false;
+    g.plunger = 0;
+  }
   const onPlunger = g.balls.find((b) => b.x > LANE_X && b.y > PLUNGER.y - 8 && Math.abs(b.vy) < 30);
   if (onPlunger && input.launch) {
     const before = g.plunger;

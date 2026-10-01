@@ -886,6 +886,7 @@ window.addEventListener('keyup', (e) => {
 const pointers = new Map();
 // Real time, not the game clock, which only moves on a frame (and slow frames would turn taps into holds).
 const HOLD = 150; // ms before a touch counts as holding
+let tapped = false; // a touch let go before it counted as a hold
 const pointerLaunch = () => [...pointers.values()].some((p) => !p.panel && performance.now() - p.down > HOLD);
 function toCanvas(e) {
   const r = canvas.getBoundingClientRect();
@@ -941,6 +942,9 @@ const endPointer = (e) => {
   const q = pointers.get(e.pointerId);
   pointers.delete(e.pointerId);
   syncPointers();
+  // Judged by the touch's own times: on a slow frame a tap can look like a hold
+  // before its release arrives, and then it mustn't fire the plunger.
+  if (q && q.side && e.timeStamp - q.down < HOLD) tapped = true;
   if (q && q.panel && q.panel === v.panel && e.type === 'pointerup') {
     const r = regionAt(toCanvas(e));
     if (r) activate(r.id);
@@ -1101,7 +1105,8 @@ function tick() {
   if (mode === 'title' || AUTO) input = autopilot(game, 0.97);
   else {
     const pad = padPrev;
-    input = { left: held.left || !!pad.left, right: held.right || !!pad.right, launch: held.launch || pointerLaunch() || (!!pad.a && !padHoldA), nudge: nudgeQueued };
+    input = { left: held.left || !!pad.left, right: held.right || !!pad.right, launch: held.launch || pointerLaunch() || (!!pad.a && !padHoldA), tap: tapped, nudge: nudgeQueued };
+    tapped = false;
     nudgeQueued = false;
   }
   step(game, input);

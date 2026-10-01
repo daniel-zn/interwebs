@@ -44,8 +44,11 @@ export function bleed(source) {
     if (t === lastTop && b === lastBottom) return;
     lastTop = t;
     lastBottom = b;
-    root.style.backgroundColor = t;
-    root.style.backgroundImage = `linear-gradient(${t} 50%, ${b} 50%)`;
+    // The base colour is the top edge's (Safari fills the status bar strip with
+    // it). The bottom edge's colour runs from halfway down to a whole screen
+    // past the end of the page, behind the toolbar: a plain two-colour
+    // gradient would repeat there and start again with the top colour.
+    root.style.background = `linear-gradient(${b}, ${b}) left 0 bottom -100vh / 100% calc(50% + 100vh) no-repeat, ${t}`;
   }
   requestAnimationFrame(tick);
 }
