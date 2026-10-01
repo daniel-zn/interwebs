@@ -54,11 +54,14 @@ to make sure none of it creeps back.
 **Edge to edge on iPhones.** Safari shows the page behind the status bar,
 the Dynamic Island and its toolbars, outside the area a game's canvas fills.
 Each game's `src/bleed.js` samples the colours along the canvas's top and
-bottom edges a few times a second and paints them into strips just past the
-top and bottom of the screen, and sets the page background to match, so the
-game's backdrop carries on behind them. No page sets `theme-color`, so Safari's
-bars stay see-through instead of solid; the home page's own background runs
-behind them as you scroll. `npm run check` makes sure every game with a canvas does this.
+bottom edges a few times a second and paints them into soft layers behind
+the game that reach well past the top and bottom of the screen (the body has
+no background of its own, so they show wherever the canvas stops, including
+behind Safari's toolbar, which sits inside the page), and sets the page
+background to match. No page sets `theme-color`, so Safari's
+bars stay see-through instead of solid. On the home page the fixed layers
+(the starfield) reach down behind the toolbar and none has a solid
+background, so its own background runs behind the bars as you scroll. `npm run check` makes sure every game with a canvas does this.
 
 Dev-only files and folders are not published: `node_modules`, `tests`,
 `test-results`, `scripts`, `tools`, `package.json`, `package-lock.json`,
