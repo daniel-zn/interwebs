@@ -8,20 +8,35 @@ const ctx = sky.getContext('2d');
 const PX = 3; // one star pixel = 3 CSS pixels
 let W = 0, H = 0, stars = [], shoot = null, shootIn = 4;
 
+function newStar(x0, y0, x1, y1) {
+  const layer = Math.random() < 0.65 ? 0 : Math.random() < 0.7 ? 1 : 2;
+  return {
+    x: x0 + Math.random() * (x1 - x0), y: y0 + Math.random() * (y1 - y0), layer,
+    ph: Math.random() * 7, sp: 0.6 + Math.random() * 2,
+    c: layer === 2 ? (Math.random() < 0.3 ? '#9fd8ff' : '#fff6d6') : layer === 1 ? '#8e97cf' : '#4a3f86',
+  };
+}
+
+// Phones resize the page all the time (the toolbar sliding, pull to reload),
+// so the stars stay put: every star keeps its place, and new ones are only
+// scattered over sky that has never been shown before.
+let maxW = 0, maxH = 0;
+function fill(x0, y0, x1, y1) {
+  const n = Math.round(((x1 - x0) * (y1 - y0)) / 260);
+  for (let i = 0; i < n; i++) stars.push(newStar(x0, y0, x1, y1));
+}
 function resize() {
-  W = Math.ceil((sky.clientWidth || innerWidth) / PX);
-  H = Math.ceil((sky.clientHeight || innerHeight) / PX);
+  const w = Math.ceil((sky.clientWidth || innerWidth) / PX);
+  const h = Math.ceil((sky.clientHeight || innerHeight) / PX);
+  if (w === W && h === H) return;
+  W = w;
+  H = h;
   sky.width = W;
   sky.height = H;
-  const n = Math.round((W * H) / 260);
-  stars = Array.from({ length: n }, () => {
-    const layer = Math.random() < 0.65 ? 0 : Math.random() < 0.7 ? 1 : 2;
-    return {
-      x: Math.random() * W, y: Math.random() * H, layer,
-      ph: Math.random() * 7, sp: 0.6 + Math.random() * 2,
-      c: layer === 2 ? (Math.random() < 0.3 ? '#9fd8ff' : '#fff6d6') : layer === 1 ? '#8e97cf' : '#4a3f86',
-    };
-  });
+  if (W > maxW) fill(maxW, 0, W, Math.max(H, maxH));
+  if (H > maxH) fill(0, maxH, Math.max(W, maxW), H);
+  maxW = Math.max(maxW, W);
+  maxH = Math.max(maxH, H);
   draw(0);
 }
 
