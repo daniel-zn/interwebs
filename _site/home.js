@@ -9,8 +9,8 @@ const PX = 3; // one star pixel = 3 CSS pixels
 let W = 0, H = 0, stars = [], shoot = null, shootIn = 4;
 
 function resize() {
-  W = Math.ceil(innerWidth / PX);
-  H = Math.ceil(innerHeight / PX);
+  W = Math.ceil((sky.clientWidth || innerWidth) / PX);
+  H = Math.ceil((sky.clientHeight || innerHeight) / PX);
   sky.width = W;
   sky.height = H;
   const n = Math.round((W * H) / 260);

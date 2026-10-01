@@ -297,7 +297,7 @@ const watch = (page) => {
       g.height = 1;
       g.getContext('2d').drawImage(game, game.width >> 1, 0, 1, 1, 0, 0, 1, 1);
       return {
-        outside: top.getBoundingClientRect().bottom <= 0 && bottom.getBoundingClientRect().top >= innerHeight && top.getBoundingClientRect().height > 100,
+        outside: top.getBoundingClientRect().top < -100 && bottom.getBoundingClientRect().bottom > innerHeight + 100 && getComputedStyle(document.body).backgroundColor === 'rgba(0, 0, 0, 0)',
         painted: rgb(top) !== '0,0,0' || rgb(g) === '0,0,0',
         root: getComputedStyle(document.documentElement).backgroundImage.includes('gradient'),
         seeThrough: !document.querySelector('meta[name="theme-color"]'),

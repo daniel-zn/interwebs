@@ -219,14 +219,19 @@ dialog::backdrop { background: rgb(0 0 0 / 0.7); }
   .hint.title { animation: none; }
 }
 
-/* Edge to edge on phones: strips above and below the screen that carry on the
-   game's backdrop behind the status bar and Safari's toolbars (see bleed.js). */
+/* Edge to edge on phones: layers behind the game that carry on its backdrop
+   past the top and bottom of the screen, behind the status bar and Safari's
+   toolbar (see bleed.js). The body has no background of its own, so wherever
+   the canvas stops, these show. */
+body { background: transparent; }
 .bleed {
   position: fixed;
   left: 0;
   width: 100%;
-  height: 60vh;
+  height: 110vh;
+  z-index: -1;
+  filter: blur(6px);
   pointer-events: none;
 }
-.bleed-top { bottom: 100%; }
-.bleed-bottom { top: 100%; }
+.bleed-top { top: -60vh; }
+.bleed-bottom { top: 50vh; }

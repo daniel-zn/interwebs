@@ -21,6 +21,7 @@ html { -webkit-tap-highlight-color: transparent; }
    Safari's see-through bars too (there's no theme-color to tint them). */
 
 body {
+  position: relative;
   margin: 0;
   min-height: 100vh;
   min-height: 100dvh;
@@ -32,18 +33,21 @@ body {
   flex-direction: column;
 }
 
+/* The fixed layers reach down behind Safari's toolbar (100lvh), and none of
+   them has a solid background, so Safari keeps its bars see-through. */
 #sky {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
   width: 100%;
-  height: 100%;
+  height: 100lvh;
   image-rendering: pixelated;
   pointer-events: none;
   z-index: 0;
 }
 
 .scanlines {
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 3;
@@ -214,9 +218,9 @@ footer kbd {
   inset: 0;
   z-index: 4;
   pointer-events: none;
-  background: var(--wipe, var(--bg));
   clip-path: circle(0 at var(--x, 50%) var(--y, 50%));
 }
+.launching .wipe { background: var(--wipe, var(--bg)); }
 .launching .wipe { animation: iris 0.5s steps(8) forwards; }
 @keyframes iris { to { clip-path: circle(150vmax at var(--x, 50%) var(--y, 50%)); } }
 .launching .card.go { animation: flash 0.25s steps(2) 2; }
