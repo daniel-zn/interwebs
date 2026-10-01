@@ -14,7 +14,7 @@
 //                                    Without it the card gets a generated pixel cover.
 
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { basename, join } from 'node:path';
+import { basename, join, relative, sep } from 'node:path';
 import { findProjects, ROOT } from './scripts/lib.mjs';
 import { iconIco, iconPng, iconSvgDataUri } from './scripts/icons.mjs';
 import { pixelText } from './scripts/pixelfont.mjs';
@@ -22,11 +22,17 @@ import { pixelText } from './scripts/pixelfont.mjs';
 const OUT = join(ROOT, 'dist');
 const SITE = 'interwebs.danielzn.com';
 
-// Skipped when copying a project. Matched against each file or folder name.
+// Dev-only files and folders at the top of a project, skipped when copying it
+// (a project's own src/scripts/ or img/tools/ are published as normal).
+// Dotfiles are skipped everywhere.
 const EXCLUDE = new Set([
   'node_modules', 'tests', 'test-results', 'scripts', 'tools',
   'package.json', 'package-lock.json', 'eslint.config.js', 'README.md',
 ]);
+const publish = (dir) => (src) => {
+  const rel = relative(dir, src);
+  return !basename(src).startsWith('.') && !(rel && !rel.includes(sep) && EXCLUDE.has(rel));
+};
 
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -120,10 +126,7 @@ await rm(OUT, { recursive: true, force: true });
 await mkdir(join(OUT, '_home'), { recursive: true });
 
 for (const { slug } of projects) {
-  await cp(join(ROOT, slug), join(OUT, slug), {
-    recursive: true,
-    filter: (src) => !EXCLUDE.has(basename(src)) && !basename(src).startsWith('.'),
-  });
+  await cp(join(ROOT, slug), join(OUT, slug), { recursive: true, filter: publish(join(ROOT, slug)) });
 }
 for (const f of ['home.css', 'home.js']) await cp(join(ROOT, '_site', f), join(OUT, '_home', f));
 // Root icons: browsers that skip a page's SVG icon (Safari, notably) ask for these.

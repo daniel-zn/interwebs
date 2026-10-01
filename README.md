@@ -63,9 +63,10 @@ bars stay see-through instead of solid. On the home page the fixed layers
 (the starfield) reach down behind the toolbar and none has a solid
 background, so its own background runs behind the bars as you scroll. `npm run check` makes sure every game with a canvas does this.
 
-Dev-only files and folders are not published: `node_modules`, `tests`,
-`test-results`, `scripts`, `tools`, `package.json`, `package-lock.json`,
-`eslint.config.js`, `README.md`, and dotfiles. The list is in `build.mjs`.
+Dev-only files and folders at the top of a project are not published:
+`node_modules`, `tests`, `test-results`, `scripts`, `tools`, `package.json`,
+`package-lock.json`, `eslint.config.js` and `README.md`; nor are dotfiles,
+anywhere. The list is in `build.mjs`.
 Folders starting with `_` or `.`, plus `scripts`, `dist` and `node_modules`,
 are never treated as projects.
 

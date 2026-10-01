@@ -14,15 +14,27 @@ export async function exists(path) {
   }
 }
 
+// Folders at the top of the repo that are never projects (and, inside a
+// project, the dev-only files and folders the build leaves out).
+export const NOT_PROJECTS = ['dist', 'node_modules', 'scripts', 'tools', 'tests', 'test-results'];
+
+const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0' };
+/** Text from HTML source: entities decoded, so the build can escape it exactly once. */
+const decode = (s) => s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => {
+  if (e[0] !== '#') return ENTITIES[e.toLowerCase()] ?? m;
+  const n = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : Number(e.slice(1));
+  return Number.isFinite(n) && n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : m;
+});
+
 const meta = (html, name) =>
-  html.match(new RegExp(`<meta\\s+name="${name}"\\s+content="([^"]*)"`, 'i'))?.[1].trim() ?? '';
+  decode(html.match(new RegExp(`<meta\\s+name="${name}"\\s+content="([^"]*)"`, 'i'))?.[1].trim() ?? '');
 
 /** Every top-level folder with an index.html is a project. */
 export async function findProjects() {
   const entries = await readdir(ROOT, { withFileTypes: true });
   const projects = [];
   for (const entry of entries) {
-    if (!entry.isDirectory() || /^[._]/.test(entry.name) || ['dist', 'node_modules', 'scripts'].includes(entry.name)) continue;
+    if (!entry.isDirectory() || /^[._]/.test(entry.name) || NOT_PROJECTS.includes(entry.name)) continue;
     const dir = join(ROOT, entry.name);
     const index = join(dir, 'index.html');
     if (!(await exists(index))) continue;
@@ -34,14 +46,16 @@ export async function findProjects() {
         break;
       }
     }
+    const order = meta(html, 'interwebs:order');
     projects.push({
       slug: entry.name,
       dir,
-      title: html.match(/<title>([^<]*)<\/title>/i)?.[1].trim() || entry.name,
+      title: decode(html.match(/<title>([^<]*)<\/title>/i)?.[1].trim() ?? '') || entry.name,
       description: meta(html, 'description'),
       kind: meta(html, 'interwebs:kind') || 'Experience',
       accent: meta(html, 'interwebs:accent') || meta(html, 'theme-color'),
-      order: Number(meta(html, 'interwebs:order')) || 0,
+      // Projects with an order come first (lower first), then the rest by title.
+      order: order !== '' && Number.isFinite(Number(order)) ? Number(order) : Infinity,
       cover,
     });
   }

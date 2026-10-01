@@ -59,7 +59,9 @@ const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePa
 const errors = [];
 const watch = (page) => {
   page.on('pageerror', (e) => errors.push(e.message));
-  page.on('console', (m) => m.type() === 'error' && !m.text().includes('404') && errors.push(m.text()));
+  // Only the deliberate request for a missing page may log a failed load;
+  // anything else (a broken script, style or image) counts.
+  page.on('console', (m) => m.type() === 'error' && !(m.location()?.url || '').endsWith('/does-not-exist') && errors.push(`${m.text()} ${m.location()?.url || ''}`));
 };
 
 // ------------------------------------------------------------------ desktop
@@ -75,6 +77,8 @@ const watch = (page) => {
   const expected = (await findProjects()).length + 1;
   check(cards.length === expected, 'one card per project folder', cards.map((c) => c.href).join(' '));
   check(cards.every((c) => /^\/[\w-]+\/$/.test(c.href)), 'cards link to /<folder>/');
+  // Covers further down load lazily: ask for them all now, then wait.
+  await page.$$eval('img[loading="lazy"]', (els) => els.forEach((i) => (i.loading = 'eager')));
   await page.waitForFunction(() => [...document.images].every((i) => i.complete));
   const imgs = await page.$$eval('.card img', (els) => els.map((i) => i.naturalWidth));
   check(imgs.every((w) => w > 0), 'all cover images load (incl. generated placeholder)', imgs.join(','));
@@ -105,11 +109,8 @@ const watch = (page) => {
   await page.waitForTimeout(600);
   check((await page.title()) === cards[0].title, 'experience page loads at its folder', await page.title());
 
-  await page.goBack();
-  await page.waitForTimeout(300);
-  check(!(await page.evaluate(() => document.body.classList.contains('launching'))), 'back button returns to a usable select screen');
-
   // Click path.
+  await page.goto(base + '/');
   await Promise.all([page.waitForURL(`**${cards[1].href}`), page.click(`.card[href="${cards[1].href}"]`)]);
   check(page.url().endsWith(cards[1].href), 'clicking a card opens it', new URL(page.url()).pathname);
 
@@ -117,6 +118,11 @@ const watch = (page) => {
   const noSlash = cards[1].href.slice(0, -1);
   await page.goto(base + noSlash);
   check(page.url().endsWith(cards[1].href), 'folder without trailing slash redirects', new URL(page.url()).pathname);
+  // That's this script's own server; on Cloudflare the redirect and the 404
+  // page come from the asset settings, so make sure those are what we test.
+  const wrangler = await readFile(join(ROOT, 'wrangler.jsonc'), 'utf8');
+  const setting = (key) => wrangler.match(new RegExp(`"${key}"\\s*:\\s*"([^"]+)"`))?.[1];
+  check(setting('html_handling') === 'auto-trailing-slash' && setting('not_found_handling') === '404-page', 'Cloudflare serves folders with a trailing slash and the 404 page', `${setting('html_handling')}, ${setting('not_found_handling')}`);
   for (const icon of ['/favicon.ico', '/apple-touch-icon.png']) {
     const r = await page.goto(base + icon);
     const type = r.headers()['content-type'] || '';
@@ -128,13 +134,53 @@ const watch = (page) => {
   await page.close();
 }
 
+// ------------------------------------------------------------------ back button
+// Playwright normally turns off the back/forward cache, which would make the
+// back button reload the page and hide a stuck launch transition. Use a
+// browser with it on, and make sure the page really came back from the cache.
+{
+  const bf = await chromium.launch({ ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}), ignoreDefaultArgs: ['--disable-back-forward-cache'] });
+  const page = await bf.newPage({ viewport: { width: 1280, height: 800 } });
+  watch(page);
+  // If the cache isn't used, Chromium says why.
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Page.enable');
+  const notUsed = [];
+  cdp.on('Page.backForwardCacheNotUsed', (e) => notUsed.push(...e.notRestoredExplanations.map((x) => x.reason)));
+  await page.addInitScript(() => addEventListener('pageshow', (e) => (window.__persisted = e.persisted)));
+  await page.goto(base + '/');
+  const href = await page.getAttribute('.card', 'href');
+  await page.keyboard.press('Home');
+  await Promise.all([page.waitForURL(`**${href}`), page.keyboard.press('Enter')]);
+  await page.waitForTimeout(800);
+  await page.goBack({ waitUntil: 'commit' });
+  await page.waitForTimeout(400);
+  const state = () => page.evaluate(() => ({ persisted: window.__persisted, launching: document.body.classList.contains('launching'), wipe: getComputedStyle(document.querySelector('.wipe')).backgroundColor }));
+  let back = await state();
+  if (notUsed.includes('BackForwardCacheDisabledForDelegate')) {
+    // This Chromium (Playwright's headless shell) has no back/forward cache at
+    // all. Stage what a cached page looks like mid-launch and replay the
+    // restore event instead.
+    await page.evaluate(() => {
+      document.body.classList.add('launching');
+      document.querySelector('.card').classList.add('go');
+      dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    });
+    back = { ...(await state()), simulated: true };
+  }
+  check((back.persisted || back.simulated) && !back.launching && back.wipe === 'rgba(0, 0, 0, 0)', 'back button returns to a usable select screen (from the back/forward cache)', JSON.stringify({ ...back, notUsed }));
+  await bf.close();
+}
+
 // ------------------------------------------------------------------ phone
 {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
   watch(page);
   await page.goto(base + '/');
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+  // (On a phone innerWidth grows to fit wide content, so compare with the
+  // layout width.)
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   check(!overflow, 'no horizontal scroll on phone');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/home-phone.png`, fullPage: true });
   const href = await page.getAttribute('.card', 'href');

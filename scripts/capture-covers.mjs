@@ -4,7 +4,7 @@
 //
 //   npm run covers            # only projects that have no cover yet
 //   npm run covers -- --force # recapture everything
-//   npm run covers -- reentry-surf
+//   npm run covers -- reentry-surf   # just these (even if they have a cover)
 //
 // Uses playwright-core. Point CHROMIUM_PATH at a Chromium binary if Playwright's
 // own browsers are not installed.
@@ -40,7 +40,7 @@ const page = await browser.newPage({ viewport: { width: 400, height: 225 }, devi
 
 for (const p of await findProjects()) {
   if (only.length && !only.includes(p.slug)) continue;
-  if (p.cover && !force) {
+  if (p.cover && !force && !only.includes(p.slug)) {
     console.log(`skip   ${p.slug} (has ${p.cover})`);
     continue;
   }

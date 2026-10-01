@@ -33,8 +33,10 @@ function resize() {
   H = h;
   sky.width = W;
   sky.height = H;
+  // New columns on the right (full height), then new rows along the bottom
+  // under the old width: together they cover the new sky exactly once.
   if (W > maxW) fill(maxW, 0, W, Math.max(H, maxH));
-  if (H > maxH) fill(0, maxH, Math.max(W, maxW), H);
+  if (H > maxH) fill(0, maxH, maxW, H);
   maxW = Math.max(maxW, W);
   maxH = Math.max(maxH, H);
   draw(0);
@@ -63,7 +65,7 @@ function frame(now) {
   if (!reduced.matches) {
     for (const s of stars) {
       s.x -= (0.4 + s.layer * 1.1) * dt;
-      if (s.x < 0) s.x += W;
+      if (s.x < 0) s.x += maxW; // stars live across the widest sky shown
     }
     if (shoot) {
       shoot.x += shoot.vx * dt;
@@ -114,40 +116,60 @@ function vertical(dir) {
 }
 
 function move(key) {
+  if (key === 'Home') return select(0);
+  if (key === 'End') return select(cards.length - 1);
   const active = cards.indexOf(document.activeElement);
   if (active < 0) return select(sel);
   sel = active;
   if (key === 'ArrowRight') select(sel + 1);
   else if (key === 'ArrowLeft') select(sel - 1);
-  else if (key === 'Home') select(0);
-  else if (key === 'End') select(cards.length - 1);
   else {
     const k = vertical(key === 'ArrowDown' ? 1 : -1);
     if (k >= 0) select(k);
   }
 }
 
+/**
+ * Enter / Space / gamepad A: launch the focused card (or the selected one).
+ * If that card is off screen, bring it into view and select it first, so a
+ * launch never happens out of sight.
+ */
+function go() {
+  const card = cards.includes(document.activeElement) ? document.activeElement : cards[sel];
+  const r = card.getBoundingClientRect();
+  if (r.bottom < 0 || r.top > innerHeight) select(cards.indexOf(card));
+  else launch(card);
+}
+
 addEventListener('keydown', (e) => {
-  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  // The 404 page has no cards: leave its keys to the browser.
+  if (e.altKey || e.ctrlKey || e.metaKey || !cards.length) return;
   if (['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) {
     e.preventDefault();
     move(e.key);
-  } else if ((e.key === 'Enter' || e.key === ' ') && !cards.includes(document.activeElement) && cards.length) {
+  } else if ((e.key === 'Enter' && !cards.includes(document.activeElement)) || e.key === ' ') {
+    // (Enter on a focused card is the link's own click.)
     e.preventDefault();
-    launch(cards[sel]);
-  } else if (e.key === ' ' && cards.includes(document.activeElement)) {
-    e.preventDefault();
-    launch(document.activeElement);
+    go();
   }
 });
+// Only a mouse that really moves picks a card: scrolling the page under a
+// still mouse (with the keyboard or a gamepad) must not steal the selection.
+let mouseAt = '';
 cards.forEach((c, k) => {
-  c.addEventListener('pointerenter', () => select(k, false));
+  c.addEventListener('pointermove', (e) => {
+    const at = `${e.screenX},${e.screenY}`;
+    if (e.pointerType !== 'mouse' || at === mouseAt) return;
+    mouseAt = at;
+    if (k !== sel) select(k, false);
+  });
   c.addEventListener('focus', () => select(k, false));
   c.addEventListener('click', (e) => {
     // Let new-tab / new-window clicks behave normally.
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
-    launch(c);
+    if (cards.indexOf(document.activeElement) === k) go();
+    else launch(c);
   });
 });
 select(0, false);
@@ -198,7 +220,7 @@ function poll(now) {
       repeatAt = now + (prev[key] ? 140 : 380);
     }
   }
-  if (state.A && !prev.A && cards.length) launch(cards[sel]);
+  if (state.A && !prev.A && cards.length) go();
   prev = state;
   requestAnimationFrame(poll);
 }

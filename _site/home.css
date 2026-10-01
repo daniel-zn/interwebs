@@ -7,6 +7,9 @@
   --gold: #f3c252;
   --teal: #7ff4ff;
   --pink: #e38bc4;
+  /* Side gutters, wider where a landscape iPhone's notch or rounded corners are. */
+  --side-l: max(16px, env(safe-area-inset-left));
+  --side-r: max(16px, env(safe-area-inset-right));
   --font: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
   color-scheme: dark;
 }
@@ -89,7 +92,7 @@ header, main, footer { position: relative; z-index: 1; }
 
 /* ------------------------------------------------------------------ header */
 .top {
-  padding: clamp(40px, 9vh, 96px) 16px clamp(20px, 4vh, 40px);
+  padding: clamp(40px, 9vh, 96px) var(--side-r) clamp(20px, 4vh, 40px) var(--side-l);
   text-align: center;
 }
 .logo { margin: 0; line-height: 0; }
@@ -117,7 +120,7 @@ main {
   width: 100%;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 0 16px 32px;
+  padding: 0 var(--side-r) 32px var(--side-l);
 }
 .grid {
   list-style: none;
@@ -221,7 +224,7 @@ main {
 
 /* ------------------------------------------------------------------ footer */
 footer {
-  padding: 8px 16px max(24px, env(safe-area-inset-bottom));
+  padding: 8px var(--side-r) max(24px, env(safe-area-inset-bottom)) var(--side-l);
   text-align: center;
   font-size: 12px;
   letter-spacing: 0.08em;
@@ -263,7 +266,7 @@ footer kbd {
 }
 
 /* ------------------------------------------------------------------ 404 */
-.lost { flex: 1; display: grid; place-content: center; gap: 18px; text-align: center; padding: 24px 16px; }
+.lost { flex: 1; display: grid; place-content: center; gap: 18px; text-align: center; padding: 24px var(--side-r) 24px var(--side-l); }
 .lost p { margin: 0; color: var(--muted); }
 .lost a {
   justify-self: center;
