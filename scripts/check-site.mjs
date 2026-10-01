@@ -275,8 +275,12 @@ const watch = (page) => {
     const home = await page.evaluate(() => ({
       theme: !!document.querySelector('meta[name="theme-color"]'),
       html: getComputedStyle(document.documentElement).backgroundImage + getComputedStyle(document.documentElement).backgroundColor,
+      body: getComputedStyle(document.body).backgroundColor,
+      height: document.documentElement.scrollHeight - document.querySelector('footer').getBoundingClientRect().bottom - scrollY,
     }));
-    check(!home.theme && home.html === 'nonergba(0, 0, 0, 0)', 'home page: Safari\'s bars stay see-through over the page\'s own background', JSON.stringify(home));
+    // A solid base colour (on html or body) is what Safari tints its bars with.
+    check(!home.theme && home.html === 'nonergba(0, 0, 0, 0)' && home.body === 'rgba(0, 0, 0, 0)', 'home page: Safari\'s bars stay see-through over the page\'s own background', JSON.stringify(home));
+    check(home.height < 40, 'home page: nothing scrolls on past the footer', `${Math.round(home.height)} px`);
     await page.close();
   }
   for (const p of await findProjects()) {
