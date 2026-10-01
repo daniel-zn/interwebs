@@ -30,9 +30,14 @@ body {
      flat colour: the page's base colour (black if there's none). So the
      page's top edge is exactly that colour too, fading into the glow over
      the first 90 px, and the strip carries straight on into the page. The
-     glow covers the whole page and doesn't repeat. */
+     glow covers the whole page and doesn't repeat. Past the end of the page
+     (behind Safari's toolbar, and when it bounces at the bottom) two more
+     layers carry on the page's dark end and its scanlines: backgrounds can
+     paint there without making the page any longer, unlike an element. */
   background:
     linear-gradient(#141341, rgb(20 19 65 / 0)) top / 100% 90px no-repeat scroll,
+    repeating-linear-gradient(rgb(0 0 0 / 0.14) 0 1px, transparent 1px 3px) left 0 bottom -100vh / 100% 100vh no-repeat scroll,
+    linear-gradient(var(--bg), var(--bg)) left 0 bottom -100vh / 100% 100vh no-repeat scroll,
     radial-gradient(120% 80% at 50% 0%, #1a1650 0%, var(--bg-2) 45%, var(--bg) 100%) 0 0 / 100% 100% no-repeat fixed,
     #141341;
   font: 15px/1.5 var(--font);
@@ -41,8 +46,6 @@ body {
   flex-direction: column;
 }
 
-/* The fixed layers reach down behind Safari's toolbar (100lvh), and none of
-   them has a solid background, so Safari keeps its bars see-through. */
 /* Above the top of the page (behind the status bar, and when it bounces at
    the top), carry on the glow's top edge rather than the dark. */
 body::before {
@@ -56,12 +59,14 @@ body::before {
   pointer-events: none;
 }
 
+/* The starfield reaches on down behind Safari's toolbar, and like every
+   fixed layer here it has no solid background, so the bars stay see-through. */
 #sky {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100lvh;
+  height: calc(100lvh + 120px);
   image-rendering: pixelated;
   pointer-events: none;
   z-index: 0;
