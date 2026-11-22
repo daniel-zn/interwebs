@@ -277,23 +277,51 @@ const watch = (page) => {
     await page.clock.runFor(count * 16);
     frames += count;
   };
-  for (let load = 0; load < 4; load++) {
-    const hook = t => 158 + 126 * Math.sin(t * (.95 + load * .09));
-    const align = async predicate => {
-      let count = 0;
-      while (count < 900 && !predicate((frames + count) * .016)) count++;
-      if (count === 900) throw new Error('Crane cannot reach target');
-      if (count) await advance(count);
-    };
-    await align(t => Math.abs(hook(t) - [52, 107, 160][load % 3]) < 3);
+  const align = async predicate => {
+    let count = 0;
+    while (count < 900 && !predicate((frames + count) * .016)) count++;
+    if (count === 900) throw new Error('Crane cannot reach target');
+    if (count) await advance(count);
+  };
+  // A hot core that lands on the outer deck misses. That same offset earns
+  // one load for a crate. A centered core earns two and advances the crane speed.
+  const contracts = [
+    { loads: 0, bin: 107, offset: 11, message: 'missed the center' },
+    { loads: 0, bin: 52, offset: 11, message: 'Freight received' },
+    { loads: 1, bin: 160, offset: 0, message: 'Two loads' },
+    { loads: 3, bin: 160, offset: 0, message: 'Shift complete' },
+  ];
+  for (const contract of contracts) {
+    const hook = t => 158 + 126 * Math.sin(t * (.95 + contract.loads * .09));
+    await align(t => Math.abs(hook(t) - contract.bin) < 2);
     await page.keyboard.press('Space');
-    await advance(24);
-    check(await page.locator('#action').textContent() === 'Release cell', 'magnet secures cargo ' + (load + 1));
-    await align(t => Math.abs(hook(t) - (236 + 48 * Math.sin((t + .48) * 1.25))) < 4);
+    await advance(48);
+    check(await page.locator('#action').textContent() === 'Release cell', 'hoist brings the cell to the magnet');
+    await align(t => Math.abs(hook(t) - (236 + 48 * Math.sin((t + .48) * 1.25)) - contract.offset) < 1);
     await tapYard();
     await advance(32);
+    if (contract.message === 'Two loads') {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      // Exercise both modes at precisely the same contact frame.
+      const reduced = await page.evaluate(async () => {
+        const { draw } = await import('/crater-crane/art.js');
+        const { newShift } = await import('/crater-crane/shift.js');
+        const s = newShift();
+        s.time = .2;
+        s.event = { kind: 'land', credit: 2, x: 200, time: 0 };
+        const c = document.createElement('canvas');
+        c.width = 320; c.height = 180;
+        const g = c.getContext('2d');
+        draw(g, s, false, false, false);
+        const particles = c.toDataURL();
+        draw(g, s, false, false, matchMedia('(prefers-reduced-motion: reduce)').matches);
+        return particles !== c.toDataURL();
+      });
+      check(reduced, 'reduced motion uses a distinct static landing payoff');
+    }
+    check((await page.locator('#status').innerText()).includes(contract.message), 'delivery outcome: ' + contract.message);
   }
-  check((await page.locator('#status').textContent()).includes('Shift complete'), 'four rover deliveries complete a shift');
+  check((await page.locator('#status').textContent()).includes('Shift complete'), 'four loads complete a shift');
   await page.locator('#action').dispatchEvent('click');
   await page.keyboard.press('KeyP');
   check(await page.locator('#action').isDisabled(), 'new shift pauses');

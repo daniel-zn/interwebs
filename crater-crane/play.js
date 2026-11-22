@@ -2,6 +2,7 @@ import { bleed } from '../solar-kite/src/bleed.js';
 import { act, newShift, step } from './shift.js';
 import { draw } from './art.js';
 
+const motion = matchMedia('(prefers-reduced-motion: reduce)');
 const canvas=document.querySelector('#game');
 const ctx=canvas.getContext('2d');
 const action=document.querySelector('#action');
@@ -12,14 +13,14 @@ function sync() {
   const ended=shift.phase==='win' || shift.phase==='lost';
   pause.disabled=title || ended;
   pause.textContent=paused?'Resume':'Pause';
-  action.disabled=paused || shift.phase==='lower' || shift.phase==='fall';
+  action.disabled=paused || shift.phase==='lower' || shift.phase==='hoist' || shift.phase==='fall';
   action.textContent=title?'Start shift':ended?'New shift':shift.phase==='carry'?'Release cell':'Lower magnet';
   const hints={
-    seek:'Lower over the glowing cell.', lower:'Magnet descending…',
-    carry:'Lead the rover and release.', fall:'Cell falling…',
+    seek:'Cyan crate: 1 load. Amber core: 2, center socket only.', lower:'Magnet descending…',
+    hoist:'Winching up…', carry:shift.hot?'Lead the rover. Aim for its amber socket.':'Lead the rover. Aim inside the cyan rails.', fall:'Cell falling…',
     win:'Four loads delivered. Shift complete!', lost:'Three misses. Shift over.',
   };
-  status.textContent=title?'Space, tap or gamepad A to operate the crane.':paused?'Shift paused.':
+  status.textContent=title?'Tap, Space or gamepad A. Ship four loads.':paused?'Shift paused.':
     [shift.note,hints[shift.phase]].filter(Boolean).join(' ');
 }
 function operate() {
@@ -34,6 +35,7 @@ function operate() {
 function togglePause() {
   if(pause.disabled) return;
   paused=!paused;
+  draw(ctx,shift,title,paused,motion.matches);
   previous=undefined;
   sync();
 }
@@ -54,12 +56,15 @@ function frame(now) {
   padHeld=pressed;
   const dt=Math.min(.05,(now-(previous??now))/1000);
   previous=now;
-  if(!paused && !['win','lost'].includes(shift.phase)) {
+  const ended=shift.phase==='win' || shift.phase==='lost';
+  const settling=ended && shift.time-shift.event.time<.9;
+  if(!paused && (!ended || settling)) {
     const phase=shift.phase;
-    step(shift,dt);
+    if(ended) shift.time+=dt;
+    else step(shift,dt);
     if(phase!==shift.phase) sync();
   }
-  draw(ctx,shift,title,paused);
+  if(!paused && (!ended || settling)) draw(ctx,shift,title,paused,motion.matches);
   requestAnimationFrame(frame);
 }
 sync();
