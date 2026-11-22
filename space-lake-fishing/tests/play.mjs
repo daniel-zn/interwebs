@@ -112,7 +112,7 @@ async function playOnce(page, press, release, { power = 0.55, shots = false } = 
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('orbit-pond:v1')));
   check(saved && saved.total === 1 && Object.keys(saved.journal).length === 1, 'journal persisted to localStorage');
 
-  await sleep(400);
+  await page.waitForFunction(() => window.__pond.game.stateT > 0.35);
   await press();
   await release();
   check((await page.snap()).state === 'idle' && (await page.isHidden('#card')), 'Space dismisses the card');
@@ -127,9 +127,11 @@ async function playOnce(page, press, release, { power = 0.55, shots = false } = 
   const r2 = await playOnce(page, mpress, mrelease, { power: 0.3 });
   check(r2.caught, 'mouse: second fish landed');
   check((await page.textContent('#stat')).startsWith('2 caught'), 'HUD counter updates', await page.textContent('#stat'));
-  await sleep(400);
+  await page.waitForFunction(() => window.__pond.game.stateT > 0.35);
   await mpress();
   await mrelease();
+
+  await page.waitForFunction(() => window.__pond.game.state === 'idle');
 
   // Pressing while waiting reels the line back in.
   await press();
