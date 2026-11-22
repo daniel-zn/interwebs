@@ -9,7 +9,16 @@ const action=document.querySelector('#action');
 const pause=document.querySelector('#pause');
 const status=document.querySelector('#status');
 let shift=newShift(), title=true, paused=false, previous;
+const portrait=matchMedia('(orientation:portrait) and (max-width:650px)');
+function sizeYard() {
+  const height=portrait.matches?Math.max(181,Math.round(canvas.clientHeight*320/canvas.clientWidth)):180;
+  if(canvas.height!==height) canvas.height=height;
+  draw(ctx,shift,title,paused,motion.matches);
+}
+new ResizeObserver(sizeYard).observe(canvas);
 function sync() {
+  document.querySelector('#loads').textContent='Loads '+shift.loads+'/4';
+  document.querySelector('#misses').textContent='Misses '+shift.misses+'/3';
   const ended=shift.phase==='win' || shift.phase==='lost';
   pause.disabled=title || ended;
   pause.textContent=paused?'Resume':'Pause';
@@ -22,6 +31,12 @@ function sync() {
   };
   status.textContent=title?'Tap, Space or gamepad A. Ship four loads.':paused?'Shift paused.':
     [shift.note,hints[shift.phase]].filter(Boolean).join(' ');
+  if(portrait.matches && !paused) {
+    const short={seek:shift.note || 'Pick a crate or precision core.', lower:'Lowering magnet…',
+      hoist:'Winching up…', carry:shift.hot?'Aim for the amber center.':'Aim between the cyan rails.',
+      fall:'Cell falling…', win:hints.win, lost:hints.lost};
+    status.textContent=title?'Deliver four loads. Cores need the center socket.':short[shift.phase];
+  }
 }
 function operate() {
   if(paused) return;
@@ -67,6 +82,7 @@ function frame(now) {
   if(!paused && (!ended || settling)) draw(ctx,shift,title,paused,motion.matches);
   requestAnimationFrame(frame);
 }
+portrait.addEventListener('change',sync);
 sync();
 requestAnimationFrame(frame);
 bleed(canvas);

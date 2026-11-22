@@ -260,16 +260,30 @@ const watch = (page) => {
 
 // Board the crane through the arcade; exercise real input against its moving targets.
 {
-  const page = await browser.newPage({ hasTouch: true, viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({ hasTouch: true, viewport: { width: 393, height: 696 } });
   watch(page);
   await page.goto(base);
   check(await page.locator('.card[href="/signal-bloom/"]').count() === 0, 'retired game leaves the arcade');
   await page.locator('.card[href="/crater-crane/"]').tap();
   await page.waitForURL('**/crater-crane/');
+  await page.addStyleTag({ content: 'html { font-size: 125% }' });
   await page.clock.install();
   await page.clock.pauseAt(new Date(Date.now() + 1500));
-  const yard = await page.locator('#game').boundingBox();
-  const tapYard = () => page.touchscreen.tap(yard.x + yard.width / 2, yard.y + yard.height / 2);
+  const tapYard = async () => {
+    const yard = await page.locator('#game').boundingBox();
+    await page.touchscreen.tap(yard.x + yard.width / 2, yard.y + yard.height / 2);
+  };
+  const tapAction = async () => {
+    const rect = await page.locator('#action').boundingBox();
+    await page.touchscreen.tap(rect.x + rect.width/2, rect.y + rect.height/2);
+  };
+  const portraitLayout = await page.evaluate(() => {
+    const yard = document.querySelector('#game').getBoundingClientRect();
+    const controls = document.querySelector('#action').getBoundingClientRect();
+    return yard.height > innerHeight*.65 && controls.height >= 48 &&
+      controls.bottom <= innerHeight && controls.top > innerHeight*.72 && document.documentElement.scrollWidth <= innerWidth;
+  });
+  check(portraitLayout, 'portrait yard fills the phone with reachable controls at larger text');
   await tapYard();
   await page.clock.runFor(16);
   let frames = 0;
@@ -292,9 +306,17 @@ const watch = (page) => {
     { loads: 3, bin: 160, offset: 0, message: 'Shift complete' },
   ];
   for (const contract of contracts) {
+    if (contract.loads === 1) {
+      await page.setViewportSize({width: 844, height: 390});
+    } else if (contract.loads === 3) {
+      await page.setViewportSize({width: 1280, height: 800});
+      const desktop = await page.locator('#game').boundingBox();
+      check(Math.abs(desktop.width/desktop.height - 16/9) < .01, 'desktop keeps its wide yard');
+    }
     const hook = t => 158 + 126 * Math.sin(t * (.95 + contract.loads * .09));
     await align(t => Math.abs(hook(t) - contract.bin) < 2);
-    await page.keyboard.press('Space');
+    if (contract.loads === 3) await page.keyboard.press('Space');
+    else await tapAction();
     await advance(48);
     check(await page.locator('#action').textContent() === 'Release cell', 'hoist brings the cell to the magnet');
     await align(t => Math.abs(hook(t) - (236 + 48 * Math.sin((t + .48) * 1.25)) - contract.offset) < 1);

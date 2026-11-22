@@ -13,3 +13,18 @@ button:disabled { opacity:.55 }
 .bleed-bottom { top:50vh }
 
 @media (max-width: 600px) { #status { min-height:4.2em; display:grid; align-items:center } }
+
+.score, .contracts { display:none }
+@media (orientation:portrait) and (max-width:650px) {
+  main { height:100svh; height:100dvh; min-height:0; display:grid;
+    grid-template-rows:auto minmax(170px,1fr) auto; align-items:stretch; justify-content:stretch }
+  .score,.contracts { display:flex; justify-content:space-between; gap:.5em; color:#76fbe4; font-weight:bold }
+  .score { padding:.5rem .85rem; background:#10152f }
+  .score span:last-child,.contracts span:last-child { color:#ffbd74 }
+  #game { width:100%; height:100%; min-height:0; display:block }
+  .panel { padding:.45rem .85rem .65rem; background:#151a34; text-align:left }
+  .contracts { justify-content:start; gap:1.3rem; font-size:.9em; margin:0 }
+  #status { display:block; min-height:2.8em; margin:.25rem 0 }
+  .panel > div { display:grid; grid-template-columns:2fr 1fr; gap:.65rem }
+  button { min-height:52px; padding:.45em .3em }
+}
