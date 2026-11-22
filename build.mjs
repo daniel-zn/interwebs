@@ -123,6 +123,13 @@ ${body}
 const projects = await findProjects();
 
 await rm(OUT, { recursive: true, force: true });
+// Bookmarks to the retired game keep working without a second arcade card.
+await mkdir(join(OUT, 'signal-bloom'), { recursive: true });
+await writeFile(join(OUT, 'signal-bloom', 'index.html'), `<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Crater Crane</title>
+<meta http-equiv="refresh" content="0;url=../crater-crane/">
+<a href="../crater-crane/">Play Crater Crane</a></html>`);
+
 await mkdir(join(OUT, '_home'), { recursive: true });
 
 for (const { slug } of projects) {

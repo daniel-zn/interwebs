@@ -258,24 +258,60 @@ const watch = (page) => {
   await ctx.close();
 }
 
-// Play each garden from its home card, including a wrong pulse and a retry.
+// Board the crane through the arcade; exercise real input against its moving targets.
 {
   const page = await browser.newPage({ hasTouch: true, viewport: { width: 390, height: 844 } });
   watch(page);
   await page.goto(base);
-  await page.locator('.card[href="/signal-bloom/"]').tap();
-  const flowers = page.locator('#garden button');
-  const lit = page.locator('#garden [aria-pressed=true]');
-  await flowers.first().tap();
-  await page.getByText('Retry garden', { exact: true }).click();
-  check(await lit.count() === 4, 'retry restores first garden');
-  for (const solution of [[4], [0, 8], [1, 4, 7], [0, 2, 6, 8], [1, 3, 4, 5, 7]]) {
-    for (const center of solution) await flowers.nth(center).press('Enter');
-    check(await lit.count() === 9 && (await page.locator('#status').innerText()).includes('Garden awake!'),
-      'garden solved at par ' + solution.length);
-    await page.locator('#next').tap();
+  check(await page.locator('.card[href="/signal-bloom/"]').count() === 0, 'retired game leaves the arcade');
+  await page.locator('.card[href="/crater-crane/"]').tap();
+  await page.waitForURL('**/crater-crane/');
+  await page.clock.install();
+  await page.clock.pauseAt(new Date(Date.now() + 1500));
+  const yard = await page.locator('#game').boundingBox();
+  const tapYard = () => page.touchscreen.tap(yard.x + yard.width / 2, yard.y + yard.height / 2);
+  await tapYard();
+  await page.clock.runFor(16);
+  let frames = 0;
+  const advance = async count => {
+    await page.clock.runFor(count * 16);
+    frames += count;
+  };
+  for (let load = 0; load < 4; load++) {
+    const hook = t => 158 + 126 * Math.sin(t * (.95 + load * .09));
+    const align = async predicate => {
+      let count = 0;
+      while (count < 900 && !predicate((frames + count) * .016)) count++;
+      if (count === 900) throw new Error('Crane cannot reach target');
+      if (count) await advance(count);
+    };
+    await align(t => Math.abs(hook(t) - [52, 107, 160][load % 3]) < 3);
+    await page.keyboard.press('Space');
+    await advance(24);
+    check(await page.locator('#action').textContent() === 'Release cell', 'magnet secures cargo ' + (load + 1));
+    await align(t => Math.abs(hook(t) - (236 + 48 * Math.sin((t + .48) * 1.25))) < 4);
+    await tapYard();
+    await advance(32);
   }
-  check((await page.locator('#status').innerText()).includes('First light · 0 pulses'), 'replay starts a fresh run');
+  check((await page.locator('#status').textContent()).includes('Shift complete'), 'four rover deliveries complete a shift');
+  await page.locator('#action').dispatchEvent('click');
+  await page.keyboard.press('KeyP');
+  check(await page.locator('#action').isDisabled(), 'new shift pauses');
+  await page.keyboard.press('KeyP');
+  await page.evaluate(() => {
+    window.padButton = { pressed: false };
+    Object.defineProperty(navigator, 'getGamepads', { value: () => [{ buttons: [window.padButton] }] });
+  });
+  for (let miss = 0; miss < 3; miss++) {
+    await page.evaluate(() => { window.padButton.pressed = true; });
+    await advance(1);
+    await page.evaluate(() => { window.padButton.pressed = false; });
+    await advance(25);
+  }
+  check((await page.locator('#status').innerText()).includes('Shift over'), 'three missed gamepad grabs end the shift');
+  await page.goto(base + '/signal-bloom/');
+  await page.waitForURL('**/crater-crane/');
+  check(await page.title() === 'Crater Crane', 'old bookmarks open Crater Crane');
   await page.close();
 }
 

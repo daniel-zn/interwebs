@@ -1,0 +1,13 @@
+* { box-sizing:border-box; touch-action:manipulation; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none }
+html { background:#10152f; color-scheme:dark; color:#fff2d5; font:1rem/1.4 ui-monospace,monospace }
+body { margin:0; background:transparent }
+main { min-height:100svh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) }
+#game { width:min(100%, 160svh, 1280px); height:auto; image-rendering:pixelated; cursor:pointer }
+.panel { text-align:center; padding:0 .6rem .4rem }
+p { margin:.55rem 0; min-height:1.4em }
+button { font:inherit; font-weight:bold; min-height:44px; padding:4px 16px; background:#25305a; border:2px solid #8194be; color:#fff2d5; cursor:pointer }
+#action { border-color:#ffb557 }
+button:disabled { opacity:.55 }
+.bleed { position:fixed; left:0; width:100%; height:110vh; z-index:-1; pointer-events:none; }
+.bleed-top { top:-60vh }
+.bleed-bottom { top:50vh }
