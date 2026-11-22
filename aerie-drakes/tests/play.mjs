@@ -129,9 +129,8 @@ async function walkTo(page, tx, ty, { face } = {}) {
   }
   if (face) {
     await page.keyboard.down(KEY[face]);
-    await sleep(30);
+    await page.waitForFunction(dir => window.__aerie.snap().dir === dir, face, { timeout: 3000 });
     await page.keyboard.up(KEY[face]);
-    await sleep(30);
   }
   const s = await page.snap();
   if (s.map !== startMap) return true; // walked through a door
@@ -387,16 +386,16 @@ async function walkTo(page, tx, ty, { face } = {}) {
   check(!overflow, 'no horizontal scroll on a phone');
   const before = await page.snap();
   const box = await page.locator('.dpad').boundingBox();
-  await page.touchscreen.tap(box.x + box.width / 2 + 50, box.y + box.height / 2);
-  // Hold right with a real pointer so the player walks a few tiles.
-  await page.evaluate(() => {
-    const d = document.querySelector('.dpad');
-    const r = d.getBoundingClientRect();
-    const opts = { bubbles: true, pointerId: 7, pointerType: 'touch', clientX: r.right - 10, clientY: r.top + r.height / 2, buttons: 1 };
-    d.dispatchEvent(new PointerEvent('pointerdown', opts));
-    setTimeout(() => d.dispatchEvent(new PointerEvent('pointerup', opts)), 400);
+  const touch = await context.newCDPSession(page);
+  await touch.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [{ x: box.x + box.width * 0.8, y: box.y + box.height / 2 }],
   });
-  await sleep(700);
+  try {
+    await page.waitForFunction(x => window.__aerie.snap().x > x, before.x, { timeout: 5000 });
+  } finally {
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  }
   s = await page.snap();
   check(s.x > before.x, 'holding the touch pad walks the player', `${before.x} -> ${s.x}`);
   await page.shot('home');
