@@ -86,7 +86,8 @@ npm run preview   # serve with wrangler at http://localhost:8787 (builds first)
 npm run deploy    # deploy from your machine (builds first; needs `npx wrangler login`)
 ```
 
-`check` and `covers` use `playwright-core`, which needs a Chromium. Set
+`check` and `covers` use `playwright-core`, which needs a Chromium. After installing the dependencies, run
+`npx playwright-core install --only-shell chromium` to install the pinned browser for checks. Set
 `CHROMIUM_PATH=/path/to/chromium` if Playwright's browsers aren't installed.
 
 ## Cloudflare setup (one time, already done)
