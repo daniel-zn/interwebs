@@ -258,6 +258,27 @@ const watch = (page) => {
   await ctx.close();
 }
 
+// Play each garden from its home card, including a wrong pulse and a retry.
+{
+  const page = await browser.newPage({ hasTouch: true, viewport: { width: 390, height: 844 } });
+  watch(page);
+  await page.goto(base);
+  await page.locator('.card[href="/signal-bloom/"]').tap();
+  const flowers = page.locator('#garden button');
+  const lit = page.locator('#garden [aria-pressed=true]');
+  await flowers.first().tap();
+  await page.getByText('Retry garden', { exact: true }).click();
+  check(await lit.count() === 4, 'retry restores first garden');
+  for (const solution of [[4], [0, 8], [1, 4, 7], [0, 2, 6, 8], [1, 3, 4, 5, 7]]) {
+    for (const center of solution) await flowers.nth(center).press('Enter');
+    check(await lit.count() === 9 && (await page.locator('#status').innerText()).includes('Garden awake!'),
+      'garden solved at par ' + solution.length);
+    await page.locator('#next').tap();
+  }
+  check((await page.locator('#status').innerText()).includes('First light · 0 pulses'), 'replay starts a fresh run');
+  await page.close();
+}
+
 // ------------------------------------------------------------------ phone gestures
 // iOS Safari ignores user-scalable=no, so double-tapping a button or a gap in
 // the controls zooms the page unless touch-action says otherwise, and a long

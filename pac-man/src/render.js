@@ -37,14 +37,17 @@ const makeCanvas = (w, h) => {
  * wall pixel's distance to the nearest open pixel decides whether it is on
  * the line, which also rounds the corners the way the arcade maze does.
  */
-function mazeArt(color) {
+function mazeArt() {
   const c = makeCanvas(MW, MH);
   const ctx = c.getContext('2d');
+  const white = makeCanvas(MW, MH);
+  const flash = white.getContext('2d');
   const open = (px, py) => {
     if (px < 0 || py < 0 || px >= MW || py >= MH) return false;
     return CELLS[(py >> 3) * COLS + (px >> 3)] !== WALL;
   };
-  ctx.fillStyle = color;
+  ctx.fillStyle = C.wall;
+  flash.fillStyle = C.white;
   const R = 5;
   for (let py = 0; py < MH; py++) {
     for (let px = 0; px < MW; px++) {
@@ -57,7 +60,10 @@ function mazeArt(color) {
         }
       }
       const d = Math.sqrt(best);
-      if (d > 3.5 && d <= 4.5) ctx.fillRect(px, py, 1, 1);
+      if (d > 3.5 && d <= 4.5) {
+        ctx.fillRect(px, py, 1, 1);
+        flash.fillRect(px, py, 1, 1);
+      }
     }
   }
   // The ghost house door.
@@ -65,9 +71,11 @@ function mazeArt(color) {
     if (CELLS[12 * COLS + x] === DOOR) {
       ctx.fillStyle = C.door;
       ctx.fillRect(x * 8, 12 * 8 + 6, 8, 2);
+      flash.fillStyle = C.door;
+      flash.fillRect(x * 8, 12 * 8 + 6, 8, 2);
     }
   }
-  return c;
+  return { walls: c, wallsWhite: white };
 }
 
 // ------------------------------------------------------------------ sprites
@@ -197,8 +205,7 @@ export class Renderer {
   constructor() {
     this.W = 0;
     this.H = 0;
-    this.walls = mazeArt(C.wall);
-    this.wallsWhite = mazeArt(C.white);
+    Object.assign(this, mazeArt());
     // Charmander by direction, leg frame, mouth (closed, open) and flame flicker.
     this.hero = [0, 1, 2, 3].map((dir) => [0, 1].map((walk) => [false, true].map((open) => [0, 1].map((flame) => (
       charmanderSprite(dir, { walk, open, flame })

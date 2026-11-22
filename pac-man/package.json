@@ -9,7 +9,7 @@
     "test": "node --test tests/sim.test.mjs",
     "play": "node tests/play.mjs",
     "size": "node tools/size.mjs",
-    "check": "npm test && npm run size && npm run play"
+    "check": "npm test && node tests/maze-art.mjs && npm run size && npm run play"
   },
   "devDependencies": {
     "playwright-core": "1.56.1"
