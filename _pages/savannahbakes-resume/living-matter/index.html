@@ -184,7 +184,7 @@ h1{font-size:clamp(44px,4.8vw,76px)}
 <script>
 (function(){
 "use strict";
-const D={"name": "Savannah Bakes", "titles": ["Sales Manager Trainee", "Indigenous Relations Program Manager", "Product Enablement Lead", "High School Science Teacher", "Student Teacher", "Bachelor of Education"], "stages": [{"k": ["name"], "label": "Savannah Bakes"}, {"k": ["title:0", "num:86→89%", "shape:map"], "label": "Sales Manager Trainee"}, {"k": ["title:1", "num:+30%", "num:100+", "shape:room"], "label": "Indigenous Relations Program Manager"}, {"k": ["title:2", "num:AWS + GoPro", "shape:fish"], "label": "Product Enablement Lead"}, {"k": ["title:3", "num:1,000+", "num:+10–20%", "shape:board"], "label": "High School Science Teacher"}, {"k": ["title:4", "num:Grades 9 and 12", "shape:web"], "label": "Student Teacher"}, {"k": ["title:5", "num:1 of 8", "num:750", "num:300", "shape:cap"], "label": "Bachelor of Education"}, {"k": ["end"], "label": "Contact"}], "nums": ["86→89%", "+30%", "100+", "AWS + GoPro", "1,000+", "+10–20%", "Grades 9 and 12", "1 of 8", "750", "300"]};
+const D={"name": "Savannah Bakes", "titles": ["Sales Manager Trainee", "Indigenous Relations Program Manager", "Product Enablement Lead", "High School Science Teacher", "Student Teacher", "Bachelor of Education"], "stages": [{"forms": ["name"], "label": "Savannah Bakes"}, {"forms": ["title:0", "shape:map"], "label": "Sales Manager Trainee"}, {"forms": ["title:1", "shape:room"], "label": "Indigenous Relations Program Manager"}, {"forms": ["title:2", "shape:fish"], "label": "Product Enablement Lead"}, {"forms": ["title:3", "shape:board"], "label": "High School Science Teacher"}, {"forms": ["title:4", "shape:web"], "label": "Student Teacher"}, {"forms": ["title:5", "shape:cap"], "label": "Bachelor of Education"}, {"forms": ["end"], "label": "Contact"}]};
 const doc=document.documentElement; doc.classList.add('js');
 const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const coarse=matchMedia('(pointer: coarse)').matches;
@@ -474,7 +474,6 @@ function R(x0,y0,x1,y1){return {x:x0*W,y:y0*H,w:(x1-x0)*W,h:(y1-y0)*H};}
 function layout(kind){
   if(PHONE){
     const top=Math.min(0.24,60/H);
-    if(kind==='num') return R(.08,top+.03,.92,.95);
     if(kind==='title') return R(.08,top+.01,.92,.96);
     return R(.05,top,.95,.96);
   }
@@ -484,7 +483,7 @@ function layout(kind){
     return {x:.05*W,y:y0,w:.9*W,h:y1-y0};
   }
   if(kind==='end') return R(.5,.14,.94,.86);
-  if(kind==='num') return R(.46,.16,.93,.84);
+  if(kind==='title') return R(.45,.13,.93,.86);
   return R(.45,.11,.94,.88);
 }
 function wrap(words,n){
@@ -516,12 +515,7 @@ function collect(d,n,th){ if(pix.length<n) pix=new Int32Array(n); let c=0; for(l
 function textForm(text,kind,o){
   const r=layout(kind), wt=o.weight||700, it=o.italic?'italic ':'';
   const font=s=>`${it}${wt} ${s}px ${FAM}`;
-  let f;
-  if(o.size){ // fixed size shared by all the numbers, so none dominates
-    cx.font=font(100); const words=text.split(/\s+/), lines=(o.lines||1)>1?wrap(words,o.lines):[text];
-    const mw=Math.max(...lines.map(l=>cx.measureText(l).width));
-    f={lines,size:Math.min(o.size,r.w*100/mw*0.95,r.h/(lines.length*1.12))};
-  } else f=fitText(text,r,font,o.max,o.lines||4);
+  const f=fitText(text,r,font,o.max,o.lines||4);
   const pad=Math.ceil(f.size*0.3);
   const iw=Math.ceil(r.w)+pad*2, ih=Math.ceil(r.h)+pad*2;
   cv.width=iw; cv.height=ih; cx.clearRect(0,0,iw,ih);
@@ -728,18 +722,10 @@ function shapeForm(name){
   const spacing=Math.sqrt(cnt/Math.max(1,nact));
   return {P,C:Cc,size:Math.max(1.4,Math.min(3.4,spacing*2.0+0.7))};
 }
-let numSz=0,numSzKey='';
-function numSize(){
-  const k=W+'x'+H+PHONE; if(k===numSzKey) return numSz;
-  const r=layout('num'); cx.font=`800 100px ${FAM}`; let mw=1;
-  D.nums.forEach(t=>{ if(t.length<=9) mw=Math.max(mw,cx.measureText(t).width); });
-  numSz=Math.min(r.w*100/mw*0.9, r.h*0.5, PHONE?120:240); numSzKey=k; return numSz;
-}
 function build(key){
   if(key==='name') return textForm(D.name,'name',{weight:800,max:PHONE?150:300,lines:2});
   if(key==='end') return textForm(D.name,PHONE?'name':'end',{weight:800,italic:true,max:PHONE?150:240,lines:2,ink:SALMON,spark:CREAM});
   if(key.startsWith('title:')) return textForm(D.titles[+key.slice(6)],'title',{weight:700,lines:4,max:PHONE?110:190});
-  if(key.startsWith('num:')){const t=key.slice(4); return textForm(t,'num',{weight:800,lines:t.length>9?2:1,size:numSize(),ink:GOLD,spark:CREAM});}
   if(key.startsWith('shape:')) return shapeForm(key.slice(6));
   return null;
 }
@@ -771,7 +757,7 @@ function swapIn(f,key){
 }
 
 /* ---------- sections drive the forms ---------- */
-let active=-1, stageT=0, pendIdx=-1, pendSince=0, pendT=0;
+let active=-1, nextT=0, pendIdx=-1, pendSince=0, pendT=0;
 function bandBottom(){return PHONE?canvas.getBoundingClientRect().bottom:0;}
 function currentIndex(){
   const b=bandBottom(), line=PHONE?b+(innerHeight-b)*0.3:innerHeight*0.5;
@@ -784,19 +770,18 @@ function activate(i){
   sections.forEach((s,k)=>{s.classList.toggle('on',k===i); if(k===i) s.classList.add('seen');});
   if(counter) counter.innerHTML=`<span class="n">${String(i).padStart(2,'0')}</span><span>/ ${String(sections.length-1).padStart(2,'0')}</span><span class="f"></span>`;
   if(counter) counter.querySelector('.f').textContent=D.stages[i].label;
-  clearTimeout(stageT);
-  const keys=D.stages[i].k;
   if(!GLOK) return;
-  queue.length=0;
-  if(RM){ requestForm(keys[keys.length-1]); return; }
-  enqueue(keys.slice(1)); [i+1,i-1].forEach(j=>{ if(D.stages[j]) enqueue(D.stages[j].k.slice(0,1)); });
-  let j=0; const tick=()=>{ requestForm(keys[j]); j++; if(j<keys.length) stageT=setTimeout(tick,j===1?1900:1700); };
-  tick();
+  queue.length=0; clearTimeout(nextT);
+  const f=D.stages[i].forms;
+  if(RM){ requestForm(f[f.length-1]); return; }
+  requestForm(f[0]);                                   // the header first…
+  if(f[1]){ enqueue([f[1]]); nextT=setTimeout(()=>requestForm(f[1]),2600); }   // …then the picture, held
+  [i+1,i-1].forEach(j=>{ if(D.stages[j]) enqueue([D.stages[j].forms[0]]); });
 }
 function onScroll(){
   const c=currentIndex();
   if(c!==pendIdx){ pendIdx=c; pendSince=performance.now(); }
-  clearTimeout(pendT); pendT=setTimeout(()=>activate(currentIndex()),170);   // settles 170ms after scrolling stops
+  clearTimeout(pendT); pendT=setTimeout(()=>activate(currentIndex()),320);   // settles a beat after scrolling stops
 }
 addEventListener('scroll',()=>{ onScroll(); scrollV+=scrollY-lastScrollY; lastScrollY=scrollY; },{passive:true});
 let scrollV=0,lastScrollY=scrollY;
@@ -868,7 +853,7 @@ function frame(t){
   if(!FIXQ&&t-tierAt>2500){ ftAcc+=raw; if(++ftN>=50){ const avg=ftAcc/ftN; ftAcc=0; ftN=0;
     if(avg>0.029&&tier<TIERS.length-1){ tier++; tierAt=t; retier(); return; } } }
   // retarget to the section in view once it has held for a moment, even mid-scroll
-  if(pendIdx!==active&&pendIdx>=0&&performance.now()-pendSince>450) activate(currentIndex());
+  if(pendIdx!==active&&pendIdx>=0&&performance.now()-pendSince>650) activate(currentIndex());
   mouse.on+=(mouse.ton-mouse.on)*Math.min(1,dt*(mouse.ton?10:2.5));
   mouse.x+=(mouse.tx-mouse.x)*Math.min(1,dt*22); mouse.y+=(mouse.ty-mouse.y)*Math.min(1,dt*22);
   mouse.vx*=Math.pow(0.02,dt); mouse.vy*=Math.pow(0.02,dt);
@@ -890,7 +875,7 @@ function retier(){
   if(SIM&&k){ // start the new, smaller set already in formation so the switch is invisible
     gl.bindFramebuffer(gl.FRAMEBUFFER,fbPos[0]); gl.viewport(0,0,S,S); gl.useProgram(P_seed.p); bindTargets(); f1(P_seed,'uRes',S); f1(P_seed,'uZR',70); drawQuad(P_seed);
     gl.bindFramebuffer(gl.FRAMEBUFFER,null); morphT0=time-10; }
-  if(active>=0) enqueue(D.stages[active].k);
+  if(active>=0) enqueue(D.stages[active].forms);
 }
 function drawStill(){
   yaw=0;pitch=0; time=morphT0+100;
@@ -912,7 +897,7 @@ addEventListener('resize',()=>{
   clearTimeout(rsT); rsT=setTimeout(()=>{
     sizeCanvas();
     if(!GLOK) return;
-    if(W!==lastW||Math.abs(H-lastH)>lastH*0.12){ lastW=W;lastH=H; cache.clear(); queue.length=0; seedDust(); const k=wantKey; curKey='x'; wantKey=null; if(k) requestForm(k); if(active>=0) enqueue(D.stages[active].k); }
+    if(W!==lastW||Math.abs(H-lastH)>lastH*0.12){ lastW=W;lastH=H; cache.clear(); queue.length=0; seedDust(); const k=wantKey; curKey='x'; wantKey=null; if(k) requestForm(k); if(active>=0) enqueue(D.stages[active].forms); }
     if(RM) drawStill();
   },180);
 });
@@ -921,7 +906,7 @@ canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();stop();GLOK=fa
 /* ---------- boot ---------- */
 sizeCanvas(); lastW=W; lastH=H;
 setupGL();
-if(DEBUG) window.__mm={show:k=>{clearTimeout(stageT);requestForm(k);},keys:D.stages,info:()=>({S,NP,SIM,tier,W,H,DPR})};
+if(DEBUG) window.__mm={show:k=>{clearTimeout(nextT);requestForm(k);},keys:D.stages,info:()=>({S,NP,SIM,tier,W,H,DPR})};
 sections[currentIndex()].classList.add('on','seen');
 const fontsReady=(document.fonts&&document.fonts.load)?Promise.all([
   document.fonts.load(`800 200px "Fraunces"`),document.fonts.load(`700 200px "Fraunces"`),document.fonts.load(`italic 800 200px "Fraunces"`)
