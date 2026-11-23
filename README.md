@@ -68,7 +68,7 @@ Dev-only files and folders at the top of a project are not published:
 `package-lock.json`, `eslint.config.js` and `README.md`; nor are dotfiles,
 anywhere. The list is in `build.mjs`.
 Folders in `_pages/` are published as plain pages at `/<folder>/` (for example
-`_pages/spb-resume/` at `/spb-resume/`). They get no card and skip the game checks.
+`_pages/savannahbakes-resume/` at `/savannahbakes-resume/`). They get no card and skip the game checks.
 
 Folders starting with `_` or `.`, plus `scripts`, `dist` and `node_modules`,
 are never treated as projects.

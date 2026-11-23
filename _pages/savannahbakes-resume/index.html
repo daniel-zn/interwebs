@@ -77,14 +77,14 @@ footer { margin-top: clamp(3rem, 8vw, 5rem); padding-top: 1.6rem; border-top: 1p
   <footer><a class="label" href="/">interwebs</a></footer>
 </main>
 <script>
-const versions = ['Bench Scope', 'The Workbench', 'Riso Zine', 'Infinite Zoom', 'The Museum', 'The Instrument', 'Living Matter', 'The Town'];
+const versions = [['Bench Scope', 'bench-scope'], ['The Workbench', 'workbench'], ['Riso Zine', 'riso-zine'], ['Infinite Zoom', 'infinite-zoom'], ['The Museum', 'museum'], ['The Instrument', 'instrument'], ['Living Matter', 'living-matter'], ['The Town', 'town']];
 const READY = window.READY || versions.map((_, i) => i + 1);
 const list = document.getElementById('list');
-versions.forEach((name, i) => {
+versions.forEach(([name, slug], i) => {
   const n = i + 1, ready = READY.includes(n), num = String(n).padStart(2, '0');
   const li = document.createElement('li');
   li.innerHTML = ready
-    ? `<a class="card" href="../spb-resume${n}/"><span class="shot"><img src="cover-${n}.webp" alt="" width="640" height="400" loading="${i < 4 ? 'eager' : 'lazy'}"></span>
+    ? `<a class="card" href="${slug}/"><span class="shot"><img src="${slug}/cover.webp" alt="" width="640" height="400" loading="${i < 4 ? 'eager' : 'lazy'}"></span>
         <span class="meta"><h2>${name}</h2><span class="label">${num}</span></span></a>`
     : `<div class="card pending"><span class="shot"><span class="label">In progress</span></span>
         <span class="meta"><h2>${name}</h2><span class="label">${num}</span></span></div>`;
