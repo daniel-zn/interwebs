@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Savannah Bakes · Résumé</title>
+<meta name="description" content="Savannah Bakes, #1 Ranked Enterprise Sales in Washington and Alaska.">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="light dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@300;400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;1,8..60,400;1,8..60,500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #e8ebe5;
+  --paper-2: #dfe4dc;
+  --ink: #1d2826;
+  --ink-2: #44514d;
+  --ink-3: #6c7772;
+  --rule: rgba(29, 40, 38, .22);
+  --rule-2: rgba(29, 40, 38, .45);
+  --earth: #8a5a36;      /* topographic brown */
+  --water: #2f6378;      /* survey blue */
+  --water-tint: rgba(47, 99, 120, .12);
+  --earth-tint: rgba(138, 90, 54, .13);
+  --c-low: 47, 99, 120;  /* contour colours, rgb triplets */
+  --c-high: 138, 90, 54;
+  --c-alpha: .42;
+  --serif: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+  --sans: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  --cond: 'IBM Plex Sans Condensed', 'Arial Narrow', 'IBM Plex Sans', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  --gutter: max(16px, env(safe-area-inset-left), env(safe-area-inset-right));
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #141b1c; --paper-2: #1a2324;
+    --ink: #dfe5df; --ink-2: #b2bcb6; --ink-3: #85908b;
+    --rule: rgba(223, 229, 223, .18); --rule-2: rgba(223, 229, 223, .38);
+    --earth: #c99a70; --water: #7fb3c6;
+    --water-tint: rgba(127, 179, 198, .14); --earth-tint: rgba(201, 154, 112, .14);
+    --c-low: 110, 160, 178; --c-high: 190, 146, 106; --c-alpha: .34;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #141b1c; --paper-2: #1a2324;
+  --ink: #dfe5df; --ink-2: #b2bcb6; --ink-3: #85908b;
+  --rule: rgba(223, 229, 223, .18); --rule-2: rgba(223, 229, 223, .38);
+  --earth: #c99a70; --water: #7fb3c6;
+  --water-tint: rgba(127, 179, 198, .14); --earth-tint: rgba(201, 154, 112, .14);
+  --c-low: 110, 160, 178; --c-high: 190, 146, 106; --c-alpha: .34;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--paper); color: var(--ink); -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font-family: var(--sans); font-size: 15px; line-height: 1.6;
+  position: relative; overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+ul { margin: 0; padding: 0; list-style: none; }
+h1, h2, h3, p { margin: 0; }
+
+/* ---------- generative ground ---------- */
+#ground {
+  position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 0;
+  display: block;
+}
+@media (prefers-reduced-motion: no-preference) {
+  #ground, .map svg.terrain { animation: settle 1.6s cubic-bezier(.2,.6,.2,1) both; }
+  @keyframes settle { from { opacity: 0; } to { opacity: 1; } }
+}
+
+.sheet {
+  position: relative; z-index: 1;
+  max-width: 1240px; margin: 0 auto;
+  padding: max(18px, env(safe-area-inset-top)) var(--gutter) max(48px, env(safe-area-inset-bottom));
+}
+
+/* ---------- collar ---------- */
+.collar {
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-3); padding: 6px 0 18px;
+}
+.collar a { text-decoration: none; color: var(--ink-2); padding: 4px 8px 4px 0; background: var(--paper); }
+.collar a:hover { color: var(--water); }
+.collar .ticks { flex: 1; height: 7px; margin-left: 18px;
+  background: repeating-linear-gradient(90deg, var(--rule-2) 0 1px, transparent 1px 24px) bottom / 100% 7px no-repeat; opacity: .7; }
+
+/* ---------- header: map + title block ---------- */
+.head {
+  display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  border: 1px solid var(--rule-2);
+  background: var(--paper);
+}
+.map { position: relative; border-right: 1px solid var(--rule-2); min-height: 560px; overflow: hidden; background: var(--paper-2); }
+.map svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.map .lbl { font-family: var(--serif); font-style: italic; font-size: 15px; fill: var(--ink); paint-order: stroke; stroke: var(--paper-2); stroke-width: 5px; stroke-linejoin: round; }
+.map .lbl-sm { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; fill: var(--ink-2); paint-order: stroke; stroke: var(--paper-2); stroke-width: 4px; stroke-linejoin: round; }
+.map .region { font-family: var(--serif); font-style: italic; font-size: 22px; letter-spacing: .42em; fill: var(--ink-2); opacity: .8; paint-order: stroke; stroke: var(--paper-2); stroke-width: 6px; }
+.map .grat { stroke: var(--rule); stroke-width: 1; fill: none; }
+.map .grat-l { font-family: var(--mono); font-size: 9.5px; fill: var(--ink-3); letter-spacing: .05em; }
+.map .border { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 7 3 1.5 3; fill: none; opacity: .75; }
+.map .stn-x { fill: var(--earth); stroke: var(--paper-2); stroke-width: 1.5; }
+.map .stn-e { fill: var(--paper-2); stroke: var(--water); stroke-width: 1.6; }
+.map .spot { font-family: var(--cond); font-weight: 500; font-size: 13px; fill: var(--earth); paint-order: stroke; stroke: var(--paper-2); stroke-width: 4px; }
+
+.title-block { display: grid; grid-template-rows: auto 1fr auto; }
+.tb-cell { padding: 22px 26px; border-bottom: 1px solid var(--rule-2); }
+.tb-cell:last-child { border-bottom: 0; }
+.tb-k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); display: block; margin-bottom: 10px; }
+h1 {
+  font-family: var(--serif); font-weight: 400; font-size: clamp(44px, 5.4vw, 74px);
+  line-height: .95; letter-spacing: -.015em; font-variation-settings: "opsz" 60;
+}
+.headline { margin-top: 20px; display: flex; gap: 16px; align-items: flex-start; }
+.headline .bm { font-family: var(--cond); font-weight: 300; font-size: 64px; line-height: .8; color: var(--earth); letter-spacing: -.02em; position: relative; padding-top: 14px; }
+.headline .bm::before { content: ""; position: absolute; left: 2px; top: 0; border: 5px solid transparent; border-bottom: 8px solid var(--earth); border-top: 0; }
+.headline .ht { font-family: var(--sans); font-size: 17px; line-height: 1.35; font-weight: 500; padding-top: 8px; max-width: 18em; }
+/* separators sit before each item; any that start a wrapped line fall into the clipped gutter */
+.focus-wrap { margin-top: 18px; overflow: hidden; }
+.focus { display: flex; flex-wrap: wrap; margin-left: -1.5em; font-family: var(--serif); font-style: italic; font-size: 16px; color: var(--ink-2); }
+.focus li { white-space: nowrap; }
+.focus li::before { content: "·"; display: inline-block; width: 1.5em; text-align: center; font-style: normal; color: var(--ink-3); }
+
+.legend { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
+.legend li { display: flex; align-items: center; gap: 10px; font-family: var(--sans); font-size: 13.5px; }
+.sym { width: 16px; height: 14px; flex: 0 0 auto; display: inline-block; }
+
+.contact h2 { font-family: var(--mono); font-weight: 400; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+.contact ul { display: grid; gap: 6px; }
+.contact a { font-family: var(--mono); font-size: 13.5px; text-decoration: none; border-bottom: 1px solid var(--rule-2); overflow-wrap: anywhere; }
+.contact a.pdf { color: var(--earth); border-color: var(--earth); }
+.contact a:hover { color: var(--water); border-color: var(--water); }
+
+/* ---------- sections ---------- */
+.part { margin-top: 128px; }
+.part-head {
+  display: flex; align-items: baseline; gap: 16px; margin-bottom: 26px;
+  border-bottom: 1px solid var(--rule-2); padding-bottom: 10px; background: var(--paper);
+  width: fit-content; padding-right: 20px;
+}
+.part-head .no { font-family: var(--mono); font-size: 12px; color: var(--earth); letter-spacing: .08em; }
+.part-head h2 { font-family: var(--serif); font-weight: 400; font-size: 34px; letter-spacing: .01em; line-height: 1; }
+.part-head .sym { align-self: center; }
+
+.entry {
+  display: grid; grid-template-columns: 190px minmax(0, 1fr) 300px; gap: 0;
+  border-top: 1px solid var(--rule-2);
+  background: var(--paper);
+  margin-bottom: 56px;
+}
+.entry:last-child { margin-bottom: 0; }
+.entry > * { padding: 20px 24px 24px; }
+.entry > * + * { border-left: 1px solid var(--rule); }
+.meta .when { font-family: var(--mono); font-size: 13px; letter-spacing: .04em; color: var(--ink); display: block; }
+.meta .where { margin-top: 10px; display: flex; gap: 8px; align-items: baseline; font-family: var(--serif); font-style: italic; font-size: 16px; color: var(--ink-2); line-height: 1.3; }
+.meta .where .sym { transform: translateY(2px); }
+.body h3 { font-family: var(--sans); font-weight: 600; font-size: 19px; line-height: 1.25; letter-spacing: -.005em; }
+.body .org { margin-top: 4px; font-family: var(--sans); font-size: 14px; color: var(--water); font-weight: 500; letter-spacing: .01em; }
+.body .detail { margin-top: 6px; font-family: var(--serif); font-style: italic; font-size: 15.5px; color: var(--ink-2); }
+.body ul { margin-top: 14px; display: grid; gap: 8px; }
+.body li { position: relative; padding-left: 18px; color: var(--ink-2); max-width: 64ch; }
+.body li::before { content: ""; position: absolute; left: 1px; top: .72em; width: 8px; height: 1px; background: var(--earth); }
+
+/* spot heights */
+.heights { display: grid; gap: 18px; align-content: start; }
+.sh { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: end; }
+.sh .v { font-family: var(--cond); font-weight: 300; font-size: 40px; line-height: .9; color: var(--earth); letter-spacing: -.01em; grid-row: span 1; position: relative; padding-top: 10px; white-space: nowrap; }
+.sh .v::before { content: ""; position: absolute; left: 1px; top: 0; border: 4px solid transparent; border-bottom: 6px solid currentColor; border-top: 0; }
+.sh .v.xl { font-size: 64px; }
+.sh .v.w { color: var(--water); }
+.sh .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); line-height: 1.35; padding-bottom: 3px; }
+.sh.pair { grid-template-columns: 1fr 1fr; }
+.sh.pair > div { display: grid; gap: 4px; }
+.fig { display: grid; gap: 6px; }
+.fig svg { width: 100%; max-width: 330px; height: auto; display: block; overflow: visible; }
+.fig .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); line-height: 1.35; }
+.fig text { font-family: var(--mono); font-size: 10px; fill: var(--ink-3); }
+.fig text.em { font-family: var(--cond); font-size: 15px; font-weight: 500; fill: var(--earth); }
+.fig text.emw { font-family: var(--cond); font-size: 15px; font-weight: 500; fill: var(--water); }
+.word { font-family: var(--cond); font-size: 24px; font-weight: 400; color: var(--water); line-height: 1.1; }
+
+/* skills: gazetteer */
+.gaz { background: var(--paper); border-top: 1px solid var(--rule-2); display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); }
+.gaz li { padding: 14px 16px 16px; border-bottom: 1px solid var(--rule); display: flex; gap: 10px; align-items: baseline; font-size: 14.5px; }
+.gaz li:not(:nth-child(5n)) { border-right: 1px solid var(--rule); }
+.gaz .n { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); min-width: 2ch; }
+
+.foot { margin-top: 110px; display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; align-items: baseline;
+  border-top: 1px solid var(--rule-2); padding-top: 14px; background: var(--paper);
+  font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+.foot a { text-decoration: none; border-bottom: 1px solid var(--rule-2); }
+.foot a:hover { color: var(--water); }
+.foot .nm { font-family: var(--serif); font-size: 17px; color: var(--ink); }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1080px) {
+  .entry { grid-template-columns: 160px minmax(0, 1fr); }
+  .entry .heights { grid-column: 2; border-left: 1px solid var(--rule); border-top: 1px dashed var(--rule); grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  .gaz { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .gaz li:not(:nth-child(5n)) { border-right: 0; }
+  .gaz li:not(:nth-child(3n)) { border-right: 1px solid var(--rule); }
+}
+@media (max-width: 860px) {
+  .head { grid-template-columns: 1fr; }
+  .map { border-right: 0; border-bottom: 1px solid var(--rule-2); min-height: 0; aspect-ratio: 1 / 1.14; }
+}
+@media (max-width: 640px) {
+  body { font-size: 14.5px; }
+  .tb-cell { padding: 18px 18px; }
+  h1 { font-size: 46px; }
+  .headline .bm { font-size: 52px; }
+  .headline .ht { font-size: 16px; }
+  .focus { display: grid; gap: 2px; margin-left: 0; }
+  .focus li::before { content: none; }
+  .part { margin-top: 88px; }
+  .part-head h2 { font-size: 28px; }
+  .entry { grid-template-columns: 1fr; margin-bottom: 40px; }
+  .entry > * { padding: 16px 0 18px; }
+  .entry > * + * { border-left: 0; }
+  .entry .meta { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding-bottom: 0; }
+  .meta .where { margin-top: 0; text-align: right; font-size: 15px; }
+  .entry .heights { grid-column: auto; border-left: 0; border-top: 1px dashed var(--rule); grid-template-columns: 1fr 1fr; gap: 16px 14px; }
+  .entry .heights .fig, .entry .heights .wide { grid-column: 1 / -1; }
+  .sh { grid-template-columns: 1fr; }
+  .sh .v { font-size: 34px; }
+  .sh .v.xl { font-size: 54px; }
+  .gaz { grid-template-columns: 1fr 1fr; }
+  .gaz li { padding: 12px 10px 13px; font-size: 14px; }
+  .gaz li:not(:nth-child(3n)) { border-right: 0; }
+  .gaz li:nth-child(odd) { border-right: 1px solid var(--rule); }
+  .legend { grid-template-columns: 1fr 1fr; }
+}
+@media print {
+  #ground { display: none; }
+  .part { margin-top: 36px; break-inside: auto; }
+  .entry { break-inside: avoid; margin-bottom: 18px; }
+  .collar a { display: none; }
+}
+</style>
+</head>
+<body>
+<svg id="ground" aria-hidden="true"></svg>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="s-exp" viewBox="0 0 16 14"><path d="M8 1.5 L14.5 12.5 H1.5 Z" fill="var(--earth)"/></symbol>
+    <symbol id="s-edu" viewBox="0 0 16 14"><rect x="2.5" y="1.5" width="11" height="11" fill="none" stroke="var(--water)" stroke-width="1.6"/><rect x="6" y="5" width="4" height="4" fill="var(--water)"/></symbol>
+    <symbol id="s-skl" viewBox="0 0 16 14"><circle cx="8" cy="7" r="5.2" fill="none" stroke="var(--ink-2)" stroke-width="1.3"/><circle cx="8" cy="7" r="1.6" fill="var(--ink-2)"/></symbol>
+    <symbol id="s-con" viewBox="0 0 16 14"><path d="M8 1 L14 7 L8 13 L2 7 Z" fill="none" stroke="var(--ink-2)" stroke-width="1.3"/><path d="M8 4.5 L10.5 7 L8 9.5 L5.5 7 Z" fill="var(--ink-2)"/></symbol>
+  </defs>
+</svg>
+
+<div class="sheet">
+  <nav class="collar"><a href="../">← All versions</a><span class="ticks" aria-hidden="true"></span></nav>
+
+  <header class="head">
+    <div class="map" aria-hidden="true">
+      <svg class="terrain" id="mapTerrain"></svg>
+      <svg id="mapLabels"></svg>
+    </div>
+
+    <div class="title-block">
+      <div class="tb-cell" data-calm>
+        <h1>Savannah Bakes</h1>
+        <p class="headline"><span class="bm">#1</span><span class="ht">Ranked Enterprise Sales in Washington and Alaska</span></p>
+        <div class="focus-wrap"><ul class="focus">
+          <li>Consultative Selling</li>
+          <li>Relationship Development</li>
+          <li>Technology Solutions</li>
+        </ul></div>
+      </div>
+      <div class="tb-cell">
+        <ul class="legend">
+          <li><svg class="sym"><use href="#s-exp"/></svg><span>Experience</span></li>
+          <li><svg class="sym"><use href="#s-edu"/></svg><span>Education</span></li>
+          <li><svg class="sym"><use href="#s-skl"/></svg><span>Skills</span></li>
+          <li><svg class="sym"><use href="#s-con"/></svg><span>Contact</span></li>
+        </ul>
+      </div>
+      <section class="tb-cell contact" id="contact" aria-labelledby="contact-h">
+        <h2 id="contact-h">Contact</h2>
+        <ul>
+          <li><a href="mailto:savannahpbakes@gmail.com">savannahpbakes@gmail.com</a></li>
+          <li><a href="https://www.linkedin.com/in/savannah-bakes" rel="noopener">linkedin.com/in/savannah-bakes</a></li>
+          <li><a class="pdf" href="../Savannah-Bakes-Resume.pdf" download>Savannah-Bakes-Resume.pdf <span aria-hidden="true">↓</span></a></li>
+        </ul>
+      </section>
+    </div>
+  </header>
+
+  <main>
+    <section class="part" data-calm id="experience" aria-labelledby="exp-h">
+      <div class="part-head"><span class="no">01</span><svg class="sym"><use href="#s-exp"/></svg><h2 id="exp-h">Experience</h2></div>
+
+      <article class="entry">
+        <div class="meta"><span class="when">2026</span><span class="where"><svg class="sym"><use href="#s-exp"/></svg>Seattle Airport</span></div>
+        <div class="body">
+          <h3>Sales Manager Trainee</h3>
+          <p class="org">Enterprise Mobility</p>
+          <ul>
+            <li>Received several #1 in sales awards across all of Washington and Alaska (500 employees, ~110 branches) three months after joining, then relocated to the “best of the best” airport operations program</li>
+            <li>Supports branch sales goals: conversion, revenue per transaction, upselling and satisfaction KPIs</li>
+            <li>Measurable results in high-volume environments: identified customer needs, built trust, overcame objections</li>
+            <li>On a team of 3, raised the satisfaction score from 86% to 89% within 2 months</li>
+          </ul>
+        </div>
+        <div class="heights">
+          <div class="sh wide"><span class="v xl">#1</span><span class="k">in sales<br>WA + AK</span></div>
+          <div class="sh pair">
+            <div><span class="sh"><span class="v">500</span></span><span class="k">employees</span></div>
+            <div><span class="sh"><span class="v">~110</span></span><span class="k">branches</span></div>
+          </div>
+          <figure class="fig" style="margin:0">
+            <svg viewBox="0 0 252 112" role="img" aria-label="Satisfaction score rose from 86% to 89% within 2 months">
+              <!-- y: 84%..90% mapped 96..8 ; x: 0..2 months mapped 34..236 -->
+              <g stroke="var(--rule)" stroke-width="1">
+                <line x1="34" y1="96" x2="236" y2="96"/>
+                <line x1="34" y1="8" x2="34" y2="96"/>
+              </g>
+              <g stroke="var(--rule)" stroke-dasharray="1 3">
+                <line x1="34" y1="66.67" x2="236" y2="66.67"/>
+                <line x1="34" y1="22.67" x2="236" y2="22.67"/>
+              </g>
+              <path d="M34 66.67 L236 22.67 L236 96 L34 96 Z" fill="var(--earth-tint)"/>
+              <g stroke="var(--earth)" stroke-width=".6" opacity=".5">
+                <line x1="34" y1="66.67" x2="34" y2="96"/>
+              </g>
+              <path d="M34 66.67 L236 22.67" stroke="var(--earth)" stroke-width="1.6" fill="none"/>
+              <circle cx="34" cy="66.67" r="3" fill="var(--paper)" stroke="var(--earth)" stroke-width="1.4"/>
+              <circle cx="236" cy="22.67" r="3.4" fill="var(--earth)"/>
+              <text x="40" y="60" class="em">86%</text>
+              <text x="236" y="14" text-anchor="end" class="em">89%</text>
+              <text x="28" y="99" text-anchor="end">84</text>
+              <text x="28" y="11" text-anchor="end">90</text>
+              <text x="34" y="110">0</text>
+              <text x="236" y="110" text-anchor="end">2 months</text>
+            </svg>
+            <figcaption class="k">Satisfaction score · team of 3</figcaption>
+          </figure>
+        </div>
+      </article>
+
+      <article class="entry">
+        <div class="meta"><span class="when">2024</span><span class="where"><svg class="sym"><use href="#s-exp"/></svg>British Columbia</span></div>
+        <div class="body">
+          <h3>Indigenous Relations Program Manager</h3>
+          <p class="org">British Columbia Utilities Commission</p>
+          <ul>
+            <li>Translated complex policy research and stakeholder analysis on Indigenous energy-sector participation into structured materials, improving engagement by 30% and enabling a broader rollout with clear success metrics</li>
+            <li>Engagement strategy, event coordination, regulatory communications</li>
+            <li>Planned and facilitated multi-stakeholder workshops and follow-ups (100+ staff and senior leaders) supporting regulatory understanding and Indigenous participation in new energy products and programs</li>
+          </ul>
+        </div>
+        <div class="heights">
+          <div class="sh"><span class="v xl">+30%</span><span class="k">engagement</span></div>
+          <div class="sh"><span class="v">100+</span><span class="k">staff and<br>senior leaders</span></div>
+        </div>
+      </article>
+
+      <article class="entry">
+        <div class="meta"><span class="when">2023–2024</span><span class="where"><svg class="sym"><use href="#s-exp"/></svg>Technology startup</span></div>
+        <div class="body">
+          <h3>Product Enablement Lead</h3>
+          <p class="org">AidMe</p>
+          <ul>
+            <li>Drove adoption of an Amazon Web Services and GoPro-powered product that measures fish populations and disease</li>
+            <li>Partnered with engineering and leadership to turn user feedback, especially from Indigenous community stakeholders, into workflow and enablement improvements that informed prioritization</li>
+          </ul>
+        </div>
+        <div class="heights">
+          <div class="fig"><span class="word">AWS + GoPro</span><span class="k">measures fish populations and disease</span></div>
+        </div>
+      </article>
+
+      <article class="entry">
+        <div class="meta"><span class="when">2025–2026</span><span class="where"><svg class="sym"><use href="#s-exp"/></svg>Chilliwack</span></div>
+        <div class="body">
+          <h3>High School Science Teacher</h3>
+          <p class="org">SD33 Chilliwack School District</p>
+          <ul>
+            <li>Designed and delivered Grade 12 science and technology curricula for 1,000+ learners: simplified complex topics, defined success criteria, communicated clearly across diverse audiences</li>
+            <li>Faculty observed GPA improvements of 10 to 20 percent and higher attendance and engagement</li>
+          </ul>
+        </div>
+        <div class="heights">
+          <div class="sh wide"><span class="v xl">1,000+</span><span class="k">learners</span></div>
+          <figure class="fig" style="margin:0">
+            <svg viewBox="0 0 252 52" role="img" aria-label="GPA improvements of 10 to 20 percent">
+              <!-- scale 0..25% mapped 4..244 -->
+              <line x1="4" y1="22" x2="244" y2="22" stroke="var(--rule-2)"/>
+              <g stroke="var(--rule-2)"><line x1="4" y1="18" x2="4" y2="26"/><line x1="100" y1="18" x2="100" y2="26"/><line x1="196" y1="18" x2="196" y2="26"/></g>
+              <rect x="100" y="15" width="96" height="14" fill="var(--earth-tint)" stroke="var(--earth)" stroke-width="1.2"/>
+              <text x="148" y="10" text-anchor="middle" class="em">+10–20%</text>
+              <text x="4" y="44">0</text><text x="100" y="44" text-anchor="middle">10</text><text x="196" y="44" text-anchor="middle">20%</text>
+            </svg>
+            <figcaption class="k">GPA improvement observed by faculty</figcaption>
+          </figure>
+        </div>
+      </article>
+
+      <article class="entry">
+        <div class="meta"><span class="when">2025</span><span class="where"><svg class="sym"><use href="#s-exp"/></svg>Richmond</span></div>
+        <div class="body">
+          <h3>Student Teacher</h3>
+          <p class="org">SD38 Richmond School District</p>
+          <ul>
+            <li>Designed and delivered Grade 9 and 12 science courses in an inquiry-driven, place-based curriculum</li>
+            <li>Built a website on Medicine Wheel-based curricula, featured by her university and adopted by educators across British Columbia</li>
+          </ul>
+        </div>
+        <div class="heights">
+          <div class="sh"><span class="v">9 · 12</span><span class="k">grades</span></div>
+          <div class="sh"><span class="v w">BC</span><span class="k">adopted by educators<br>across British Columbia</span></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="part" data-calm id="education" aria-labelledby="edu-h">
+      <div class="part-head"><span class="no">02</span><svg class="sym"><use href="#s-edu"/></svg><h2 id="edu-h">Education</h2></div>
+      <article class="entry">
+        <div class="meta"><span class="when">2020–2025</span><span class="where"><svg class="sym"><use href="#s-edu"/></svg>University of British Columbia</span></div>
+        <div class="body">
+          <h3>Bachelor of Education</h3>
+          <p class="org">University of British Columbia</p>
+          <p class="detail">Biology and Earth Science double minor, Indigenous Specialization</p>
+          <ul>
+            <li>One of 8 students in Canada to receive the Centennial full scholarship award for high achievement</li>
+            <li>Specialization in Indigenous Education with an Outstanding Practicum award, and 2× Indigenous Alumni Scholarship</li>
+            <li>Represented 750 Bachelor of Education students; as graduation coordinator, organized a grad gala for 300 people (vendors, logistics, permits, project management)</li>
+            <li>Coordinated activities, tours and outreach to onboard hundreds of Indigenous students during orientation week, as a primary point of contact</li>
+          </ul>
+        </div>
+        <div class="heights">
+          <figure class="fig" style="margin:0">
+            <svg viewBox="0 0 252 46" role="img" aria-label="One of 8 students in Canada">
+              <text x="0" y="13" class="emw">1 of 8</text>
+              <g id="eight"></g>
+            </svg>
+            <figcaption class="k">students in Canada · Centennial full scholarship</figcaption>
+          </figure>
+          <figure class="fig" style="margin:0">
+            <svg viewBox="0 0 252 70" role="img" aria-label="750 students represented; 300-person gala">
+              <!-- shared scale 0..750 mapped to 0..252 -->
+              <rect x="0" y="16" width="252" height="10" fill="var(--water-tint)" stroke="var(--water)" stroke-width="1"/>
+              <text x="0" y="11" class="emw">750<tspan dx="6" style="font-family:var(--mono);font-size:10px;font-weight:400;fill:var(--ink-3)">students represented</tspan></text>
+              <rect x="0" y="50" width="100.8" height="10" fill="var(--earth-tint)" stroke="var(--earth)" stroke-width="1"/>
+              <text x="0" y="45" class="em">300<tspan style="font-family:var(--mono);font-size:10px;font-weight:400;fill:var(--ink-3)">-person gala</tspan></text>
+            </svg>
+            <figcaption class="k">same scale</figcaption>
+          </figure>
+        </div>
+      </article>
+    </section>
+
+    <section class="part" data-calm id="skills" aria-labelledby="skl-h">
+      <div class="part-head"><span class="no">03</span><svg class="sym"><use href="#s-skl"/></svg><h2 id="skl-h">Skills</h2></div>
+      <ul class="gaz">
+        <li><span class="n">01</span>Sales OKRs/KPIs</li>
+        <li><span class="n">02</span>Program and Product Management</li>
+        <li><span class="n">03</span>Instructional Design</li>
+        <li><span class="n">04</span>Office M365 Suite</li>
+        <li><span class="n">05</span>User research</li>
+        <li><span class="n">06</span>Enablement/documentation</li>
+        <li><span class="n">07</span>Presentations</li>
+        <li><span class="n">08</span>Public speaking</li>
+        <li><span class="n">09</span>Educational outreach</li>
+        <li><span class="n">10</span>AI tools</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="foot" data-calm>
+    <span class="nm">Savannah Bakes</span>
+    <span><a href="mailto:savannahpbakes@gmail.com">savannahpbakes@gmail.com</a> &nbsp;·&nbsp; <a href="https://www.linkedin.com/in/savannah-bakes" rel="noopener">linkedin.com/in/savannah-bakes</a> &nbsp;·&nbsp; <a href="../Savannah-Bakes-Resume.pdf" download>PDF ↓</a></span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var NS = 'http://www.w3.org/2000/svg';
+
+  /* ---- 2D simplex noise, seeded ---- */
+  function makeNoise(seed) {
+    var p = new Uint8Array(256), perm = new Uint8Array(512), i;
+    for (i = 0; i < 256; i++) p[i] = i;
+    var s = seed >>> 0;
+    function rnd() { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }
+    for (i = 255; i > 0; i--) { var j = Math.floor(rnd() * (i + 1)); var t = p[i]; p[i] = p[j]; p[j] = t; }
+    for (i = 0; i < 512; i++) perm[i] = p[i & 255];
+    var G = [[1,1],[-1,1],[1,-1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]];
+    var F2 = 0.5 * (Math.sqrt(3) - 1), G2 = (3 - Math.sqrt(3)) / 6;
+    return function (xin, yin) {
+      var n0 = 0, n1 = 0, n2 = 0;
+      var sk = (xin + yin) * F2, i = Math.floor(xin + sk), j = Math.floor(yin + sk);
+      var t = (i + j) * G2, x0 = xin - (i - t), y0 = yin - (j - t);
+      var i1 = x0 > y0 ? 1 : 0, j1 = 1 - i1;
+      var x1 = x0 - i1 + G2, y1 = y0 - j1 + G2, x2 = x0 - 1 + 2 * G2, y2 = y0 - 1 + 2 * G2;
+      var ii = i & 255, jj = j & 255, g, t0 = 0.5 - x0*x0 - y0*y0, t1 = 0.5 - x1*x1 - y1*y1, t2 = 0.5 - x2*x2 - y2*y2;
+      if (t0 > 0) { g = G[perm[ii + perm[jj]] & 7]; t0 *= t0; n0 = t0 * t0 * (g[0]*x0 + g[1]*y0); }
+      if (t1 > 0) { g = G[perm[ii + i1 + perm[jj + j1]] & 7]; t1 *= t1; n1 = t1 * t1 * (g[0]*x1 + g[1]*y1); }
+      if (t2 > 0) { g = G[perm[ii + 1 + perm[jj + 1]] & 7]; t2 *= t2; n2 = t2 * t2 * (g[0]*x2 + g[1]*y2); }
+      return 70 * (n0 + n1 + n2);
+    };
+  }
+  var noise = makeNoise(20260523);
+  function field(x, y) {
+    // domain-warped fbm: long ridges with a few summits
+    var wx = x + 0.55 * noise(x * 0.6 + 11.3, y * 0.6 - 4.1);
+    var wy = y + 0.55 * noise(x * 0.6 - 7.7, y * 0.6 + 2.9);
+    var v = 0, a = 1, f = 1, n = 0;
+    for (var o = 0; o < 3; o++) { v += a * noise(wx * f, wy * f); n += a; a *= 0.5; f *= 2.03; }
+    return v / n;
+  }
+
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  /* ---- marching squares into svg paths ----
+     opts: w,h,step,scale,ox,oy,levels(step),calm(rects),fade,alpha */
+  function contours(svg, o) {
+    var cols = Math.ceil(o.w / o.step) + 1, rows = Math.ceil(o.h / o.step) + 1;
+    var g = new Float32Array(cols * rows), x, y, k, mn = Infinity, mx = -Infinity;
+    for (y = 0; y < rows; y++) for (x = 0; x < cols; x++) {
+      var v = field((x * o.step + o.ox) / o.scale, (y * o.step + o.oy) / o.scale);
+      g[y * cols + x] = v; if (v < mn) mn = v; if (v > mx) mx = v;
+    }
+    var L = o.interval, base = Math.ceil(mn / L), top = Math.floor(mx / L);
+    var nb = 4, buckets = {}; // key level|bucket -> string
+    var calm = o.calm || [], fade = o.fade || 1;
+    function alphaAt(px, py) {
+      var d = Infinity;
+      for (var r = 0; r < calm.length; r++) {
+        var c = calm[r];
+        var dx = Math.max(c.l - px, 0, px - c.r), dy = Math.max(c.t - py, 0, py - c.b);
+        var dd = (dx > 0 || dy > 0) ? Math.sqrt(dx*dx + dy*dy) : -1;
+        if (dd < d) d = dd;
+        if (d < 0) return 0;
+      }
+      return d >= fade ? 1 : d / fade;
+    }
+    function emit(lvl, ax, ay, bx, by) {
+      var a = calm.length ? alphaAt((ax + bx) / 2, (ay + by) / 2) : 1;
+      if (a < 0.06) return;
+      var b = Math.min(nb - 1, Math.floor(a * nb));
+      var key = lvl + '|' + b;
+      buckets[key] = (buckets[key] || '') + 'M' + ax.toFixed(1) + ' ' + ay.toFixed(1) + 'L' + bx.toFixed(1) + ' ' + by.toFixed(1);
+    }
+    var s = o.step;
+    for (y = 0; y < rows - 1; y++) for (x = 0; x < cols - 1; x++) {
+      var i0 = y * cols + x, a0 = g[i0], a1 = g[i0 + 1], a2 = g[i0 + cols + 1], a3 = g[i0 + cols];
+      var lo = Math.min(a0, a1, a2, a3), hi = Math.max(a0, a1, a2, a3);
+      var k0 = Math.max(base, Math.ceil(lo / L)), k1 = Math.min(top, Math.floor(hi / L));
+      var X = x * s, Y = y * s;
+      for (k = k0; k <= k1; k++) {
+        var t = k * L, c = 0;
+        if (a0 > t) c |= 8; if (a1 > t) c |= 4; if (a2 > t) c |= 2; if (a3 > t) c |= 1;
+        if (c === 0 || c === 15) continue;
+        // edge points: top(0-1), right(1-2), bottom(3-2), left(0-3)
+        var T = [X + s * (t - a0) / (a1 - a0), Y], R = [X + s, Y + s * (t - a1) / (a2 - a1)];
+        var B = [X + s * (t - a3) / (a2 - a3), Y + s], Lf = [X, Y + s * (t - a0) / (a3 - a0)];
+        var P;
+        switch (c) {
+          case 1: case 14: P = [Lf, B]; break;
+          case 2: case 13: P = [B, R]; break;
+          case 3: case 12: P = [Lf, R]; break;
+          case 4: case 11: P = [T, R]; break;
+          case 6: case 9: P = [T, B]; break;
+          case 7: case 8: P = [Lf, T]; break;
+          case 5: P = [Lf, T, B, R]; break;
+          case 10: P = [Lf, B, T, R]; break;
+        }
+        emit(k, P[0][0], P[0][1], P[1][0], P[1][1]);
+        if (P.length === 4) emit(k, P[2][0], P[2][1], P[3][0], P[3][1]);
+      }
+    }
+    var low = css('--c-low').split(',').map(Number), high = css('--c-high').split(',').map(Number);
+    var A = parseFloat(css('--c-alpha')) * (o.alpha || 1);
+    var frag = document.createDocumentFragment();
+    Object.keys(buckets).forEach(function (key) {
+      var parts = key.split('|'), lvl = +parts[0], b = +parts[1];
+      var u = (lvl - base) / Math.max(1, top - base); // 0 low .. 1 high
+      var m = Math.max(0, Math.min(1, (u - 0.25) / 0.5));
+      var col = low.map(function (c, i) { return Math.round(c + (high[i] - c) * m); });
+      var idx = ((lvl % 5) + 5) % 5 === 0;
+      var path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', buckets[key]);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', 'rgb(' + col.join(',') + ')');
+      path.setAttribute('stroke-opacity', (A * (idx ? 1.55 : 1) * (b + 1) / nb).toFixed(3));
+      path.setAttribute('stroke-width', idx ? '1' : '0.55');
+      path.setAttribute('stroke-linecap', 'round');
+      frag.appendChild(path);
+    });
+    svg.textContent = '';
+    svg.setAttribute('viewBox', '0 0 ' + o.w + ' ' + o.h);
+    svg.appendChild(frag);
+  }
+
+  /* ---- background ground, calm under text ---- */
+  var ground = document.getElementById('ground'), lastKey = '';
+  function drawGround() {
+    var w = document.documentElement.clientWidth, h = document.body.scrollHeight;
+    var key = w + 'x' + h + css('--c-alpha');
+    if (key === lastKey) return; lastKey = key;
+    ground.style.height = h + 'px';
+    ground.setAttribute('width', w); ground.setAttribute('height', h);
+    var pad = w < 640 ? 6 : 12;
+    var calm = Array.prototype.map.call(document.querySelectorAll('[data-calm], .head, .collar a'), function (el) {
+      var r = el.getBoundingClientRect(), sy = window.scrollY;
+      return { l: r.left - pad, r: r.right + pad, t: r.top + sy - pad, b: r.bottom + sy + pad };
+    });
+    contours(ground, { w: w, h: h, step: w < 640 ? 9 : 8, scale: w < 640 ? 300 : 460, ox: 0, oy: 0, interval: 0.055, calm: calm, fade: w < 640 ? 34 : 70 });
+  }
+
+  /* ---- header map ---- */
+  var mapEl = document.querySelector('.map'), terrain = document.getElementById('mapTerrain'), labels = document.getElementById('mapLabels');
+  var places = [
+    { n: 'University of British Columbia', short: 'University of British Columbia', lon: -123.246, lat: 49.261, when: '2020–2025', kind: 'e', dx: -14, dy: -12, anchor: 'end' },
+    { n: 'Richmond', lon: -123.137, lat: 49.166, when: '2025', kind: 'x', dx: -10, dy: 18, anchor: 'end' },
+    { n: 'Chilliwack', lon: -121.951, lat: 49.158, when: '2025–2026', kind: 'x', dx: 10, dy: -10, anchor: 'start' },
+    { n: 'Seattle Airport', lon: -122.309, lat: 47.449, when: '2026', kind: 'x', dx: 12, dy: 4, anchor: 'start', spot: '#1' }
+  ];
+  function el(name, attrs, text) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function drawMap() {
+    var w = mapEl.clientWidth, h = mapEl.clientHeight;
+    if (!w || !h) return;
+    contours(terrain, { w: w, h: h, step: 5, scale: 360, ox: 2400, oy: 900, interval: 0.065, alpha: 1.5 });
+    // projection: equirectangular with cos(lat0), fit bbox
+    var lat0 = 48.4, k = Math.cos(lat0 * Math.PI / 180);
+    var bb = { w: -124.0, e: -121.3, s: 47.05, n: 49.75 };
+    var bw = (bb.e - bb.w) * k, bh = bb.n - bb.s;
+    var sc = Math.min((w - 40) / bw, (h - 40) / bh);
+    var cx = (bb.w + bb.e) / 2, cy = (bb.s + bb.n) / 2;
+    function P(lon, lat) { return [w / 2 + (lon - cx) * k * sc, h / 2 - (lat - cy) * sc]; }
+    labels.textContent = '';
+    labels.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+    var g = el('g', {});
+    // graticule
+    [-124, -123, -122].forEach(function (lon) {
+      var a = P(lon, 46), b = P(lon, 51);
+      if (a[0] < 0 || a[0] > w) return;
+      g.appendChild(el('line', { x1: a[0], y1: 0, x2: b[0], y2: h, class: 'grat' }));
+      g.appendChild(el('text', { x: a[0] + 4, y: h - 8, class: 'grat-l' }, Math.abs(lon) + '°W'));
+    });
+    [48].forEach(function (lat) {
+      var a = P(-125, lat);
+      g.appendChild(el('line', { x1: 0, y1: a[1], x2: w, y2: a[1], class: 'grat' }));
+      g.appendChild(el('text', { x: 6, y: a[1] - 5, class: 'grat-l' }, lat + '°N'));
+    });
+    // 49th parallel boundary
+    var bdy = P(-125, 49)[1];
+    g.appendChild(el('line', { x1: 0, y1: bdy, x2: w, y2: bdy, class: 'border' }));
+    g.appendChild(el('text', { x: 6, y: bdy - 5, class: 'grat-l' }, '49°N'));
+    // region name
+    var rp = P(-122.65, 49.55);
+    var rt = el('text', { x: rp[0], y: rp[1], class: 'region', 'text-anchor': 'middle' }, 'BRITISH COLUMBIA');
+    if (w < 520) { rt.setAttribute('style', 'font-size:15px;letter-spacing:.3em'); rt.setAttribute('y', 22); rt.setAttribute('x', w / 2); }
+    g.appendChild(rt);
+    // stations
+    places.forEach(function (p) {
+      var q = P(p.lon, p.lat), narrow = w < 520;
+      var name = p.n;
+      if (p.kind === 'e') {
+        g.appendChild(el('rect', { x: q[0] - 5, y: q[1] - 5, width: 10, height: 10, class: 'stn-e' }));
+        g.appendChild(el('rect', { x: q[0] - 1.6, y: q[1] - 1.6, width: 3.2, height: 3.2, fill: 'var(--water)' }));
+      } else {
+        g.appendChild(el('path', { d: 'M' + q[0] + ' ' + (q[1] - 7) + 'l6.5 11h-13z', class: 'stn-x' }));
+      }
+      var tx = q[0] + p.dx, ty = q[1] + p.dy, an = p.anchor;
+      if (p.kind === 'e' && narrow) { name = 'Univ. of British Columbia'; }
+      if (narrow) {
+        if (p.n === 'Chilliwack') { ty = q[1] + 21; tx = q[0] - 4; }
+        if (p.kind === 'e') { an = 'start'; tx = q[0] - 6; ty = q[1] - 26; }
+        if (p.n === 'Richmond') { an = 'start'; tx = q[0] + 10; ty = q[1] + 6; }
+        if (p.spot) { an = 'end'; tx = q[0] - 10; }
+      }
+      var t = el('text', { x: tx, y: ty, class: 'lbl', 'text-anchor': an }, name);
+      g.appendChild(t);
+      g.appendChild(el('text', { x: tx, y: ty + 14, class: 'lbl-sm', 'text-anchor': an }, p.when));
+      if (p.spot) g.appendChild(el('text', { x: tx, y: ty + 32, class: 'spot', 'text-anchor': an }, '▲ #1 in sales · WA + AK'));
+    });
+    labels.appendChild(g);
+  }
+
+  /* ---- 1 of 8 ---- */
+  (function () {
+    var g = document.getElementById('eight');
+    for (var i = 0; i < 8; i++) {
+      var x = 62 + i * 23;
+      g.appendChild(el('path', { d: 'M' + x + ' 2l7 12h-14z', fill: i === 0 ? 'var(--water)' : 'none', stroke: 'var(--water)', 'stroke-width': 1.2 }));
+    }
+    g.appendChild(el('line', { x1: 62, y1: 22, x2: 62 + 7 * 23, y2: 22, stroke: 'var(--rule-2)' }));
+    g.appendChild(el('text', { x: 62, y: 36, 'text-anchor': 'middle' }, '1'));
+    g.appendChild(el('text', { x: 62 + 7 * 23, y: 36, 'text-anchor': 'middle' }, '8'));
+  })();
+
+  function drawAll() { drawMap(); drawGround(); }
+  var tm;
+  function soon() { clearTimeout(tm); tm = setTimeout(drawAll, 120); }
+  drawAll();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { lastKey = ''; drawAll(); });
+  var lastW = document.documentElement.clientWidth;
+  window.addEventListener('resize', function () { var nw = document.documentElement.clientWidth; if (nw !== lastW) { lastW = nw; lastKey = ''; soon(); } else soon(); });
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    (mq.addEventListener ? mq.addEventListener.bind(mq, 'change') : mq.addListener.bind(mq))(function () { lastKey = ''; drawAll(); });
+  }
+  window.addEventListener('beforeprint', function () {});
+})();
+</script>
+</body>
+</html>
