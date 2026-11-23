@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Savannah Bakes · Résumé</title>
-<meta name="description" content="Savannah Bakes: #1 ranked enterprise sales in Washington and Alaska, educator and program manager. Her résumé, told in living particles.">
+<meta name="description" content="Savannah Bakes · #1 Ranked Enterprise Sales in Washington and Alaska. Consultative Selling, Relationship Development, Technology Solutions.">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#0d1715">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -198,13 +198,13 @@ const coarse=matchMedia('(pointer: coarse)').matches;
 /* ---------- content → sections ----------
    Each role: its title, then its headline figure(s) set huge, then a generated particle "plate". */
 const XTRA=[
-  {nums:[['#1','#1 in sales, WA + AK'],['86→89%','Satisfaction, 86% → 89%']], shape:'map',  shapeName:'Washington + Alaska'},
-  {nums:[['+30%','+30% engagement'],['100+','100+ staff and senior leaders']], shape:'room', shapeName:'Workshop circle'},
-  {nums:[['AWS+GoPro','AWS + GoPro']], shape:'fish', shapeName:'Fish, measured'},
-  {nums:[['1,000+','1,000+ learners'],['+10–20%','+10–20% GPA']], shape:'board', shapeName:'Chalkboard'},
-  {nums:[['9 & 12','Grades 9 and 12']], shape:'web', shapeName:'Curriculum site'},
+  {nums:[['#1','#1 in sales, WA + AK'],['86→89%','86% → 89%']], shape:'map'},
+  {nums:[['+30%','+30% engagement'],['100+','100+ staff and senior leaders']], shape:'room'},
+  {nums:[['AWS+GoPro','AWS + GoPro']], shape:'fish'},
+  {nums:[['1,000+','1,000+ learners'],['+10–20%','+10–20% GPA']], shape:'board'},
+  {nums:[['Grades 9 and 12','Grades 9 and 12']], shape:'web'},
 ];
-const EDU_X={nums:[['1 of 8','1 of 8 in Canada'],['750','750 students represented'],['300','300-person gala']], shape:'cap', shapeName:'Graduation'};
+const EDU_X={nums:[['1 of 8','1 of 8 in Canada'],['750','750 students represented'],['300','300-person gala']], shape:'cap'};
 const E=C.education;
 const roles=C.experience.map((e,k)=>Object.assign({kind:'proj',id:'r'+(k+1),title:e.role,org:e.org,place:e.place,when:e.when,points:e.points,numbers:e.numbers},XTRA[k]));
 roles.push(Object.assign({kind:'proj',id:'edu',title:E.degree,org:E.school,place:E.detail,when:E.when,points:E.points,numbers:E.numbers,isEdu:true},EDU_X));
@@ -219,12 +219,12 @@ let html='';
 SECS.forEach((s,i)=>{
   if(s.kind==='intro'){
     html+=`<section class="s intro" id="top" data-i="${i}"><div class="panel">
-      <p class="meta"><span class="no">00</span><span class="craft">Résumé</span><span>Sales · Education · Programs</span></p>
+      <p class="meta"><span class="no">00</span><span class="craft">Résumé</span></p>
       <h1>${esc(C.name)}</h1>
       <p class="lede">${esc(C.headline)}.</p>
       <ul class="focus" aria-label="Focus">${C.focus.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>
       <div class="cta"><button class="ext" data-plain>Read the plain résumé</button><a class="ext ghost" href="mailto:${esc(mail)}">${esc(mail)}</a></div>
-      <p class="hint"><b>Scroll</b> and the matter re-forms into each role: its title, its numbers, then a picture made of particles. <span class="fine">Move to disturb it, <b>click</b> for a shockwave.</span><span class="coarse">Drag a finger through it, <b>tap</b> for a shockwave.</span></p>
+      <p class="hint" aria-hidden="true"><b>Scroll</b> · <span class="fine">move to disturb · <b>click</b> for a shockwave</span><span class="coarse">drag to disturb · <b>tap</b> for a shockwave</span></p>
     </div></section>`;
   } else if(s.kind==='proj'){
     const n=s.isEdu?'Education':String(i).padStart(2,'0')+' / '+String(total-1).padStart(2,'0');
@@ -238,10 +238,9 @@ SECS.forEach((s,i)=>{
     </div></section>`;
   } else {
     html+=`<section class="s about" id="contact" data-i="${i}" aria-labelledby="h-about"><div class="panel">
-      <p class="meta"><span class="no">${String(i).padStart(2,'0')}</span><span class="craft">Contact</span><span>Skills &amp; links</span></p>
-      <h2 id="h-about">Let’s talk.</h2>
-      <p class="lede">${esc(C.focus.join(', '))}, from airport sales floors to classrooms and energy regulation.</p>
-      <h3>Get in touch</h3>${contactHTML}
+      <p class="meta"><span class="no">${String(i).padStart(2,'0')}</span><span class="craft">Contact</span></p>
+      <h2 id="h-about">Contact</h2>
+      <div style="margin-top:18px">${contactHTML}</div>
       <h3>Skills</h3><ul class="skills">${C.skills.map(k=>`<li>${esc(k)}</li>`).join('')}</ul>
       <div class="cta"><button class="ext" data-plain>Plain résumé</button></div>
     </div></section>`;
@@ -322,7 +321,7 @@ function showStage(i,j){
   const s=SECS[i], st=s.stages[j][0];
   sections[i].querySelectorAll('[data-st]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.st===j)));
   if(st==='title'){ requestForm('title:'+i); formLabel=s.title; }
-  else if(st==='shape'){ requestForm('shape:'+s.shape); formLabel=s.shapeName; }
+  else if(st==='shape'){ requestForm('shape:'+s.shape); formLabel='Plate'; }
   else { const n=s.nums[+st.slice(3)]; requestForm('num:'+n[0]); formLabel=n[1]; }
   updateReadout();
 }
@@ -342,7 +341,7 @@ function activate(i,now){
   clearTimeout(subT);
   if(s.kind==='intro'){ requestForm('name'); formLabel='Name'; }
   else if(s.kind==='proj'){ runStages(i); }
-  else { formLabel='Hello'; requestForm('hello'); }
+  else { formLabel='Name'; requestForm('hello'); }
   updateReadout();
 }
 addEventListener('scroll',()=>{
@@ -717,9 +716,6 @@ const SHAPES={
     const sea=fw.map(project([[-122.31,47.45]],47)[0]);
     g.strokeStyle=COL.salmon; g.lineWidth=2.4*u; [10,18].forEach(r=>{g.beginPath();g.arc(sea[0],sea[1],r*u,0,7);g.stroke();});
     g.fillStyle=COL.salmon; g.beginPath(); g.arc(sea[0],sea[1],5*u,0,7); g.fill();
-    g.font=`500 ${15*u}px ${MONO}`; g.textAlign='left'; g.fillText('SEA',sea[0]+22*u,sea[1]+5*u);
-    g.fillStyle=COL.cream; g.font=`500 ${16*u}px ${MONO}`; g.textAlign='center';
-    g.fillText('ALASKA',w*.3,h*.93); g.fillText('WASHINGTON',w*.8,h*.82);
   }},
   room:{ar:1.3,draw(g,w,h){
     const u=Math.min(w,h)/400, cxm=w/2, cym=h*.5;
@@ -741,7 +737,7 @@ const SHAPES={
     g.strokeStyle=COL.cream; g.lineWidth=3*u; const L=26*u;
     [[bx0,by0,1,1],[bx1,by0,-1,1],[bx0,by1,1,-1],[bx1,by1,-1,-1]].forEach(([x,y,sx,sy])=>{g.beginPath();g.moveTo(x,y+sy*L);g.lineTo(x,y);g.lineTo(x+sx*L,y);g.stroke();});
     g.fillStyle=COL.salmon; g.beginPath(); g.arc(bx0+14*u,by0+15*u,5*u,0,7); g.fill();
-    g.font=`500 ${12*u}px ${MONO}`; g.textAlign='left'; g.fillText('REC',bx0+24*u,by0+19.5*u);
+    
     // body
     const y=h*.46, nx=w*.2, tx=w*.7;
     g.beginPath(); g.moveTo(nx,y);
@@ -774,8 +770,7 @@ const SHAPES={
     g.fillStyle=COL.wood; g.fillRect(w*.08,h*.92,w*.84,h*.04);
     g.fillStyle=COL.cream; g.fillRect(w*.2,h*.895,w*.07,h*.025); g.fillStyle=COL.salmon; g.fillRect(w*.3,h*.9,w*.05,h*.02);
     g.strokeStyle=COL.cream; g.fillStyle=COL.cream; g.lineCap='round'; g.lineJoin='round';
-    g.font=`italic 600 ${34*u}px ${FAM}`; g.textAlign='left'; g.fillText('Science 12',w*.09,h*.2);
-    chalk(g,[[w*.09,h*.235],[w*.36,h*.23]],2.6*u,false,4);
+    chalk(g,[[w*.09,h*.2],[w*.2,h*.17],[w*.3,h*.21],[w*.38,h*.18]],2.6*u,false,4);
     // Bohr-style atom
     const ax=w*.29, ay=h*.55;
     [0,Math.PI/3,-Math.PI/3].forEach((rot,k)=>{ chalk(g,ellipsePts(ax,ay,w*.17,h*.07,rot,40),2.6*u,true,10+k);
@@ -788,7 +783,6 @@ const SHAPES={
     g.strokeStyle=COL.gold; chalk(g,pts,3.4*u,false,22);
     const e=pts[pts.length-1]; g.fillStyle=COL.gold; poly(g,[[e[0]+10*u,e[1]-12*u],[e[0]-12*u,e[1]-4*u],[e[0]+2*u,e[1]+12*u]]); g.fill();
     pts.forEach(p=>{g.beginPath();g.arc(p[0],p[1],4.5*u,0,7);g.fill();});
-    g.fillStyle=COL.cream; g.font=`500 ${15*u}px ${MONO}`; g.fillText('GPA',x0+w*.015,y1+h*.02);
   }},
   web:{ar:1.45,draw(g,w,h){
     const u=Math.min(w,h)/400;
@@ -870,9 +864,9 @@ async function buildForm(key){
   const c=getCached(key); if(c) return c;
   let f=null; const m=W<=760;
   if(key==='name') f=textForm(C.name,'name',{weight:800,max:m?150:300,lines:2});
-  else if(key==='hello') f=textForm('Let’s talk.','about',{weight:800,italic:true,max:m?120:240,lines:2,ink:SALMON,spark:CREAM});
+  else if(key==='hello') f=textForm(C.name,'about',{weight:800,italic:true,max:m?120:240,lines:2,ink:SALMON,spark:CREAM});
   else if(key.startsWith('title:')){const s=SECS[+key.slice(6)]; f=textForm(s.title,'proj',{weight:700,lines:4,max:m?110:190});}
-  else if(key.startsWith('num:')){const t=key.slice(4).replace('+GoPro',' + GoPro'); f=textForm(t,'num',{weight:800,lines:t.length>8?2:1,max:m?190:420,ink:GOLD,spark:CREAM});}
+  else if(key.startsWith('num:')){const t=key.slice(4).replace('+GoPro',' + GoPro'); f=textForm(t,'num',{weight:800,lines:t.length>9?2:1,max:m?190:420,ink:GOLD,spark:CREAM});}
   else if(key.startsWith('shape:')) f=shapeForm(key.slice(6));
   if(f) putCache(key,f);
   return f;

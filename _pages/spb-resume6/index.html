@@ -293,6 +293,7 @@ a{color:inherit}
 .pad.h::before{content:"";position:absolute;left:9px;right:9px;top:30px;height:3px;border-radius:2px;background:var(--stripe)}
 .pad.h::after{border-radius:9px}
 .pad.h .t{font:400 22px/1 var(--serif);font-variation-settings:"opsz" 72;letter-spacing:-.02em;white-space:nowrap}
+.pad.h.long .t{font-size:16px}
 .pad.h .r{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
 
 /* sequencer */
@@ -402,14 +403,14 @@ a{color:inherit}
   .d-line li{font-size:12px;line-height:1.33;padding-left:0}
   .d-line li::before{display:none}
   .d-line li:not(:first-child){display:none}
-  .d-line li:first-child{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  .d-line li:first-child{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
   .d-line.one li{font-size:12.5px}
   .d-patch{display:none}
   .d-link{font-size:10px;padding:5px 7px 4px}
   .bigyear{font-size:26px;padding-top:18px}
   .tl{display:none}
   .scope{height:66px;padding:5px}
-  .scope-lab{bottom:5px;font-size:8.5px}
+  .scope-lab{display:none}
   .controls{order:2;flex-direction:row;flex-wrap:wrap;gap:12px;margin-top:14px;align-items:center}
   .pwr-wrap{gap:10px}
   .power{width:54px;height:54px}
@@ -427,6 +428,7 @@ a{color:inherit}
   .pad.h{min-height:66px;padding:7px}
   .pad.h::before{left:7px;right:7px;top:9px}
   .pad.h .t{font-size:17px}
+  .pad.h.long .t{font-size:12.5px}
   .pad.h .r{font-size:8px;letter-spacing:.03em}
   .seq{grid-template-columns:1fr}
   .seq-ctl{flex-wrap:wrap;gap:12px}
@@ -464,8 +466,7 @@ a{color:inherit}
       <header class="badge">
         <div class="brand">
           <h1>Savannah <i>Bakes</i></h1>
-          <span class="model">SB-06</span>
-          <span class="sub">Career groove box · 6 chapters · 8 hits · 2020–2026</span>
+          <span class="sub" id="brandSub"></span>
         </div>
         <nav class="jacks" aria-label="Contact" id="jacks"></nav>
       </header>
@@ -474,7 +475,7 @@ a{color:inherit}
         <div class="screens">
           <div class="display bezel">
             <div class="glass" id="display">
-              <div class="d-status"><span id="dStatL">Ready · 6 chapters</span><span id="dStatR" class="warn">Sound off · press Power</span></div>
+              <div class="d-status"><span id="dStatL">Ready</span><span id="dStatR" class="warn">Sound off · press Power</span></div>
               <div class="d-img" id="dImgWrap"><div class="scene" id="scene"></div><div class="bigyear" id="bigYear">2020</div></div>
               <div class="d-text" id="dText" aria-live="polite">
                 <div class="d-tag" id="dTag"></div>
@@ -482,14 +483,14 @@ a{color:inherit}
                 <div class="d-date" id="dDate"></div>
                 <ul class="d-line" id="dLine"></ul>
                 <div class="d-patch" id="dPatch"></div>
-                <a class="d-link" id="dLink" href="#notes" hidden>Read it all ↓</a>
+                <a class="d-link" id="dLink" href="#notes" hidden>Plain résumé ↓</a>
               </div>
               <div class="tl" id="tl" aria-hidden="true"><div class="head" id="tlHead"></div></div>
             </div>
           </div>
           <div class="scope bezel">
             <div class="glass"><canvas id="scope" aria-hidden="true"></canvas>
-              <div class="scope-lab"><span>Scope · <b id="vizName">No signal</b></span><span id="vizCraft"></span></div>
+              <div class="scope-lab"><span>Scope</span></div>
             </div>
           </div>
         </div>
@@ -502,12 +503,12 @@ a{color:inherit}
             <div class="pwr-txt">
               <span class="silk">Audio</span>
               <span class="big">Power</span>
-              <span class="hint pulse" id="hint">Press to hear. Pads still read with sound off.</span>
+              <span class="hint pulse" id="hint">Press for sound</span>
             </div>
           </div>
           <button class="latch career-cta" id="careerBtn" aria-pressed="false">
             <span class="ledb" id="careerLed"></span>
-            <span><strong>Play the career</strong><small id="careerSub">2020 UBC → 2026 #1 · about 30 seconds</small></span>
+            <span><strong>Play the career</strong><small id="careerSub">2020 → 2026</small></span>
           </button>
           <div class="knobs">
             <div class="knob-w"><div class="knob" id="kTone" role="slider" tabindex="0" aria-label="Tone"><span class="ind"></span></div><span class="silk">Tone</span><span class="val" id="vTone"></span></div>
@@ -517,10 +518,9 @@ a{color:inherit}
       </section>
 
       <section class="padsec" aria-labelledby="padsH">
-        <div class="sec-head"><h2 id="padsH">Chapters</h2><span class="rule"></span><span class="silk">In the order she lived them · keys 1 → 6</span></div>
-        <ul class="legend" id="legend"></ul>
+        <div class="sec-head"><h2 id="padsH">Chapters</h2><span class="rule"></span><span class="silk">Keys 1–6</span></div>
         <div class="pads" id="pads"></div>
-        <div class="sec-head"><h2>Hits</h2><span class="rule"></span><span class="silk">The numbers · keys Q → I</span></div>
+        <div class="sec-head"><h2>Hits</h2><span class="rule"></span><span class="silk">Keys Q–I</span></div>
         <div class="hits" id="hits"></div>
       </section>
 
@@ -538,30 +538,25 @@ a{color:inherit}
           </div>
           <div class="seq-steps-wrap"><div class="steps" id="steps"></div></div>
           <div class="seq-info">
-            <span class="silk armed" id="armed">Loaded: none · tap a pad, then tap steps to place it</span>
-            <span class="silk">Tap a filled step with the same pad to clear it</span>
+            <span class="silk armed" id="armed">Tap a pad, then tap steps</span>
+            <span class="silk">Space: loop · Esc: stop</span>
           </div>
         </div>
       </section>
-
-      <footer class="serial">
-        <span class="silk">Every sound synthesised live in your browser · no samples</span>
-        <span class="silk">S/N SB-0006 · B.Ed. UBC 2025</span>
-      </footer>
     </div>
     <div class="cheek r" aria-hidden="true"></div>
   </div>
 
   <section class="notes" id="notes" aria-labelledby="notesH">
-    <div class="eyebrow">Liner notes · the plain résumé</div>
+    <div class="eyebrow">Résumé</div>
     <h2 id="notesH">Savannah Bakes</h2>
     <p class="lede" id="lede"></p>
     <p class="focus" id="focus"></p>
     <div class="cols">
       <div>
-        <h3 class="tracks-h">Experience <span>newest first · pad number in front</span></h3>
+        <h3 class="tracks-h">Experience</h3>
         <ol class="tracks" id="tracks"></ol>
-        <h3 class="tracks-h" style="margin-top:34px">Education <span>pad 01</span></h3>
+        <h3 class="tracks-h" style="margin-top:34px">Education</h3>
         <ol class="tracks" id="eduTrack"></ol>
       </div>
       <div class="about">
@@ -569,11 +564,7 @@ a{color:inherit}
           <span>Email</span><a id="mail" href="#"></a>
           <span>LinkedIn</span><a id="li" href="#" target="_blank" rel="noopener"></a>
         </section>
-        <section><h3>The hits</h3><ul class="hitlist" id="hitlist"></ul></section>
         <section><h3>Skills</h3><ul class="chips" id="skills"></ul></section>
-        <section><h3>How to play</h3>
-          <p class="keys-help">Power turns sound on. Keys 1–6 play the chapters, Q–I the hits. Space starts the loop, Esc stops everything. Each chapter has its own instrument: carillon bells for UBC, a sonar ping for the fish-monitoring startup, a warm grid pad for the utilities commission, wood for student teaching, a bright lead for the science classroom, and brass for the airport sales floor.</p>
-        </section>
       </div>
     </div>
   </section>
@@ -643,15 +634,16 @@ const CH = [
 ];
 /* the headline numbers, each a one-shot */
 const HITS = [
- {id:"no1",  ch:"ent",  big:"#1",      label:"in sales · WA + AK", line:"Received several #1 in sales awards across all of Washington and Alaska (500 employees, ~110 branches) three months after joining.", notes:[0,2,4,7,9]},
- {id:"csat", ch:"ent",  big:"86→89%",  label:"satisfaction",       line:"On a team of 3, raised the satisfaction score from 86% to 89% within 2 months.", notes:[2,4]},
- {id:"eng",  ch:"bcuc", big:"+30%",    label:"engagement",         line:"Turned complex policy research and stakeholder analysis into structured materials, improving engagement by 30%.", notes:[0,2,4]},
- {id:"lrn",  ch:"sd33", big:"1,000+",  label:"learners",           line:"Designed and delivered Grade 12 science and technology curricula for 1,000+ learners.", notes:[0,1,2,3,4]},
- {id:"gpa",  ch:"sd33", big:"+10–20%", label:"GPA",                line:"Faculty observed GPA improvements of 10 to 20 percent and higher attendance and engagement.", notes:[1,3,5]},
- {id:"one8", ch:"ubc",  big:"1 of 8",  label:"in Canada",          line:"One of 8 students in Canada to receive the Centennial full scholarship award for high achievement.", notes:[5,0]},
- {id:"s750", ch:"ubc",  big:"750",     label:"students represented",line:"Represented 750 Bachelor of Education students.", notes:[0,2,4]},
- {id:"gala", ch:"ubc",  big:"300",     label:"person grad gala",   line:"As graduation coordinator, organized a grad gala for 300 people: vendors, logistics, permits, project management.", notes:[4,2,0,4]}
+ {id:"no1",  ch:"ent",  big:"#1",        label:"in sales, WA + AK",    line:0, notes:[0,2,4,7,9]},
+ {id:"csat", ch:"ent",  big:"86% → 89%", label:"",                     line:3, notes:[2,4]},
+ {id:"eng",  ch:"bcuc", big:"+30%",      label:"engagement",           line:0, notes:[0,2,4]},
+ {id:"lrn",  ch:"sd33", big:"1,000+",    label:"learners",             line:0, notes:[0,1,2,3,4]},
+ {id:"gpa",  ch:"sd33", big:"+10–20%",   label:"GPA",                  line:1, notes:[1,3,5]},
+ {id:"one8", ch:"ubc",  big:"1 of 8",    label:"in Canada",            line:0, notes:[5,0]},
+ {id:"s750", ch:"ubc",  big:"750",       label:"students represented", line:2, notes:[0,2,4]},
+ {id:"gala", ch:"ubc",  big:"300-person",label:"gala",                 line:2, notes:[4,2,0,4]}
 ];
+HITS.forEach(h=>{ h.line = CH.find(c=>c.id===h.ch).points[h.line]; });
 
 const KEYS = ["1","2","3","4","5","6","q","w","e","r","t","y","u","i"];
 const SCALE = [0,2,4,7,9], NOTE_NAMES = ["D","E","F♯","A","B"];
@@ -748,20 +740,20 @@ ALL.forEach((p,i)=>{
   } else {
     b.className="pad h"; b.style.setProperty("--stripe",p.color);
     b.setAttribute("aria-label",`${p.big} ${p.label}. Key ${p.key.toUpperCase()}.`);
+    if(p.big.length>7) b.classList.add("long");
     b.innerHTML=`<span class="k">${p.key}</span><span class="t">${esc(p.big)}</span><span class="r">${esc(p.label)}</span>`;
     hitsEl.appendChild(b);
   }
   b.addEventListener("click",()=>hitPad(i));
   pads.push(b);
 });
-$("legend").innerHTML = CH.map(c=>`<li><i style="background:${c.color}"></i>${esc(c.short)} <em>${VOICE[c.voice].name}</em></li>`).join("");
+$("brandSub").textContent = R.headline;
 $("jacks").innerHTML = `<a class="jack" href="mailto:${R.email}"><span>Email</span><i></i></a><a class="jack" href="${R.linkedin.href}" target="_blank" rel="noopener"><span>LinkedIn</span><i></i></a><a class="jack" href="#notes"><span>Résumé</span><i></i></a>`;
 $("lede").textContent = R.headline+".";
 $("focus").textContent = R.focus.join(" · ");
 $("mail").href="mailto:"+R.email; $("mail").textContent=R.email;
 $("li").href=R.linkedin.href; $("li").textContent=R.linkedin.label+" ↗";
 $("skills").innerHTML = R.skills.map(s=>`<li>${esc(s)}</li>`).join("");
-$("hitlist").innerHTML = HITS.map(h=>`<li><b>${esc(h.big)}</b><span>${esc(h.line)}</span></li>`).join("");
 function trackLi(c){
   const n=String(c.idx+1).padStart(2,"0");
   return `<li><span class="no">${n}</span><span class="kk">${c.key}</span><button class="tt" data-i="${c.idx}" aria-label="Show and play ${esc(c.role)}">${esc(c.role)}</button><span class="meta"><span class="dot" style="background:${c.color}"></span>${c.when}</span><span class="org">${esc(c.org)}${c.place?" · "+esc(c.place):""}${c.detail?"<br>"+esc(c.detail):""}</span><ul>${c.points.map(p=>`<li>${esc(p)}</li>`).join("")}</ul></li>`;
@@ -796,7 +788,7 @@ for(let s=0;s<16;s++){
   const b=document.createElement("button"); b.className="step";
   b.innerHTML=`<span class="sl"></span><span class="chip"></span><span class="n">${s+1}</span>`;
   b.addEventListener("click",()=>{
-    if(armed<0){ setArmedMsg("Tap a pad first, then tap steps to place it"); return; }
+    if(armed<0){ setArmedMsg("Tap a pad, then tap steps"); return; }
     seqSteps[s] = seqSteps[s]===armed ? -1 : armed;
     renderSteps();
     if(seqSteps[s]>=0 && powered && !seq.playing) voiceNote(ALL[seqSteps[s]], AC.currentTime+.005, s, .8);
@@ -814,7 +806,7 @@ function renderSteps(){
   stepEls.forEach((b,s)=>{
     const i=seqSteps[s];
     b.classList.toggle("full",i>=0);
-    if(i>=0){ b.style.setProperty("--chip",ALL[i].color); b.querySelector(".n").textContent=ALL[i].key.toUpperCase(); b.setAttribute("aria-label",`Step ${s+1}: ${ALL[i].role||ALL[i].big+" "+ALL[i].label}`); }
+    if(i>=0){ b.style.setProperty("--chip",ALL[i].color); b.querySelector(".n").textContent=ALL[i].key.toUpperCase(); b.setAttribute("aria-label",`Step ${s+1}: ${ALL[i].role||(ALL[i].big+" "+ALL[i].label).trim()}`); }
     else { b.querySelector(".n").textContent=s+1; b.setAttribute("aria-label",`Step ${s+1}: empty`); }
   });
 }
@@ -980,7 +972,7 @@ function phrase(p,t,v){
 /* ================= visual voices (work with or without sound) ================= */
 const vv=[]; let vizVoice=null;
 function addVirtual(p,f,v){ vv.push({t0:performance.now(),f,v,voice:p.voice}); if(vv.length>40) vv.shift(); setViz(p.voice); if(p.voice==="sonar") addBlip(v); }
-function setViz(c){ if(c===vizVoice) return; vizVoice=c; clearViz=true; $("vizName").textContent=VOICE[c].viz; $("vizCraft").textContent=VOICE[c].name; }
+function setViz(c){ if(c===vizVoice) return; vizVoice=c; clearViz=true; }
 const timers=[];
 function atTime(t,fn){ const d=AC?(t-AC.currentTime)*1000:0; timers.push(setTimeout(fn,Math.max(0,d))); if(timers.length>400) timers.splice(0,200); }
 function clearTimers(){ while(timers.length) clearTimeout(timers.pop()); }
@@ -999,21 +991,20 @@ function show(i,opts){
   const p=ALL[i], V=VOICE[p.voice];
   if(p.kind==="chapter"){
     scene.innerHTML=SCENES[p.id];
-    $("dTag").innerHTML=`<i style="color:${p.color};background:${p.color}"></i><span>${esc(p.short)}<span class="full"> · ${V.name}</span></span>`;
+    $("dTag").innerHTML=`<i style="color:${p.color};background:${p.color}"></i><span>${p.id==="ubc"?"Education":"Experience"}</span>`;
     $("dTitle").textContent=p.role;
     $("dDate").textContent=`${p.when} · ${p.org}${p.place?" · "+p.place:""}`;
     setLines(p.detail?[p.detail].concat(p.points):p.points);
   } else {
     const c=chById[p.ch];
     scene.innerHTML=numScene(p.big,p.label);
-    $("dTag").innerHTML=`<i style="color:${c.color};background:${c.color}"></i><span>Hit · ${esc(c.short)}</span>`;
-    $("dTitle").textContent=`${p.big} ${p.label.replace(/^·\s*/,"")}`;
-    $("dDate").textContent=`${c.when} · ${c.role}`;
+    $("dTag").innerHTML=`<i style="color:${c.color};background:${c.color}"></i><span>${c.id==="ubc"?"Education":"Experience"}</span>`;
+    $("dTitle").textContent=`${p.big} ${p.label}`.trim();
+    $("dDate").textContent=`${c.when} · ${c.role} · ${c.org}`;
     setLines([p.line],true);
   }
-  $("dPatch").innerHTML=`<b>Patch</b> ${V.name} &nbsp;<b>Notes</b> ${p.sig.notes.map(n=>NOTE_NAMES[mod(n,5)]).join(" ")} &nbsp;<b>Pad</b> ${p.key.toUpperCase()}`;
   $("dLink").hidden=false;
-  $("dStatL").innerHTML=`${opts.career?"<b>Career</b> · ":""}${p.kind==="chapter"?"Chapter "+(p.idx+1)+"/6":"Hit"} · ${p.year}`;
+  $("dStatL").innerHTML=`${opts.career?"<b>▶</b> · ":""}Pad ${p.key.toUpperCase()}`;
   $("bigYear").textContent=p.year;
   const ci = p.kind==="chapter" ? p.idx : chById[p.ch].idx;
   spans.forEach((s,j)=>s&&s.classList.toggle("on",j===ci));
@@ -1021,39 +1012,37 @@ function show(i,opts){
   pads.forEach((b,j)=>b.classList.toggle("cur",j===i));
   swap();
 }
-function showIntro(fin){
-  scene.innerHTML=numScene("#1","in enterprise sales · Washington + Alaska");
-  $("dTag").innerHTML=`<i style="color:var(--phos);background:var(--phos)"></i>${fin?"Fin · six chapters, eight hits":"Sales leader · educator · program manager"}`;
-  $("dTitle").textContent=fin?"That’s the career so far":R.name;
-  $("dDate").textContent=fin?"2020 – 2026":R.focus.join(" · ");
-  setLines([fin?"From a UBC education degree to the top of enterprise sales in Washington and Alaska. Press any pad to hear a chapter again, or build a loop below.":R.headline+". Every pad below is a chapter or a number from her résumé. Press one to hear it and read it here."],true);
-  $("dPatch").textContent=fin?"Résumé in full below the instrument.":"Tip: Play the career runs her path in order.";
+function showIntro(){
+  scene.innerHTML=numScene("#1","in sales, WA + AK");
+  $("dTag").innerHTML="";
+  $("dTitle").textContent=R.name;
+  $("dDate").textContent=R.focus.join(" · ");
+  setLines([R.headline],true);
   $("dLink").hidden=false;
-  if(fin) $("bigYear").textContent="2026";
   spans.forEach(s=>s&&s.classList.remove("on")); pads.forEach(b=>b.classList.remove("cur"));
   swap();
 }
-showIntro(false);
+showIntro();
 function updateStatus(){
   const r=$("dStatR");
-  if(powered){ r.textContent=career.playing?"Playing the career":seq.playing?`Loop · ${knobState.tempo} bpm`:"Audio on"; r.className=""; }
+  if(powered){ r.textContent=career.playing?"Career ▶":seq.playing?`Loop · ${knobState.tempo} bpm`:"Audio on"; r.className=""; }
   else { r.textContent="Sound off · press Power"; r.className="warn"; }
 }
 
 /* ================= interaction ================= */
 const panel=$("panel");
 function powerOn(){
-  if(!AC){ if(!initAudio()){ $("hint").textContent="This browser has no Web Audio. Everything still reads."; return false; } }
+  if(!AC){ if(!initAudio()){ $("hint").textContent="No Web Audio"; return false; } }
   if(AC.state==="suspended") AC.resume();
   powered=true; panel.classList.add("on"); $("power").setAttribute("aria-pressed","true"); $("power").setAttribute("aria-label","Power: turn sound off");
-  $("hint").textContent="Sound on. Play a pad, or play the career."; $("hint").classList.remove("pulse");
+  $("hint").textContent="Sound on"; $("hint").classList.remove("pulse");
   updateStatus(); return true;
 }
 function powerOff(){
   stopCareer(); stopSeq(); powered=false; panel.classList.remove("on");
   if(AC) AC.suspend();
   $("power").setAttribute("aria-pressed","false"); $("power").setAttribute("aria-label","Power: turn sound on");
-  $("hint").textContent="Sound off. Pads still show every chapter.";
+  $("hint").textContent="Press for sound";
   updateStatus();
 }
 $("power").addEventListener("click",()=>{ powered?powerOff():(powerOn()&&phraseBoot()); });
@@ -1064,7 +1053,7 @@ function phraseBoot(){ // S-B chime: D A D, bell over sub
 }
 function hitPad(i){
   const p=ALL[i];
-  armed=i; setArmedMsg(`Loaded: <b>${p.key.toUpperCase()} · ${esc(p.kind==="chapter"?p.short:p.big+" "+p.label)}</b> · tap steps to place it`);
+  armed=i; setArmedMsg(`Loaded: <b>${p.key.toUpperCase()}</b>`);
   if(!career.playing) show(i);
   if(powered){ phrase(p,AC.currentTime+.01,1); }
   else { flashPad(i); p.sig.notes.forEach((n,k)=>setTimeout(()=>addVirtual(p,freqOf(p.voice,n),.8),k*p.sig.step*1000)); flashPower(); }
@@ -1118,13 +1107,13 @@ function startCareer(){
   ev.sort((x,y)=>x.t-y.t);
   career.events=ev; career.idx=0; career.playing=true;
   panel.classList.add("career-on"); $("careerBtn").setAttribute("aria-pressed","true"); $("careerLed").classList.add("lit");
-  $("careerSub").textContent="Playing · press again to stop"; updateStatus();
+  $("careerSub").textContent="Stop"; updateStatus();
 }
 function segStart(s,t,dur){
   if(s.type==="pad"){ phrase(s.p,t,1); atTime(t,()=>show(s.p.idx,{career:true})); }
   else if(s.type==="end"){
     vSub(t,36.7,1); vBell(t,293.7,.6,{ratio:3.5}); vBell(t+.12,440,.5,{ratio:3.5}); vBell(t+.24,587.3,.45,{ratio:2}); vBrass(t,146.8,.6,.8); drone(t,dur);
-    atTime(t,()=>{ addVirtual({voice:"brass"},146.8,1); showIntro(true); });
+    atTime(t,()=>{ addVirtual({voice:"brass"},146.8,1); showIntro(); });
   }
 }
 function tick(s,k,t){
@@ -1141,7 +1130,7 @@ function stopCareer(finished){
   if(!career.playing) return;
   career.playing=false; career.events=[]; if(!finished) clearTimers();
   panel.classList.remove("career-on"); $("careerBtn").setAttribute("aria-pressed","false"); $("careerLed").classList.remove("lit");
-  $("careerSub").textContent=finished?"Again? 2020 → 2026":"2020 UBC → 2026 #1 · about 30 seconds"; updateStatus();
+  $("careerSub").textContent="2020 → 2026"; updateStatus();
 }
 $("careerBtn").addEventListener("click",()=>career.playing?stopCareer():startCareer());
 

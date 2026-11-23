@@ -137,7 +137,7 @@ a{color:inherit}
 #idx .x{position:absolute;right:14px;top:12px;font-size:12px;font-weight:700;color:var(--T);padding:6px 8px}
 #idx p{font-size:12.5px;line-height:1.5;margin:6px 0}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-@media (max-width:520px){#bar .lbl{min-width:100px;padding:0 8px}#hint{font-size:15px}}
+@media (max-width:720px){#bar .lbl{min-width:100px;padding:0 8px}#hint{font-size:15px;top:auto;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 50px)}}
 </style>
 </head>
 <body>
@@ -496,7 +496,7 @@ pages[17]={cls:'',html:`
 <div class="a mono b up cP" style="left:24px;top:102px;font-size:10px">§5 · Kitchen</div>
 ${ids.map((id,i)=>{const p=PR[id],[x,y,d]=pl[i];return ht(id,x,y,d,d,{inks:i%2?['T','P']:['P','T'],cell:3.6,ang:15+i*20,c:1.1,b:-.32},'border-radius:50%')+
   `<div class="a hand ${i%2?'cP':'cT'}" style="left:${x}px;top:${y+d+4}px;width:${d}px;font-size:14px;line-height:1.05;transform:rotate(${i%2?4:-4}deg)">${p.title}</div>`}).join('')}
-<div class="a ser cK" style="left:24px;top:648px;width:400px;font-size:17px;line-height:1.05">${PR['spicy-sausage-pasta'].line} <span class="mono" style="font-size:9.5px">(${when(PR['spicy-sausage-pasta'])})</span></div>`}}
+<div class="a ser cK" style="left:60px;top:648px;width:416px;font-size:17px;line-height:1.05">${PR['spicy-sausage-pasta'].line} <span class="mono" style="font-size:9.5px">(${when(PR['spicy-sausage-pasta'])})</span></div>`}}
 
 // 18 WORK / CV
 pages[18]={cls:'cv',html:`
@@ -1047,6 +1047,7 @@ idx.addEventListener('click',e=>{
 /* ---------- boot ---------- */
 addEventListener('resize',()=>{clearTimeout(layout.t);layout.t=setTimeout(layout,120)});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&anim){const a=anim;stopAnim();pos=Math.round(pos);bend=0;render();settle()}});
+if(matchMedia('(pointer:coarse)').matches)document.getElementById('hint').textContent='swipe or drag the page · double-tap to zoom';
 layout();settle();
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>render());
 // test hook

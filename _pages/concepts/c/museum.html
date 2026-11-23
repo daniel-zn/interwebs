@@ -658,7 +658,7 @@ function imgTex(src){
   t.encoding = THREE.sRGBEncoding; t.anisotropy = maxAniso; return t;
 }
 function updateLoad(){
-  $('iLoad').textContent = loaded < toLoad ? `Hanging the works… ${loaded} of ${toLoad}` : `All ${toLoad} works are hung.`;
+  $('iLoad').textContent = loaded < toLoad ? `Hanging the works… ${loaded} of ${toLoad}` : `All ${WORKS.length} works are hung.`;
 }
 
 /* ---------- framed works ---------- */

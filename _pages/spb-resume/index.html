@@ -4,96 +4,91 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Savannah Bakes · Résumé</title>
-<meta name="description" content="Savannah Bakes, #1 ranked enterprise sales in Washington and Alaska. One résumé, eight ways to read it.">
+<meta name="description" content="Savannah Bakes: résumé examples.">
 <meta name="robots" content="noindex">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,400..700&family=DM+Mono:wght@400;500&display=swap">
+<meta name="color-scheme" content="dark">
+<link rel="preload" href="fonts/orbix-regular.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-/* A deck of cards on a sand-coloured table: pick one to open that version of the résumé. */
+/* Styled after danielzn.com/resume: near-black, bone type, one sun-orange accent, Orbix throughout. */
+@font-face { font-family: 'Orbix'; src: url('fonts/orbix-regular.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Orbix Fill'; src: url('fonts/orbitron-v35-latin.woff2') format('woff2'); font-weight: 400; font-display: swap; size-adjust: 92%; }
 :root {
-  --bg: #ece6da; --ink: #1d1a16; --muted: #6b6358; --card: #f8f4ec; --rule: #d6cdbd; --accent: #b4441f;
-  --display: "Fraunces", Georgia, serif; --mono: "DM Mono", ui-monospace, Menlo, monospace;
-  color-scheme: light;
+  --bg: #0a0a0b; --bg-2: #111112; --bg-3: #18181a;
+  --fg: #e9e6df; --dim: #aaa59c; --faint: #6f6b65;
+  --line: rgba(233, 230, 223, 0.12); --line-2: rgba(233, 230, 223, 0.24);
+  --sun: #ff5b2e;
+  --font: 'Orbix', 'Orbix Fill', ui-sans-serif, system-ui, sans-serif;
+  --gutter: clamp(1rem, 3.4vw, 2.1rem);
+  --ease: cubic-bezier(0.2, 0.7, 0.1, 1);
+  color-scheme: dark;
 }
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #16130f; --ink: #f1ebe0; --muted: #a89f92; --card: #211d18; --rule: #3a332b; --accent: #ef7a4f; color-scheme: dark; }
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); color: var(--fg); font-family: var(--font); -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-height: 100svh; font-size: .95rem; line-height: 1.75; letter-spacing: .01em; background: var(--bg); -webkit-font-smoothing: antialiased; overflow-x: clip; }
+a { color: inherit; text-decoration: none; }
+h1, h2 { font-weight: 400; margin: 0; line-height: 1.05; letter-spacing: -.01em; }
+.wrap { width: 100%; max-width: 78rem; margin: 0 auto; padding: calc(clamp(3rem, 9vw, 6rem) + env(safe-area-inset-top)) max(var(--gutter), env(safe-area-inset-right)) calc(4rem + env(safe-area-inset-bottom)) max(var(--gutter), env(safe-area-inset-left)); }
+.label { font-size: .66rem; line-height: 1.5; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+.label--hue { color: var(--sun); }
+.pip { display: inline-block; width: .5em; height: .5em; border-radius: 50%; background: var(--sun); margin-right: .7em; vertical-align: .06em; }
+
+header h1 { font-size: clamp(3rem, 9vw, 7rem); line-height: .92; letter-spacing: -.03em; margin: 1rem 0 .9rem; }
+.sub { color: var(--sun); font-size: clamp(1rem, 2vw, 1.3rem); margin: 0; }
+.links { display: flex; flex-wrap: wrap; gap: .6rem 1.8rem; list-style: none; margin: 2rem 0 0; padding: 0; }
+.links a { transition: color .2s ease; }
+
+.list { list-style: none; margin: clamp(2.5rem, 6vw, 4rem) 0 0; padding: 1.6rem 0 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); gap: 2rem 1.4rem; }
+.card { display: grid; gap: .9rem; }
+.shot { position: relative; display: block; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 6px; background: var(--bg-3); }
+.shot img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s var(--ease), filter .4s ease; filter: saturate(.85); }
+.shot::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow .3s ease; }
+.meta { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.card h2 { font-size: 1.2rem; transition: color .2s ease; }
+.card:focus-visible { outline: 1px solid var(--sun); outline-offset: 6px; border-radius: 6px; }
+.card.pending { opacity: .45; }
+.card.pending .shot { display: grid; place-items: center; }
+
+footer { margin-top: clamp(3rem, 8vw, 5rem); padding-top: 1.6rem; border-top: 1px solid var(--line); }
+
+@media (hover: hover) {
+  .links a:hover { color: var(--sun); }
+  a.card:hover .shot img { transform: scale(1.04); filter: saturate(1); }
+  a.card:hover .shot::after { box-shadow: inset 0 0 0 1px var(--sun), 0 0 40px -6px rgba(255, 91, 46, .5); }
+  a.card:hover h2 { color: var(--sun); }
 }
-* { box-sizing: border-box; }
-html { background: var(--bg); }
-body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--display); -webkit-font-smoothing: antialiased; }
-.wrap { max-width: 1240px; margin: 0 auto; padding: calc(48px + env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) calc(64px + env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)); }
-header { display: grid; gap: 18px; margin-bottom: 44px; }
-.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-h1 { margin: 0; font-weight: 400; font-size: clamp(48px, 10vw, 132px); line-height: .9; letter-spacing: -.025em; }
-h1 i { font-weight: 600; color: var(--accent); }
-.headline { margin: 0; font-size: clamp(19px, 2.2vw, 26px); line-height: 1.35; max-width: 34ch; }
-.contact { display: flex; flex-wrap: wrap; gap: 8px 22px; font: 400 14px/1.6 var(--mono); }
-.contact a { color: var(--ink); text-underline-offset: 4px; text-decoration-color: var(--accent); }
-.grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 22px; }
-.card { display: flex; flex-direction: column; height: 100%; text-decoration: none; color: inherit; background: var(--card); border: 1px solid var(--rule); border-radius: 14px; overflow: hidden;
-  transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s; box-shadow: 0 1px 0 rgba(0,0,0,.04); }
-.card.pending { opacity: .55; }
-.card.pending .go { color: var(--muted); }
-.card:not(.pending):hover, .card:focus-visible { transform: translateY(-6px) rotate(-.6deg); box-shadow: 0 22px 40px -18px rgba(40,25,10,.45); }
-.grid li:nth-child(even) .card:hover, .grid li:nth-child(even) .card:focus-visible { transform: translateY(-6px) rotate(.6deg); }
-.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-.shot { position: relative; aspect-ratio: 16 / 10; background: var(--rule); overflow: hidden; }
-.shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.shot .n { position: absolute; left: 12px; top: 10px; font: 500 12px/1 var(--mono); padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,.55); color: #fff; letter-spacing: .08em; }
-.body { display: grid; gap: 8px; padding: 18px 18px 20px; }
-.body h2 { margin: 0; font-weight: 500; font-size: 26px; line-height: 1.05; letter-spacing: -.01em; }
-.body p { margin: 0; font-size: 15.5px; line-height: 1.5; color: var(--muted); }
-.go { font: 500 12px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-top: 4px; }
-footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--rule); font: 400 13px/1.7 var(--mono); color: var(--muted); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
-footer a { color: inherit; }
-@media (prefers-reduced-motion: reduce) { .card { transition: none; } .card.pending { opacity: .55; }
-.card.pending .go { color: var(--muted); }
-.card:not(.pending):hover, .card:focus-visible { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .shot img, .card h2 { transition: none; } }
 </style>
-<script>window.READY = [];</script>
+<script>window.READY = [6];</script>
 </head>
 <body>
-<div class="wrap">
+<main class="wrap">
   <header>
-    <span class="eyebrow">Résumé · eight ways to read it</span>
-    <h1>Savannah <i>Bakes</i></h1>
-    <p class="headline">#1 ranked enterprise sales in Washington and Alaska. Consultative selling, relationship development and technology solutions.</p>
-    <div class="contact">
-      <a href="mailto:savannahpbakes@gmail.com">savannahpbakes@gmail.com</a>
-      <a href="https://www.linkedin.com/in/savannah-bakes" target="_blank" rel="noopener">linkedin.com/in/savannah-bakes</a>
-    </div>
+    <p class="label label--hue"><span class="pip" aria-hidden="true"></span>Résumé</p>
+    <h1>Savannah Bakes</h1>
+    <p class="sub">Resume Examples</p>
+    <ul class="links label">
+      <li><a href="mailto:savannahpbakes@gmail.com">savannahpbakes@gmail.com</a></li>
+      <li><a href="https://www.linkedin.com/in/savannah-bakes" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
+    </ul>
   </header>
 
-  <ul class="grid" id="grid"></ul>
+  <ol class="list" id="list"></ol>
 
-  <footer>
-    <span>Every version holds the same résumé. Each one also has a plain list view.</span>
-    <a href="/">interwebs</a>
-  </footer>
-</div>
+  <footer><a class="label" href="/">interwebs</a></footer>
+</main>
 <script>
-const versions = [
-  ['Bench Scope', 'Her career traced on a working oscilloscope. Turn the knobs to move through the roles.'],
-  ['The Workbench', 'The résumé as objects on a desk: award plaques, name badges, lesson plans. Pick one up to read it.'],
-  ['Riso Zine', 'A stapled, two-ink printed zine you page through by dragging the corner.'],
-  ['Infinite Zoom', 'One continuous dive. Each chapter of her career sits inside a detail of the one before.'],
-  ['The Museum', 'A walkable retrospective with a wing for each chapter and curator labels on the walls.'],
-  ['The Instrument', 'A groove box where each role is a pad. Play the career and it becomes a song.'],
-  ['Living Matter', 'Particles that flow from her name into each role and its numbers. Your cursor pushes them around.'],
-  ['The Town', 'A small pixel-art town where every building is a chapter and the townsfolk tell you about her.'],
-];
-const grid = document.getElementById('grid');
-const READY = window.READY || [1, 2, 3, 4, 5, 6, 7, 8];
-versions.forEach(([name, line], i) => {
-  const n = i + 1;
-  const ready = READY.includes(n);
+const versions = ['Bench Scope', 'The Workbench', 'Riso Zine', 'Infinite Zoom', 'The Museum', 'The Instrument', 'Living Matter', 'The Town'];
+const READY = window.READY || versions.map((_, i) => i + 1);
+const list = document.getElementById('list');
+versions.forEach((name, i) => {
+  const n = i + 1, ready = READY.includes(n), num = String(n).padStart(2, '0');
   const li = document.createElement('li');
-  li.innerHTML = ready ? `<a class="card" href="../spb-resume${n}/">
-    <span class="shot"><img src="cover-${n}.webp" alt="" width="640" height="400" loading="${i < 4 ? 'eager' : 'lazy'}"><span class="n">No. ${n}</span></span>
-    <span class="body"><h2>${name}</h2><p>${line}</p><span class="go">Open →</span></span></a>` : `<div class="card pending"><span class="shot"><span class="n">No. ${n}</span></span>
-    <span class="body"><h2>${name}</h2><p>${line}</p><span class="go">In progress</span></span></div>`;
-  grid.appendChild(li);
+  li.innerHTML = ready
+    ? `<a class="card" href="../spb-resume${n}/"><span class="shot"><img src="cover-${n}.webp" alt="" width="640" height="400" loading="${i < 4 ? 'eager' : 'lazy'}"></span>
+        <span class="meta"><h2>${name}</h2><span class="label">${num}</span></span></a>`
+    : `<div class="card pending"><span class="shot"><span class="label">In progress</span></span>
+        <span class="meta"><h2>${name}</h2><span class="label">${num}</span></span></div>`;
+  list.appendChild(li);
 });
 </script>
 </body>
