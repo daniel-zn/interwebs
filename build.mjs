@@ -139,9 +139,10 @@ for (const { slug } of projects) {
 }
 // Standalone pages (not arcade cards): _pages/<name>/ is published at /<name>/.
 // They skip the game checks, so they can be ordinary readable, selectable pages.
+// Dev-only files at their top (README.md, scripts, ...) are left out, as for projects.
 for (const name of await readdir(join(ROOT, '_pages')).catch(() => [])) {
   if (name.startsWith('.')) continue;
-  await cp(join(ROOT, '_pages', name), join(OUT, name), { recursive: true, filter: (src) => !basename(src).startsWith('.') });
+  await cp(join(ROOT, '_pages', name), join(OUT, name), { recursive: true, filter: publish(join(ROOT, '_pages', name)) });
 }
 for (const f of ['home.css', 'home.js']) await cp(join(ROOT, '_site', f), join(OUT, '_home', f));
 // Root icons: browsers that skip a page's SVG icon (Safari, notably) ask for these.

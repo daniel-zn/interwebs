@@ -70,6 +70,9 @@ anywhere. The list is in `build.mjs`.
 Folders in `_pages/` are published as plain pages at `/<folder>/` (for example
 `_pages/savannahbakes-resume/` at `/savannahbakes-resume/`). They get no card and skip the game checks.
 
+`_archive/` holds things kept for reference but never published (for example
+`_archive/site-concepts/`, eight website prototypes).
+
 Folders starting with `_` or `.`, plus `scripts`, `dist` and `node_modules`,
 are never treated as projects.
 

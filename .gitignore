@@ -2,5 +2,3 @@ node_modules/
 dist/
 .wrangler/
 
-# Staging for the résumé versions while they are built; published copies live in _pages/savannahbakes-resume/
-_pages/spb-resume*/

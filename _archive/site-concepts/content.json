@@ -1,0 +1,419 @@
+{
+ "name": "Daniel Nadeem",
+ "title": "Sr. Electrical Engineer at Tesla",
+ "site": "danielzn.com",
+ "hello": "Hey, I’m Daniel",
+ "lede": "I’m an electrical engineer at Tesla. This site is a short record of the apps, games and builds I make on the side.",
+ "portrait": "img/portrait.webp",
+ "crafts": {
+  "apps": "iPhone, Mac and TV apps",
+  "games": "Games and worlds",
+  "hardware": "Robots, boards and logic",
+  "woodworking": "Furniture and shop builds",
+  "audio": "Speakers",
+  "cooking": "A few plates"
+ },
+ "projects": [
+  {
+   "id": "3d-printer-side-table",
+   "title": "3D Printer Side Table",
+   "craft": "woodworking",
+   "date": "2020-09-01",
+   "line": "Red oak and pine, a printer on top and a PC inside.",
+   "img": "img/3d-printer-side-table.webp",
+   "external": null
+  },
+  {
+   "id": "artemis",
+   "title": "Artemis",
+   "craft": "apps",
+   "date": "2026-11-20",
+   "line": "Your own PC’s desktop and games, on your iPhone, Mac and TV.",
+   "img": "img/artemis.webp",
+   "external": null
+  },
+  {
+   "id": "blackbeards-wake",
+   "title": "Blackbeard’s Wake",
+   "craft": "games",
+   "date": "2026-10-17",
+   "line": "A procedural pirate-ship world you sail in the browser.",
+   "img": "img/blackbeards-wake.webp",
+   "external": "https://yarr.danielzn.com/"
+  },
+  {
+   "id": "brainyburrow",
+   "title": "Brainy Burrow",
+   "craft": "apps",
+   "date": "2026-11-18",
+   "line": "Twenty brain games for kids aged 4 to 8, with Pip the bunny reading every word aloud.",
+   "img": "img/brainyburrow.webp",
+   "external": null
+  },
+  {
+   "id": "coin-picking-robot",
+   "title": "Coin Picking Robot",
+   "craft": "hardware",
+   "date": "2020-04-01",
+   "line": "A competition robot that finds and collects scattered coins.",
+   "img": "img/coin-picking-robot.webp",
+   "external": null
+  },
+  {
+   "id": "desk",
+   "title": "Desk",
+   "craft": "woodworking",
+   "date": "2021-09-01",
+   "line": "Solid red oak, hidden cables, legs on 3D-printed bolts.",
+   "img": "img/desk.webp",
+   "external": null
+  },
+  {
+   "id": "duct-tape-aerospace",
+   "title": "Duct Tape Aerospace",
+   "craft": "games",
+   "date": "2026-10-15",
+   "line": "Build rockets from parts. Fly them to Mona and Marsha.",
+   "img": "img/duct-tape-aerospace.webp",
+   "external": null
+  },
+  {
+   "id": "flight-simulator",
+   "title": "Flight Simulator",
+   "craft": "woodworking",
+   "date": "2020-04-01",
+   "line": "A pine cockpit for air travel during quarantine.",
+   "img": "img/flight-simulator.webp",
+   "external": null
+  },
+  {
+   "id": "interwebs",
+   "title": "Interwebs",
+   "craft": "games",
+   "date": "2026-10-18",
+   "line": "A collection of small browser games.",
+   "img": "img/interwebs.webp",
+   "external": "https://interwebs.danielzn.com/"
+  },
+  {
+   "id": "mercurius",
+   "title": "Mercurius",
+   "craft": "apps",
+   "date": "2026-10-16",
+   "line": "Your own team of AI bots, living on your Mac.",
+   "img": "img/mercurius.webp",
+   "external": null
+  },
+  {
+   "id": "meridusk",
+   "title": "Meridusk",
+   "craft": "games",
+   "date": "2026-11-21",
+   "line": "A pixel-art racer for iPhone. Carry embers around a planet stuck at sunset.",
+   "img": "img/meridusk.webp",
+   "external": null
+  },
+  {
+   "id": "mindplay",
+   "title": "MindPlay",
+   "craft": "apps",
+   "date": "2026-11-09",
+   "line": "Thirty-six short puzzle games across six skills, with a fresh three-game mix every day.",
+   "img": "img/mindplay.webp",
+   "external": null
+  },
+  {
+   "id": "muses",
+   "title": "Muses",
+   "craft": "apps",
+   "date": "2026-10-20",
+   "line": "Music, movies, shows and audiobooks from a server at home, on every screen.",
+   "img": "img/muses.webp",
+   "external": null
+  },
+  {
+   "id": "mushroom-steak",
+   "title": "Mushroom Topping on Steak with Sautéed Fries",
+   "craft": "cooking",
+   "date": null,
+   "line": "",
+   "img": "img/mushroom-steak.webp",
+   "external": null
+  },
+  {
+   "id": "omelet",
+   "title": "Omelet with a Vegetable Filling",
+   "craft": "cooking",
+   "date": null,
+   "line": "",
+   "img": "img/omelet.webp",
+   "external": null
+  },
+  {
+   "id": "quality-control-robot",
+   "title": "Quality Control Robot",
+   "craft": "hardware",
+   "date": "2021-04-01",
+   "line": "A four-motor arm that sorts marshmallows on a factory line.",
+   "img": "img/quality-control-robot.webp",
+   "external": null
+  },
+  {
+   "id": "reflow-oven-controller",
+   "title": "Reflow Oven Controller",
+   "craft": "hardware",
+   "date": "2020-02-01",
+   "line": "A toaster oven taught to follow a solder reflow profile.",
+   "img": "img/reflow-oven-controller.webp",
+   "external": null
+  },
+  {
+   "id": "retroplay",
+   "title": "RetroPlay",
+   "craft": "apps",
+   "date": "2026-11-19",
+   "line": "A free, open-source emulator for the NES, SNES, Game Boy Advance, N64, DS, Genesis, Atari 7800, PlayStation and PSP.",
+   "img": "img/retroplay.webp",
+   "external": null
+  },
+  {
+   "id": "salmon",
+   "title": "Salmon Fillet and Mixed Vegetables in Rice",
+   "craft": "cooking",
+   "date": null,
+   "line": "",
+   "img": "img/salmon.webp",
+   "external": null
+  },
+  {
+   "id": "shoe-rack",
+   "title": "Shoe Rack",
+   "craft": "woodworking",
+   "date": "2021-10-01",
+   "line": "Two pairs a shelf, eight inches for boots.",
+   "img": "img/shoe-rack.webp",
+   "external": null
+  },
+  {
+   "id": "shoot-from-the-hip",
+   "title": "Shoot From The Hip",
+   "craft": "games",
+   "date": "2026-11-08",
+   "line": "A Western shooter told as sworn testimony. Every objection rewrites the gunfight.",
+   "img": "img/shoot-from-the-hip.webp",
+   "external": null
+  },
+  {
+   "id": "simple-risc-machine",
+   "title": "Simple RISC Machine",
+   "craft": "hardware",
+   "date": "2019-12-01",
+   "line": "A small processor in Verilog, running from RAM on an FPGA.",
+   "img": "img/simple-risc-machine.webp",
+   "external": null
+  },
+  {
+   "id": "spicy-sausage-pasta",
+   "title": "Spicy Sausage Pasta Sauce with Linguini",
+   "craft": "cooking",
+   "date": "2021-10-01",
+   "line": "Sausage, pepper and mushrooms simmered in tomatoes and red wine.",
+   "img": "img/spicy-sausage-pasta.webp",
+   "external": null
+  },
+  {
+   "id": "starhaul",
+   "title": "Starhaul",
+   "craft": "games",
+   "date": "2026-10-14",
+   "line": "Space trucking at ten thousand miles an hour.",
+   "img": "img/starhaul.webp",
+   "external": null
+  },
+  {
+   "id": "starship-cycle",
+   "title": "Starship Cycle",
+   "craft": "games",
+   "date": "2026-10-19",
+   "line": "A real-time replica of a full Starship flight cycle, in the browser.",
+   "img": "img/starship-cycle.webp",
+   "external": "https://starship-cycle.danielzn.com/"
+  },
+  {
+   "id": "two-way-surround-speakers",
+   "title": "Two-Way Surround Speakers",
+   "craft": "audio",
+   "date": "2021-08-01",
+   "line": "Passive bookshelf speakers on single-screw tilting mounts.",
+   "img": "img/two-way-surround-speakers.webp",
+   "external": null
+  },
+  {
+   "id": "workbench",
+   "title": "Workbench",
+   "craft": "woodworking",
+   "date": "2020-06-01",
+   "line": "An English Nicholson bench with a bay for the table saw.",
+   "img": "img/workbench.webp",
+   "external": null
+  }
+ ],
+ "courses": [
+  {
+   "code": "CIVL 250",
+   "title": "Engineering and Sustainable Development"
+  },
+  {
+   "code": "CPEN 211",
+   "title": "Computing Systems I"
+  },
+  {
+   "code": "CPSC 259",
+   "title": "Data Structures and Algorithms for Electrical Engineers"
+  },
+  {
+   "code": "ELEC 201",
+   "title": "Circuit Analysis I"
+  },
+  {
+   "code": "ELEC 202",
+   "title": "Circuit Analysis II"
+  },
+  {
+   "code": "ELEC 211",
+   "title": "Engineering Electromagnetics"
+  },
+  {
+   "code": "ELEC 221",
+   "title": "Signals and Systems"
+  },
+  {
+   "code": "ELEC 281",
+   "title": "Technical Communication"
+  },
+  {
+   "code": "MATH 253",
+   "title": "Multivariable Calculus"
+  },
+  {
+   "code": "MATH 256",
+   "title": "Differential Equations"
+  },
+  {
+   "code": "CPEN 311",
+   "title": "Digital Systems Design"
+  },
+  {
+   "code": "ELEC 301",
+   "title": "Electronic Circuits"
+  },
+  {
+   "code": "ELEC 311",
+   "title": "Electromagnetic Fields and Waves"
+  },
+  {
+   "code": "ELEC 315",
+   "title": "Electronic Materials and Devices"
+  },
+  {
+   "code": "ELEC 331",
+   "title": "Computer Communications"
+  },
+  {
+   "code": "ELEC 341",
+   "title": "Systems and Control"
+  },
+  {
+   "code": "ELEC 342",
+   "title": "Electro-Mechanical Energy Conversion and Transmission"
+  },
+  {
+   "code": "MATH 307",
+   "title": "Applied Linear Algebra"
+  },
+  {
+   "code": "APSC 450",
+   "title": "Professional Engineering Practice"
+  },
+  {
+   "code": "ELEC 481",
+   "title": "Economic Analysis of Engineering Projects"
+  }
+ ],
+ "experience": [
+  {
+   "org": "Tesla",
+   "where": "Fremont, CA",
+   "when": "May 2022 – Aug 2022",
+   "role": "Test Engineering Intern",
+   "did": [
+    "Designed an energy-limiting circuit interruption device that protects the HV lab’s resistor bank",
+    "Automated battery charging over CAN, saving technicians 2+ hours a day",
+    "Ran HV electrical abuse tests on powertrain components"
+   ]
+  },
+  {
+   "org": "EnerSys",
+   "where": "Burnaby, BC",
+   "when": "Sep 2021 – Dec 2021",
+   "role": "Electronics Engineering Intern",
+   "did": [
+    "Designed a high-voltage shorting jig with an isolated switch",
+    "Diagnosed a faulty shunt-measuring PCBA"
+   ]
+  },
+  {
+   "org": "Rocket UBC",
+   "where": "Vancouver, BC",
+   "when": "Sep 2022 – May 2023",
+   "role": "Avionics",
+   "did": [
+    "Designed the radio PCBA flown on Beauty and the Beast at Launch Canada 2023"
+   ]
+  },
+  {
+   "org": "UAS UBC",
+   "where": "Vancouver, BC",
+   "when": "Sep 2022 – May 2023",
+   "role": "RF Comms",
+   "did": [
+    "Designed a long-range 2.4 GHz directional antenna and its link budget"
+   ]
+  }
+ ],
+ "education": "UBC — B.A.Sc. Electrical Engineering, 2018–2023",
+ "skills": [
+  "C",
+  "Python",
+  "Verilog",
+  "Git",
+  "Circuit design",
+  "Altium",
+  "LTSpice",
+  "SolidWorks",
+  "Soldering",
+  "Lab equipment"
+ ],
+ "links": [
+  {
+   "label": "X",
+   "href": "https://x.com/danielzn100"
+  },
+  {
+   "label": "LinkedIn",
+   "href": "https://www.linkedin.com/in/danielzn/"
+  },
+  {
+   "label": "GitHub",
+   "href": "https://github.com/daniel-zn"
+  },
+  {
+   "label": "YouTube",
+   "href": "https://www.youtube.com/channel/UCmhuSmJumwws5QfWfJfPXiw"
+  },
+  {
+   "label": "Thingiverse",
+   "href": "https://www.thingiverse.com/danielzn/designs"
+  }
+ ]
+}

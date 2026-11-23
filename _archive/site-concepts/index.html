@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eight Impossible Websites</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..900,0..100&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a specimen catalogue. One large numbered entry per concept, alternating image side, on a quiet paper ground. */
+:root {
+  --bg: #efede6; --fg: #17171a; --muted: #5d5b55; --rule: #cfccc2; --card: #e6e3da; --accent: #d2361e;
+  --display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141416; --fg: #ecebe6; --muted: #a09d95; --rule: #2e2d2b; --card: #1e1e21; --accent: #ff6a4d; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #141416; --fg: #ecebe6; --muted: #a09d95; --rule: #2e2d2b; --card: #1e1e21; --accent: #ff6a4d; color-scheme: dark; }
+body { background: var(--bg); color: var(--fg); font-family: var(--display); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 56px 80px; }
+header { display: grid; gap: 20px; padding-bottom: 40px; border-bottom: 1px solid var(--rule); }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0; font-weight: 300; font-variation-settings: "SOFT" 100, "opsz" 144; font-size: clamp(48px, 9vw, 128px); line-height: .92; letter-spacing: -.02em; text-wrap: balance; }
+h1 em { font-style: italic; font-weight: 600; color: var(--accent); }
+.intro { max-width: 62ch; font-size: clamp(17px, 1.6vw, 20px); line-height: 1.55; color: var(--muted); margin: 0; }
+ol { list-style: none; margin: 0; padding: 0; }
+.entry { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(20px, 4vw, 56px); align-items: center; padding-block: 48px; border-bottom: 1px solid var(--rule); }
+.entry:nth-child(even) .shot { order: 2; }
+.shot { display: block; position: relative; aspect-ratio: 16 / 10; max-width: 100%; background: var(--card); overflow: hidden; border-radius: 3px; }
+.shot.pending { display: grid; place-items: center; font-family: var(--mono); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.shot img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s cubic-bezier(.2,.7,.2,1); }
+.shot:hover img, .shot:focus-visible img { transform: scale(1.03); }
+.shot:focus-visible, .open:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.text { display: grid; gap: 14px; min-width: 0; }
+.num { font-family: var(--mono); font-size: 13px; color: var(--accent); letter-spacing: .1em; }
+h2 { margin: 0; font-weight: 500; font-size: clamp(32px, 4.4vw, 56px); line-height: 1; letter-spacing: -.015em; font-variation-settings: "opsz" 96; text-wrap: balance; }
+.text p { margin: 0; font-size: 17px; line-height: 1.55; max-width: 48ch; }
+.tech { font-family: var(--mono); font-size: 12px; color: var(--muted); line-height: 1.6; }
+.open { justify-self: start; display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 20px; border: 1px solid var(--fg); color: var(--fg); text-decoration: none; font-family: var(--mono); font-size: 13px; letter-spacing: .06em; border-radius: 999px; transition: background .2s, color .2s; }
+.open:hover { background: var(--fg); color: var(--bg); }
+footer { padding-top: 32px; font-family: var(--mono); font-size: 12px; color: var(--muted); line-height: 1.7; }
+@media (max-width: 760px) {
+  .entry { grid-template-columns: 1fr; padding-block: 36px; }
+  .entry:nth-child(even) .shot { order: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .shot.pending { display: grid; place-items: center; font-family: var(--mono); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.shot img { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Prototypes · built on danielzn.com content</span>
+    <h1>Eight <em>impossible</em> websites</h1>
+    <p class="intro">Eight working prototypes, each a different answer to what a personal website can be. They all use the same content: 27 projects, a résumé and 20 sets of course notes. Each one opens full screen and works with a mouse, keyboard or touch.</p>
+  </header>
+
+  <ol id="list"></ol>
+
+  <footer>Sound plays only after you press something. Every concept has a plain list of the projects, so the content is never locked behind the gimmick.</footer>
+</div>
+
+<script>
+const concepts = [
+  { slug: 'scope', name: 'Bench Scope', idea: 'The site is a working oscilloscope. The beam traces his name, the knobs scrub through projects, and photos are scanned onto green phosphor.', tech: 'WebGL phosphor persistence · X–Y vector text · rotary knobs' },
+  { slug: 'bench', name: 'The Workbench', idea: 'Everything is a physical object on a maker’s bench: photos, phones, PCBs, recipe cards. Grab them, fling them, stack them, or pick one up to read the back.', tech: '2D rigid-body physics · procedural materials · lamp lighting' },
+  { slug: 'zine', name: 'Riso Zine', idea: 'A stapled, risograph-printed zine you page through by dragging the corner. Every photo is turned into a two-ink halftone as the page loads.', tech: '3D page curl · live halftone shader · misregistered spot inks' },
+  { slug: 'zoom', name: 'Infinite Zoom', idea: 'One continuous dive with no pages. Each project is hidden inside a tiny detail of the one before it, so you fall through his work layer by layer.', tech: 'Scale-space renderer · depth gauge · pinch and wheel zoom' },
+  { slug: 'museum', name: 'The Museum', idea: 'A walkable retrospective with a wing for each craft. Works hang under gallery lighting with curator labels, and the floor plan teleports you between wings.', tech: 'three.js · procedural architecture · synthesised footsteps' },
+  { slug: 'synth', name: 'The Instrument', idea: 'A boutique groove box where each project is a pad with its own sound. Play the career and it becomes a song, in the order the projects were released.', tech: 'WebAudio synthesis · step sequencer · live visualiser' },
+  { slug: 'matter', name: 'Living Matter', idea: 'All the content is made of the same few hundred thousand particles. They flow from his name into each project’s photo and title, and your cursor pushes them around.', tech: 'GPU particles · curl-noise flow · image sampling' },
+  { slug: 'town', name: 'The Town', idea: 'A little pixel-art town to walk around. Each building is a section, every project is something you can inspect, and the townsfolk tell you about him.', tech: 'Canvas pixel art · day–night cycle · tap-to-walk pathfinding' },
+];
+const list = document.getElementById('list');
+const READY = window.READY || concepts.map((c) => c.slug);
+concepts.forEach((c, i) => {
+  const ready = READY.includes(c.slug);
+  const li = document.createElement('li');
+  li.className = 'entry';
+  const href = 'c/' + c.slug + '.html';
+  li.innerHTML = `
+    ${ready ? `<a class="shot" href="${href}" aria-label="Open ${c.name}"><img src="img/thumb-${c.slug}.webp" alt="${c.name}, first screen" loading="lazy" width="1440" height="900"></a>` : `<span class="shot pending"><span>In progress</span></span>`}
+    <div class="text">
+      <span class="num">No. ${String(i + 1).padStart(2, '0')}</span>
+      <h2>${c.name}</h2>
+      <p>${c.idea}</p>
+      <span class="tech">${c.tech}</span>
+      ${ready ? `<a class="open" href="${href}">Open prototype →</a>` : `<span class="tech">Still being built</span>`}
+    </div>`;
+  list.appendChild(li);
+});
+</script>
+
+</html>
