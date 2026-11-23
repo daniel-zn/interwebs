@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Savannah Bakes · Résumé</title>
+<meta name="description" content="Savannah Bakes, #1 ranked enterprise sales in Washington and Alaska. One résumé, eight ways to read it.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,400..700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* A deck of cards on a sand-coloured table: pick one to open that version of the résumé. */
+:root {
+  --bg: #ece6da; --ink: #1d1a16; --muted: #6b6358; --card: #f8f4ec; --rule: #d6cdbd; --accent: #b4441f;
+  --display: "Fraunces", Georgia, serif; --mono: "DM Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #16130f; --ink: #f1ebe0; --muted: #a89f92; --card: #211d18; --rule: #3a332b; --accent: #ef7a4f; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--display); -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: calc(48px + env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) calc(64px + env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)); }
+header { display: grid; gap: 18px; margin-bottom: 44px; }
+.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0; font-weight: 400; font-size: clamp(48px, 10vw, 132px); line-height: .9; letter-spacing: -.025em; }
+h1 i { font-weight: 600; color: var(--accent); }
+.headline { margin: 0; font-size: clamp(19px, 2.2vw, 26px); line-height: 1.35; max-width: 34ch; }
+.contact { display: flex; flex-wrap: wrap; gap: 8px 22px; font: 400 14px/1.6 var(--mono); }
+.contact a { color: var(--ink); text-underline-offset: 4px; text-decoration-color: var(--accent); }
+.grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 22px; }
+.card { display: flex; flex-direction: column; height: 100%; text-decoration: none; color: inherit; background: var(--card); border: 1px solid var(--rule); border-radius: 14px; overflow: hidden;
+  transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s; box-shadow: 0 1px 0 rgba(0,0,0,.04); }
+.card.pending { opacity: .55; }
+.card.pending .go { color: var(--muted); }
+.card:not(.pending):hover, .card:focus-visible { transform: translateY(-6px) rotate(-.6deg); box-shadow: 0 22px 40px -18px rgba(40,25,10,.45); }
+.grid li:nth-child(even) .card:hover, .grid li:nth-child(even) .card:focus-visible { transform: translateY(-6px) rotate(.6deg); }
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.shot { position: relative; aspect-ratio: 16 / 10; background: var(--rule); overflow: hidden; }
+.shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.shot .n { position: absolute; left: 12px; top: 10px; font: 500 12px/1 var(--mono); padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,.55); color: #fff; letter-spacing: .08em; }
+.body { display: grid; gap: 8px; padding: 18px 18px 20px; }
+.body h2 { margin: 0; font-weight: 500; font-size: 26px; line-height: 1.05; letter-spacing: -.01em; }
+.body p { margin: 0; font-size: 15.5px; line-height: 1.5; color: var(--muted); }
+.go { font: 500 12px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-top: 4px; }
+footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--rule); font: 400 13px/1.7 var(--mono); color: var(--muted); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
+footer a { color: inherit; }
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } .card.pending { opacity: .55; }
+.card.pending .go { color: var(--muted); }
+.card:not(.pending):hover, .card:focus-visible { transform: none; } }
+</style>
+<script>window.READY = [];</script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Résumé · eight ways to read it</span>
+    <h1>Savannah <i>Bakes</i></h1>
+    <p class="headline">#1 ranked enterprise sales in Washington and Alaska. Consultative selling, relationship development and technology solutions.</p>
+    <div class="contact">
+      <a href="mailto:savannahpbakes@gmail.com">savannahpbakes@gmail.com</a>
+      <a href="https://www.linkedin.com/in/savannah-bakes" target="_blank" rel="noopener">linkedin.com/in/savannah-bakes</a>
+    </div>
+  </header>
+
+  <ul class="grid" id="grid"></ul>
+
+  <footer>
+    <span>Every version holds the same résumé. Each one also has a plain list view.</span>
+    <a href="/">interwebs</a>
+  </footer>
+</div>
+<script>
+const versions = [
+  ['Bench Scope', 'Her career traced on a working oscilloscope. Turn the knobs to move through the roles.'],
+  ['The Workbench', 'The résumé as objects on a desk: award plaques, name badges, lesson plans. Pick one up to read it.'],
+  ['Riso Zine', 'A stapled, two-ink printed zine you page through by dragging the corner.'],
+  ['Infinite Zoom', 'One continuous dive. Each chapter of her career sits inside a detail of the one before.'],
+  ['The Museum', 'A walkable retrospective with a wing for each chapter and curator labels on the walls.'],
+  ['The Instrument', 'A groove box where each role is a pad. Play the career and it becomes a song.'],
+  ['Living Matter', 'Particles that flow from her name into each role and its numbers. Your cursor pushes them around.'],
+  ['The Town', 'A small pixel-art town where every building is a chapter and the townsfolk tell you about her.'],
+];
+const grid = document.getElementById('grid');
+const READY = window.READY || [1, 2, 3, 4, 5, 6, 7, 8];
+versions.forEach(([name, line], i) => {
+  const n = i + 1;
+  const ready = READY.includes(n);
+  const li = document.createElement('li');
+  li.innerHTML = ready ? `<a class="card" href="../spb-resume${n}/">
+    <span class="shot"><img src="cover-${n}.webp" alt="" width="640" height="400" loading="${i < 4 ? 'eager' : 'lazy'}"><span class="n">No. ${n}</span></span>
+    <span class="body"><h2>${name}</h2><p>${line}</p><span class="go">Open →</span></span></a>` : `<div class="card pending"><span class="shot"><span class="n">No. ${n}</span></span>
+    <span class="body"><h2>${name}</h2><p>${line}</p><span class="go">In progress</span></span></div>`;
+  grid.appendChild(li);
+});
+</script>
+</body>
+</html>
