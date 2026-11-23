@@ -150,8 +150,9 @@ async function playOnce(page, press, release, { power = 0.55, shots = false } = 
   check(await page.evaluate(() => window.__pond.game.paused), 'game pauses behind dialogs');
   await page.shot('journal');
   await page.keyboard.press('Escape');
-  await sleep(100);
-  check(!(await page.isVisible('#journal')) && !(await page.evaluate(() => window.__pond.game.paused)), 'Esc closes journal and resumes');
+  // The dialog closes (and the game resumes) in a later task, so wait for it rather than a fixed delay.
+  const resumed = await page.waitForFunction(() => !document.getElementById('journal').open && !window.__pond.game.paused, null, { timeout: 5000 }).then(() => true, () => false);
+  check(resumed, 'Esc closes journal and resumes');
 
   // Sound toggle and help/settings.
   await page.keyboard.press('m');
@@ -162,6 +163,7 @@ async function playOnce(page, press, release, { power = 0.55, shots = false } = 
   await page.check('#opt-gentle');
   await page.shot('help');
   await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.getElementById('help').open && !window.__pond.game.paused, null, { timeout: 5000 });
   check(await page.evaluate(() => window.__pond.store.settings.gentle), 'gentle mode setting saved');
 
   // Frame cost of update + render.
