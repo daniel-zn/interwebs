@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Savannah Bakes · Résumé</title>
+<meta name="description" content="Savannah Bakes, #1 Ranked Enterprise Sales in Washington and Alaska.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..600&family=Archivo+Narrow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E8ECEF;
+  --paper-2:#DCE2E7;
+  --ink:#0D1320;
+  --ink-2:#3A4352;
+  --rule:#0D132033;
+  --blue:#1F2EE0;
+  --blue-ink:#E8ECEF;
+  --display:"Bodoni Moda","Didot","Bodoni 72","Times New Roman",serif;
+  --text:"Newsreader","Iowan Old Style","Georgia",serif;
+  --label:"Archivo Narrow","Arial Narrow","Helvetica Neue",Arial,sans-serif;
+  --gut:clamp(16px,3.2vw,48px);
+  --pad-l:max(var(--gut),env(safe-area-inset-left));
+  --pad-r:max(var(--gut),env(safe-area-inset-right));
+}
+*{box-sizing:border-box}
+html{background:var(--paper);color:var(--ink);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--text);font-size:clamp(17px,1.2vw,19px);line-height:1.5;font-optical-sizing:auto;overflow-x:hidden;
+  padding-bottom:env(safe-area-inset-bottom)}
+a{color:inherit}
+h1,h2,h3,p,ul,ol,dl{margin:0}
+ul{padding:0;list-style:none}
+.wrap{max-width:1440px;margin:0 auto;padding-left:var(--pad-l);padding-right:var(--pad-r)}
+.label{font-family:var(--label);font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase}
+
+/* running head */
+.runhead{display:flex;justify-content:space-between;align-items:baseline;gap:16px;
+  padding-top:max(18px,env(safe-area-inset-top));padding-bottom:14px;border-bottom:1px solid var(--ink)}
+.runhead a{text-decoration:none}
+.runhead a:hover{color:var(--blue)}
+.runhead .mid{flex:1;text-align:center}
+.runhead .folio{font-variant-numeric:tabular-nums}
+
+/* opening spread */
+.opener{display:grid;grid-template-columns:repeat(12,1fr);column-gap:var(--gut);
+  padding-top:clamp(28px,4vw,56px);padding-bottom:clamp(40px,6vw,96px);align-items:end}
+.opener .name{grid-column:1 / 9;align-self:start}
+h1{font-family:var(--display);font-weight:500;font-optical-sizing:auto;font-variation-settings:"opsz" 96;
+  font-size:clamp(86px,15.2vw,232px);line-height:.82;letter-spacing:-.035em;margin-left:-.04em}
+h1 span{display:block}
+h1 .last{font-style:italic;font-weight:400;padding-left:.62em}
+.deck{grid-column:1 / 8;margin-top:clamp(28px,3.6vw,56px);display:grid;grid-template-columns:auto 1fr;gap:18px 24px;align-items:start}
+.deck .rule{width:56px;height:6px;background:var(--blue);margin-top:.55em}
+.headline{font-family:var(--display);font-style:italic;font-weight:400;font-size:clamp(26px,2.5vw,38px);line-height:1.12;letter-spacing:-.01em;max-width:20ch}
+.focus{grid-column:2;display:flex;flex-wrap:wrap;gap:6px 0}
+.focus li{font-family:var(--label);font-weight:600;font-size:13px;letter-spacing:.14em;text-transform:uppercase}
+.focus li+li::before{content:"/";color:var(--blue);margin:0 .7em}
+.contact-top{grid-column:2;display:flex;flex-wrap:wrap;gap:6px 28px;font-family:var(--label);font-size:15px;letter-spacing:.02em}
+.contact-top a{text-decoration:none;border-bottom:1px solid var(--blue);padding-bottom:1px}
+.contact-top a:hover{color:var(--blue)}
+
+.plate{grid-column:9 / 13;grid-row:1 / 3;align-self:stretch;background:var(--blue);color:var(--blue-ink);
+  display:flex;flex-direction:column;justify-content:space-between;padding:clamp(18px,2vw,30px);min-height:clamp(420px,46vw,660px);position:relative;overflow:hidden}
+.plate .label{opacity:.85}
+.plate .big{font-family:var(--display);font-weight:600;font-variation-settings:"opsz" 96;font-size:clamp(150px,19vw,300px);line-height:.78;letter-spacing:-.05em;margin-left:-.05em}
+.plate .big sup{font-size:.36em;vertical-align:top;position:relative;top:.18em;letter-spacing:0;margin-right:.02em}
+.plate .cap{font-family:var(--display);font-style:italic;font-size:clamp(20px,1.7vw,26px);line-height:1.15;margin-top:14px;max-width:14ch}
+.plate .stripe{position:absolute;left:0;right:0;bottom:0;height:34%;background:var(--ink);opacity:.0}
+
+/* section heads */
+.sec{border-top:1px solid var(--ink);padding-top:14px}
+.sechead{display:grid;grid-template-columns:repeat(12,1fr);column-gap:var(--gut);align-items:baseline;margin-bottom:clamp(28px,4vw,56px)}
+.sechead .label{grid-column:1 / 4}
+h2{grid-column:4 / 13;font-family:var(--display);font-weight:500;font-variation-settings:"opsz" 96;font-size:clamp(54px,8vw,128px);line-height:.9;letter-spacing:-.035em}
+h2 em{color:var(--blue)}
+
+/* timeline block (solid ink "photograph") */
+.timeline{background:var(--ink);color:var(--paper);margin:0 0 clamp(48px,6vw,96px);padding:clamp(20px,2.4vw,36px) clamp(18px,2.4vw,36px) clamp(18px,2vw,28px)}
+.timeline .tl-top{display:flex;justify-content:space-between;gap:16px;margin-bottom:22px}
+.tl{position:relative;display:grid;grid-template-columns:repeat(7,1fr);row-gap:8px}
+.tl .row{display:contents}
+.tl .bar{height:30px;background:var(--paper);color:var(--ink);font-family:var(--label);font-weight:600;font-size:12px;letter-spacing:.06em;
+  display:block;line-height:30px;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl .bar.acc{background:var(--blue);color:var(--paper)}
+.tl .bar.edu{background:transparent;color:var(--paper);box-shadow:inset 0 0 0 1px var(--paper)}
+.tl .axis{grid-column:1 / -1;display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid #E8ECEF55;margin-top:10px;padding-top:8px}
+.tl .axis span{font-family:var(--label);font-size:12px;letter-spacing:.1em;font-variant-numeric:tabular-nums;opacity:.8}
+
+/* roles */
+.role{display:grid;grid-template-columns:repeat(12,1fr);column-gap:var(--gut);padding:clamp(28px,3.4vw,52px) 0;border-top:1px solid var(--rule)}
+.role:first-of-type{border-top:0;padding-top:0}
+.margin{grid-column:1 / 4}
+.when{font-family:var(--label);font-weight:600;font-size:14px;letter-spacing:.14em;font-variant-numeric:tabular-nums;color:var(--blue)}
+.pull{margin-top:22px;display:grid;gap:22px}
+.fig{border-top:3px solid var(--ink);padding-top:8px}
+.fig b{display:block;white-space:nowrap;font-family:var(--display);font-weight:600;font-variation-settings:"opsz" 96;font-size:clamp(52px,5.4vw,84px);line-height:.92;letter-spacing:-.04em}
+.fig b i{color:var(--blue);font-style:normal;font-weight:700}
+.fig b.sm{font-size:clamp(34px,3.3vw,54px)}
+.fig b i.s,.hash{font-family:var(--label);font-weight:700;font-size:.72em;vertical-align:.12em;margin-right:.04em}
+.hash{color:var(--blue);font-size:.8em;font-style:normal;vertical-align:.04em}
+.plate .big sup{font-family:var(--label);font-weight:700}
+.fig small{display:block;font-family:var(--label);font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin-top:6px;color:var(--ink-2)}
+.body{grid-column:4 / 13}
+h3{font-family:var(--display);font-weight:500;font-variation-settings:"opsz" 72;font-size:clamp(30px,3vw,46px);line-height:1.02;letter-spacing:-.02em;max-width:22ch}
+.org{font-family:var(--label);font-size:15px;letter-spacing:.06em;text-transform:uppercase;margin-top:12px;color:var(--ink-2)}
+.org strong{color:var(--ink);font-weight:700}
+.org .sep{color:var(--blue);margin:0 .5em}
+.points{margin-top:22px;column-count:2;column-gap:var(--gut);column-rule:1px solid var(--rule)}
+.points li{break-inside:avoid;margin-bottom:.9em;hyphens:auto;text-wrap:pretty}
+.points.one{column-count:1;max-width:38em}
+.drop li:first-child::first-letter{font-family:var(--display);font-weight:500;float:left;font-size:5.1em;line-height:.8;margin:.06em .1em 0 -.02em;color:var(--blue);font-variation-settings:"opsz" 96}
+
+/* slope chart */
+.slope{margin-top:6px}
+.slope svg{display:block;width:100%;height:auto;overflow:visible;margin-bottom:10px}
+.slope text{font-family:var(--label);font-size:12px;letter-spacing:.06em;fill:var(--ink-2)}
+.slope .v{font-family:var(--display);font-size:26px;fill:var(--ink);letter-spacing:-.02em}
+
+/* dot field 1 of 8 */
+.dots{display:flex;gap:6px;margin-top:10px}
+.dots span{width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.dots span.on{background:var(--blue);box-shadow:none}
+
+/* education */
+.edu{display:grid;grid-template-columns:repeat(12,1fr);column-gap:var(--gut);padding-bottom:clamp(48px,6vw,96px)}
+.edu .body .detail{font-family:var(--display);font-style:italic;font-size:clamp(20px,1.7vw,26px);line-height:1.25;margin-top:14px;max-width:30ch}
+.scale{margin-top:6px}
+.scale .bars{display:flex;align-items:flex-end;gap:10px;height:120px;margin-top:30px}
+.scale .bars div{background:var(--ink);width:44px;position:relative}
+.scale .bars div.b2{background:var(--blue)}
+.scale .bars em{position:absolute;bottom:100%;left:0;font-style:normal;font-family:var(--label);font-size:12px;letter-spacing:.06em;margin-bottom:4px;color:var(--ink-2);white-space:nowrap}
+
+/* skills */
+.skills-sec{padding-bottom:clamp(48px,6vw,96px)}
+.skills{display:grid;grid-template-columns:repeat(12,1fr);column-gap:var(--gut)}
+.skills ul{grid-column:4 / 13;font-family:var(--display);font-size:clamp(26px,2.6vw,40px);line-height:1.22;letter-spacing:-.01em}
+.skills li{display:inline}
+.skills li:nth-child(even){font-style:italic}
+.skills li+li::before{content:"·";color:var(--blue);margin-right:.38em;font-style:normal}
+
+/* contact colophon */
+.colophon{background:var(--blue);color:var(--paper);padding:clamp(28px,4vw,64px) 0 max(28px,env(safe-area-inset-bottom))}
+.colophon .sechead{margin-bottom:clamp(20px,3vw,40px)}
+.colophon .sec{border-top-color:var(--paper)}
+.colophon h2 em{color:var(--paper)}
+.colophon .cl{display:grid;grid-template-columns:repeat(12,1fr);column-gap:var(--gut);row-gap:18px}
+.colophon dt{grid-column:1 / 4}
+.colophon .cl li{grid-column:4 / 13;margin:0;font-family:var(--display);font-size:clamp(24px,3.4vw,52px);line-height:1.05;letter-spacing:-.02em;overflow-wrap:anywhere}
+.colophon .cl li a{text-decoration:none;border-bottom:2px solid var(--paper)}
+.colophon .cl li a:hover{border-bottom-color:var(--ink)}
+.colophon .foot{display:flex;justify-content:space-between;margin-top:clamp(36px,5vw,72px);padding-top:12px;border-top:1px solid #E8ECEF88}
+
+/* load-in */
+@media (prefers-reduced-motion:no-preference){
+  .plate{animation:wipe 1.1s cubic-bezier(.7,0,.2,1) both}
+  h1 span{animation:rise .9s cubic-bezier(.2,.7,.2,1) both}
+  h1 .last{animation-delay:.12s}
+  @keyframes wipe{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0 0 0 0)}}
+  @keyframes rise{from{transform:translateY(.12em);opacity:.0001}to{transform:none;opacity:1}}
+}
+
+/* tablet */
+@media (max-width:1000px){
+  .opener .name{grid-column:1 / -1}
+  .deck{grid-column:1 / 8}
+  .plate{grid-column:8 / 13;grid-row:2;min-height:380px}
+  .points{column-count:1;max-width:40em}
+}
+/* phone */
+@media (max-width:680px){
+  .opener,.sechead,.role,.edu,.skills,.colophon .cl{grid-template-columns:minmax(0,1fr)}
+  .skills ul{font-size:23px}
+  .opener>*, .sechead>*, .role>*, .edu>*, .skills>*, .colophon .cl>*{grid-column:1 / -1 !important}
+  h1{font-size:clamp(64px,22vw,120px)}
+  h1 .last{padding-left:.4em}
+  .deck{grid-template-columns:1fr}
+  .deck .rule,.focus,.contact-top{grid-column:1}
+  .focus{display:block}
+  .focus li{display:block;margin-bottom:6px}
+  .focus li+li::before{content:none}
+  .plate{grid-row:auto;min-height:0;margin-top:36px;aspect-ratio:4/5}
+  .plate .big{font-size:58vw}
+  .runhead .mid{display:none}
+  .sechead .label{margin-bottom:10px}
+  h2{font-size:clamp(48px,15vw,80px)}
+  .margin{order:2;margin-top:22px}
+  .pull{grid-template-columns:1fr 1fr;gap:16px}
+  .pull .slope,.pull .wide{grid-column:1 / -1}
+  .fig b{font-size:46px}
+  .tl .bar{font-size:9px;letter-spacing:.02em;padding:0 4px;height:24px;line-height:24px;text-overflow:clip}
+  .tl .bar .y{display:none}
+  .tl .bar.edu .y{display:inline}
+  .tl .axis span{font-size:10px;letter-spacing:.02em}
+  .colophon dt{margin-top:6px}
+}
+@media print{
+  .plate,.timeline,.colophon{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .runhead a{display:none}
+  .role,.fig{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <div class="runhead label">
+    <a href="../">← All versions</a>
+    <span class="mid">Savannah Bakes</span>
+    <span class="folio">01</span>
+  </div>
+
+  <div class="opener">
+    <div class="name">
+      <h1><span>Savannah</span><span class="last">Bakes</span></h1>
+    </div>
+    <div class="deck">
+      <div class="rule" aria-hidden="true"></div>
+      <p class="headline"><span class="hash">#</span>1 Ranked Enterprise Sales in Washington and Alaska</p>
+      <ul class="focus" aria-label="Focus">
+        <li>Consultative Selling</li> <li>Relationship Development</li> <li>Technology Solutions</li>
+      </ul>
+      <p class="contact-top">
+        <a href="mailto:savannahpbakes@gmail.com">savannahpbakes@gmail.com</a>
+        <a href="https://www.linkedin.com/in/savannah-bakes">linkedin.com/in/savannah-bakes</a>
+        <a href="../Savannah-Bakes-Resume.pdf" download>Résumé PDF ↓</a>
+      </p>
+    </div>
+    <aside class="plate" aria-label="#1 in sales, WA + AK">
+      <span class="label">Enterprise Mobility · 2026</span>
+      <div>
+        <div class="big" aria-hidden="true"><sup>#</sup>1</div>
+        <p class="cap">in sales, Washington + Alaska</p>
+      </div>
+    </aside>
+  </div>
+</header>
+
+<main>
+  <section class="wrap sec" aria-labelledby="h-exp">
+    <div class="sechead">
+      <span class="label">02 &nbsp;/&nbsp; Savannah Bakes</span>
+      <h2 id="h-exp">Experience</h2>
+    </div>
+
+    <figure class="timeline" aria-label="Timeline of roles and education, 2020 to 2026" style="margin-left:0;margin-right:0">
+      <div class="tl-top label"><span>2020 — 2026</span><span>Experience · Education</span></div>
+      <div class="tl">
+        <div class="bar edu" style="grid-column:1 / 7">Bachelor of Education · UBC<span class="y"> · 2020–2025</span></div>
+        <div class="bar" style="grid-column:4 / 6">AidMe<span class="y"> · 2023–2024</span></div>
+        <div class="bar" style="grid-column:5 / 6">BCUC<span class="y"> · 2024</span></div>
+        <div class="bar" style="grid-column:6 / 7">SD38<span class="y"> · 2025</span></div>
+        <div class="bar" style="grid-column:6 / 8">SD33<span class="y"> · 2025–2026</span></div>
+        <div class="bar acc" style="grid-column:7 / 8">Enterprise<span class="y"> · 2026</span></div>
+        <div class="axis" aria-hidden="true"><span>2020</span><span>2021</span><span>2022</span><span>2023</span><span>2024</span><span>2025</span><span>2026</span></div>
+      </div>
+    </figure>
+
+    <article class="role">
+      <div class="margin">
+        <p class="when">2026</p>
+        <div class="pull">
+          <div class="fig"><b>500</b><small>employees, WA + AK</small></div>
+          <div class="fig"><b>~110</b><small>branches</small></div>
+          <div class="fig slope wide">
+            <svg viewBox="0 0 240 172" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Satisfaction score rose from 86% to 89% within 2 months">
+              <!-- y scale: 80% at y=130, 100% at y=10 -> 6 units per point; 86% -> 94, 89% -> 76 -->
+              <line x1="0" y1="130" x2="240" y2="130" stroke="#0D132055"/>
+              <line x1="0" y1="10" x2="240" y2="10" stroke="#0D132022" stroke-dasharray="2 3"/>
+              <text x="240" y="24" text-anchor="end">100%</text>
+              <text x="240" y="144" text-anchor="end">80%</text>
+              <line x1="40" y1="94" x2="190" y2="76" stroke="#1F2EE0" stroke-width="3"/>
+              <circle cx="40" cy="94" r="5" fill="#0D1320"/>
+              <circle cx="190" cy="76" r="6" fill="#1F2EE0"/>
+              <text class="v" x="40" y="80" text-anchor="middle">86%</text>
+              <text class="v" x="190" y="62" text-anchor="middle">89%</text>
+              <line x1="40" y1="152" x2="190" y2="152" stroke="#0D1320" stroke-width="1"/>
+              <line x1="40" y1="147" x2="40" y2="157" stroke="#0D1320"/><line x1="190" y1="147" x2="190" y2="157" stroke="#0D1320"/>
+              <text x="115" y="170" text-anchor="middle">WITHIN 2 MONTHS</text>
+            </svg>
+            <small>Satisfaction score, team of 3</small>
+          </div>
+        </div>
+      </div>
+      <div class="body">
+        <h3>Sales Manager Trainee</h3>
+        <p class="org"><strong>Enterprise Mobility</strong><span class="sep">/</span>Seattle Airport</p>
+        <ul class="points drop">
+          <li>Received several #1 in sales awards across all of Washington and Alaska (500 employees, ~110 branches) three months after joining, then relocated to the “best of the best” airport operations program.</li>
+          <li>Supports branch sales goals: conversion, revenue per transaction, upselling and satisfaction KPIs.</li>
+          <li>Measurable results in high-volume environments: identified customer needs, built trust, overcame objections.</li>
+          <li>On a team of 3, raised the satisfaction score from 86% to 89% within 2 months.</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="role">
+      <div class="margin">
+        <p class="when">2024</p>
+        <div class="pull">
+          <div class="fig"><b><i class="s">+</i>30%</b><small>engagement</small></div>
+          <div class="fig"><b>100<i class="s">+</i></b><small>staff and senior leaders</small></div>
+        </div>
+      </div>
+      <div class="body">
+        <h3>Indigenous Relations Program Manager</h3>
+        <p class="org"><strong>British Columbia Utilities Commission</strong></p>
+        <ul class="points">
+          <li>Translated complex policy research and stakeholder analysis on Indigenous energy-sector participation into structured materials, improving engagement by 30% and enabling a broader rollout with clear success metrics.</li>
+          <li>Engagement strategy, event coordination, regulatory communications.</li>
+          <li>Planned and facilitated multi-stakeholder workshops and follow-ups (100+ staff and senior leaders) supporting regulatory understanding and Indigenous participation in new energy products and programs.</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="role">
+      <div class="margin">
+        <p class="when">2023–2024</p>
+        <div class="pull">
+          <div class="fig"><b class="sm">AWS <i class="s">+</i> GoPro</b><small>fish populations and disease</small></div>
+        </div>
+      </div>
+      <div class="body">
+        <h3>Product Enablement Lead</h3>
+        <p class="org"><strong>AidMe</strong><span class="sep">/</span>Technology startup</p>
+        <ul class="points">
+          <li>Drove adoption of an Amazon Web Services and GoPro-powered product that measures fish populations and disease.</li>
+          <li>Partnered with engineering and leadership to turn user feedback, especially from Indigenous community stakeholders, into workflow and enablement improvements that informed prioritization.</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="role">
+      <div class="margin">
+        <p class="when">2025–2026</p>
+        <div class="pull">
+          <div class="fig"><b>1,000<i class="s">+</i></b><small>learners</small></div>
+          <div class="fig"><b class="sm"><i class="s">+</i>10–20%</b><small>GPA</small></div>
+        </div>
+      </div>
+      <div class="body">
+        <h3>High School Science Teacher</h3>
+        <p class="org"><strong>SD33 Chilliwack School District</strong></p>
+        <ul class="points">
+          <li>Designed and delivered Grade 12 science and technology curricula for 1,000+ learners: simplified complex topics, defined success criteria, communicated clearly across diverse audiences.</li>
+          <li>Faculty observed GPA improvements of 10 to 20 percent and higher attendance and engagement.</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="role">
+      <div class="margin">
+        <p class="when">2025</p>
+        <div class="pull">
+          <div class="fig"><b>9 <i>&amp;</i> 12</b><small>Grades</small></div>
+          <div class="fig"><b>BC</b><small>adopted across</small></div>
+        </div>
+      </div>
+      <div class="body">
+        <h3>Student Teacher</h3>
+        <p class="org"><strong>SD38 Richmond School District</strong></p>
+        <ul class="points">
+          <li>Designed and delivered Grade 9 and 12 science courses in an inquiry-driven, place-based curriculum.</li>
+          <li>Built a website on Medicine Wheel-based curricula, featured by her university and adopted by educators across British Columbia.</li>
+        </ul>
+      </div>
+    </article>
+  </section>
+
+  <section class="wrap sec" aria-labelledby="h-edu">
+    <div class="sechead">
+      <span class="label">03 &nbsp;/&nbsp; Savannah Bakes</span>
+      <h2 id="h-edu">Education</h2>
+    </div>
+    <div class="edu">
+      <div class="margin">
+        <p class="when">2020–2025</p>
+        <div class="pull">
+          <div class="fig wide"><b>1 <i>of</i> 8</b><small>in Canada · Centennial full scholarship</small>
+            <div class="dots" aria-hidden="true"><span class="on"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          </div>
+          <div class="fig scale wide"><small style="margin-top:0">750 students represented · 300-person gala</small>
+            <div class="bars" role="img" aria-label="750 students represented; 300-person gala, bars to scale">
+              <div style="height:100%"><em>750</em></div>
+              <div class="b2" style="height:40%"><em>300</em></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="body">
+        <h3>Bachelor of Education</h3>
+        <p class="org"><strong>University of British Columbia</strong></p>
+        <p class="detail">Biology and Earth Science double minor, Indigenous Specialization</p>
+        <ul class="points">
+          <li>One of 8 students in Canada to receive the Centennial full scholarship award for high achievement.</li>
+          <li>Specialization in Indigenous Education with an Outstanding Practicum award, and 2× Indigenous Alumni Scholarship.</li>
+          <li>Represented 750 Bachelor of Education students; as graduation coordinator, organized a grad gala for 300 people (vendors, logistics, permits, project management).</li>
+          <li>Coordinated activities, tours and outreach to onboard hundreds of Indigenous students during orientation week, as a primary point of contact.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap sec skills-sec" aria-labelledby="h-skills">
+    <div class="sechead">
+      <span class="label">04 &nbsp;/&nbsp; Savannah Bakes</span>
+      <h2 id="h-skills">Skills</h2>
+    </div>
+    <div class="skills">
+      <ul>
+        <li>Sales OKRs/KPIs</li> <li>Program and Product Management</li> <li>Instructional Design</li> <li>Office M365 Suite</li> <li>User research</li> <li>Enablement/documentation</li> <li>Presentations</li> <li>Public speaking</li> <li>Educational outreach</li> <li>AI tools</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer class="colophon" aria-labelledby="h-contact">
+  <div class="wrap">
+    <div class="sec">
+      <div class="sechead">
+        <span class="label">05 &nbsp;/&nbsp; Savannah Bakes</span>
+        <h2 id="h-contact">Contact</h2>
+      </div>
+      <ul class="cl">
+        <li><a href="mailto:savannahpbakes@gmail.com">savannahpbakes@gmail.com</a></li>
+        <li><a href="https://www.linkedin.com/in/savannah-bakes">linkedin.com/in/savannah-bakes</a></li>
+        <li><a href="../Savannah-Bakes-Resume.pdf" download>Résumé PDF ↓</a></li>
+      </ul>
+      <div class="foot label"><span>Savannah Bakes</span><span>05</span></div>
+    </div>
+  </div>
+</footer>
+</body>
+</html>
