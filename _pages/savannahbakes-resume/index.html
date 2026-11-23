@@ -69,6 +69,7 @@ footer { margin-top: clamp(3rem, 8vw, 5rem); padding-top: 1.6rem; border-top: 1p
     <ul class="links label">
       <li><a href="mailto:savannahpbakes@gmail.com">savannahpbakes@gmail.com</a></li>
       <li><a href="https://www.linkedin.com/in/savannah-bakes" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
+      <li><a href="Savannah-Bakes-Resume.pdf" download>Résumé PDF ↓</a></li>
     </ul>
   </header>
 
@@ -77,11 +78,11 @@ footer { margin-top: clamp(3rem, 8vw, 5rem); padding-top: 1.6rem; border-top: 1p
   <footer><a class="label" href="/">interwebs</a></footer>
 </main>
 <script>
-const versions = [['Swiss Grid', 'swiss-grid'], ['Feature', 'feature'], ['Two Inks', 'two-inks'], ['Chronology', 'chronology'], ['Contours', 'contours'], ['Specimen', 'specimen'], ['Colour Fields', 'colour-fields'], ['Letterpress', 'letterpress']];
-const READY = window.READY || versions.map((_, i) => i + 1);
+const versions = [['Living Matter', 'living-matter'], ['Swiss Grid', 'swiss-grid'], ['Feature', 'feature'], ['Two Inks', 'two-inks'], ['Chronology', 'chronology'], ['Contours', 'contours'], ['Specimen', 'specimen'], ['Colour Fields', 'colour-fields'], ['Letterpress', 'letterpress']];
+const READY = window.READY || versions.map(([, slug]) => slug);
 const list = document.getElementById('list');
 versions.forEach(([name, slug], i) => {
-  const n = i + 1, ready = READY.includes(n), num = String(n).padStart(2, '0');
+  const n = i + 1, ready = READY.includes(slug), num = String(n).padStart(2, '0');
   const li = document.createElement('li');
   li.innerHTML = ready
     ? `<a class="card" href="${slug}/"><span class="shot"><img src="${slug}/cover.webp" alt="" width="640" height="400" loading="${i < 4 ? 'eager' : 'lazy'}"></span>
