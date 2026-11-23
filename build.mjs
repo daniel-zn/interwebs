@@ -12,10 +12,8 @@
 //   <meta name="interwebs:order">    optional sort order (lower first)
 //   cover.png / .webp / .jpg / .svg  card art (16:9); `npm run covers` captures one.
 //                                    Without it the card gets a generated pixel cover.
-//
-// Folders in _pages/ are published as-is at /<folder>/ without a card.
 
-import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { basename, join, relative, sep } from 'node:path';
 import { findProjects, ROOT } from './scripts/lib.mjs';
 import { iconIco, iconPng, iconSvgDataUri } from './scripts/icons.mjs';
@@ -136,13 +134,6 @@ await mkdir(join(OUT, '_home'), { recursive: true });
 
 for (const { slug } of projects) {
   await cp(join(ROOT, slug), join(OUT, slug), { recursive: true, filter: publish(join(ROOT, slug)) });
-}
-// Standalone pages (not arcade cards): _pages/<name>/ is published at /<name>/.
-// They skip the game checks, so they can be ordinary readable, selectable pages.
-// Dev-only files at their top (README.md, scripts, ...) are left out, as for projects.
-for (const name of await readdir(join(ROOT, '_pages')).catch(() => [])) {
-  if (name.startsWith('.')) continue;
-  await cp(join(ROOT, '_pages', name), join(OUT, name), { recursive: true, filter: publish(join(ROOT, '_pages', name)) });
 }
 for (const f of ['home.css', 'home.js']) await cp(join(ROOT, '_site', f), join(OUT, '_home', f));
 // Root icons: browsers that skip a page's SVG icon (Safari, notably) ask for these.
