@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Savannah Bakes · Résumé</title>
+<meta name="description" content="Savannah Bakes, #1 Ranked Enterprise Sales in Washington and Alaska.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gut:clamp(20px,4.4vw,72px);
+  --c0:#B3201A; --t0:#FFF4EC;
+  --c1:#EA5A22; --t1:#1C0703;
+  --c2:#F08A1E; --t2:#1F0B02;
+  --c3:#F2BC1C; --t3:#231803;
+  --c4:#A7BB2A; --t4:#141A02;
+  --c5:#1B7550; --t5:#F2FFF6;
+  --c6:#136B78; --t6:#EFFCFD;
+  --c7:#1E3F8C; --t7:#F1F4FF;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--c0);-webkit-text-size-adjust:100%}
+body{background:var(--c7);color:var(--t0);font-family:"Archivo","Helvetica Neue",Arial,sans-serif;font-stretch:100%;font-size:17px;line-height:1.5;font-variation-settings:"wdth" 100}
+a{color:inherit;text-decoration-thickness:1px;text-underline-offset:.2em}
+a:hover{text-decoration-thickness:2px}
+ul{list-style:none}
+
+.band{position:relative;background:var(--bg);color:var(--fg);
+  padding:clamp(40px,6vw,96px) max(var(--gut),env(safe-area-inset-right)) clamp(48px,7vw,112px) max(var(--gut),env(safe-area-inset-left))}
+.b0{--bg:var(--c0);--fg:var(--t0)} .b1{--bg:var(--c1);--fg:var(--t1)} .b2{--bg:var(--c2);--fg:var(--t2)}
+.b3{--bg:var(--c3);--fg:var(--t3)} .b4{--bg:var(--c4);--fg:var(--t4)} .b5{--bg:var(--c5);--fg:var(--t5)}
+.b6{--bg:var(--c6);--fg:var(--t6)} .b7{--bg:var(--c7);--fg:var(--t7)}
+
+/* label strip */
+.strip{display:flex;justify-content:space-between;gap:16px;align-items:baseline;
+  font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+  border-top:2px solid currentColor;padding-top:12px;margin-bottom:clamp(28px,4vw,56px)}
+.strip h2{font:inherit;letter-spacing:inherit}
+.strip .idx{font-variant-numeric:tabular-nums}
+
+/* header */
+.top{padding-top:max(20px,env(safe-area-inset-top))}
+.back{display:inline-block;font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;
+  border-bottom:2px solid currentColor;padding-bottom:2px;margin-bottom:clamp(40px,8vw,120px)}
+.back:hover{border-bottom-width:4px}
+h1{font-weight:850;font-variation-settings:"wdth" 125;font-size:clamp(52px,11.2vw,184px);line-height:.86;letter-spacing:-.035em;text-transform:uppercase}
+.head-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px var(--gut);margin-top:clamp(32px,5vw,72px)}
+.headline{grid-column:1/8;font-size:clamp(24px,3vw,44px);line-height:1.08;font-weight:600;letter-spacing:-.01em}
+.headline b{font-weight:850}
+.focus{grid-column:1/8;display:flex;flex-wrap:wrap;gap:0;font-size:15px;font-weight:600;letter-spacing:.04em}
+.focus li{padding:2px 16px 2px 0;margin:6px 0}
+.focus li+li{padding-left:16px;border-left:2px solid currentColor}
+.contact{grid-column:9/13;grid-row:1/3;align-self:end;font-size:16px}
+.contact h2{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;border-top:2px solid currentColor;padding-top:10px;margin-bottom:10px}
+.pdf{display:inline-block;margin-top:6px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:13px;text-decoration:none;border:2px solid currentColor;padding:8px 12px}
+.pdf:hover{background:var(--fg);color:var(--bg)}
+.contact li{padding:4px 0;overflow-wrap:anywhere}
+
+/* entries */
+.entry{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0 var(--gut);align-items:start}
+.fig{grid-column:1/7}
+.big{display:block;font-weight:850;font-variation-settings:"wdth" 125;font-size:min(clamp(92px,15vw,248px),calc(50vw / (var(--n,3) * .74)));line-height:.8;letter-spacing:-.05em;
+  font-variant-numeric:lining-nums;white-space:nowrap;margin-left:-.04em}
+.big small{font-size:.42em;letter-spacing:-.02em;vertical-align:.95em;margin-left:.06em}
+.cap{display:block;margin-top:clamp(14px,2vw,26px);font-size:clamp(15px,1.3vw,19px);font-weight:600;max-width:24ch;line-height:1.25}
+.txt{grid-column:7/13}
+.txt h3{font-size:clamp(26px,2.6vw,40px);line-height:1.05;font-weight:800;letter-spacing:-.015em;font-variation-settings:"wdth" 110}
+.org{margin-top:10px;font-size:17px;font-weight:600}
+.org span{font-weight:400}
+.pts{margin-top:22px;border-top:1px solid currentColor}
+.pts li{padding:12px 0 12px 28px;border-bottom:1px solid currentColor;position:relative;max-width:62ch}
+.pts li::before{content:"";position:absolute;left:0;top:1.25em;width:14px;height:2px;background:currentColor}
+.detail{margin-top:8px;font-style:italic}
+
+/* secondary figures */
+.stats{grid-column:1/13;display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:clamp(36px,5vw,72px);border-top:2px solid currentColor}
+.stats li{padding:14px 20px 0 0}
+.stats li+li{padding-left:20px;border-left:1px solid currentColor}
+.stats b{display:block;font-weight:850;font-variation-settings:"wdth" 125;font-size:clamp(34px,4.4vw,68px);line-height:1;letter-spacing:-.03em;white-space:nowrap}
+.stats span{display:block;margin-top:8px;font-size:14px;font-weight:600;letter-spacing:.02em}
+.stats.three{grid-template-columns:repeat(3,1fr)}
+
+/* satisfaction slope: correctly scaled 0–100 */
+.meter{margin-top:12px;height:10px;position:relative;border:1px solid currentColor}
+.meter i{position:absolute;top:0;bottom:0;left:0;background:currentColor}
+.meter i.a{width:86%;opacity:.45}
+.meter i.b{width:89%;opacity:1;clip-path:inset(0 0 0 96.6%)}
+.meter-l{display:flex;justify-content:space-between;font-size:11px;font-weight:600;letter-spacing:.08em;margin-top:6px}
+
+/* skills */
+.skills{display:grid;grid-template-columns:repeat(2,1fr);gap:0 var(--gut);border-top:1px solid currentColor}
+.skills li{font-size:clamp(22px,2.6vw,40px);font-weight:700;letter-spacing:-.01em;line-height:1.1;padding:16px 0;border-bottom:1px solid currentColor;font-variation-settings:"wdth" 112;display:flex;gap:20px;align-items:baseline}
+.skills li::before{content:counter(sk,decimal-leading-zero);counter-increment:sk;font-size:13px;font-weight:600;letter-spacing:.1em;min-width:2.2em;font-variation-settings:"wdth" 100}
+.skills{counter-reset:sk}
+.foot{margin-top:clamp(48px,7vw,104px);display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 32px;font-size:16px;font-weight:600;border-top:2px solid currentColor;padding-top:14px;padding-bottom:env(safe-area-inset-bottom)}
+.foot h2{font-size:13px;letter-spacing:.14em;text-transform:uppercase}
+.foot a{overflow-wrap:anywhere}
+
+/* colour key: the full palette as a quiet strip */
+.key{display:flex;height:10px;margin-top:28px}
+.key span{flex:1;background:var(--k)}
+.key span:first-child{box-shadow:inset 0 0 0 1px currentColor}
+
+@media (prefers-reduced-motion:no-preference){
+  .band{animation:rise .7s cubic-bezier(.2,.7,.2,1) both}
+  .b1{animation-delay:.06s}.b2{animation-delay:.12s}
+  @keyframes rise{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+}
+
+@media (max-width:900px){
+  .head-grid{grid-template-columns:minmax(0,1fr)}
+  h1{font-size:min(14vw,120px);font-variation-settings:"wdth" 100}
+  .stats b{font-size:clamp(24px,7vw,56px)}
+  .stats li{padding-right:12px}.stats li+li{padding-left:12px}
+  .headline,.focus,.contact{grid-column:1/-1;grid-row:auto}
+  .contact{margin-top:16px}
+  .focus{display:block;border-top:1px solid currentColor;max-width:420px}
+  .focus li,.focus li+li{padding:8px 0;margin:0;border-left:0;border-bottom:1px solid currentColor}
+  .entry{grid-template-columns:minmax(0,1fr)}
+  .fig,.txt,.stats{grid-column:1/-1}
+  .txt{margin-top:36px}
+  .big{font-size:min(clamp(84px,27vw,200px),calc((100vw - 2*var(--gut)) / (var(--n,3) * .74)))}
+  .stats,.stats.three{grid-template-columns:1fr 1fr}
+  .stats li:nth-child(odd){padding-left:0;border-left:0}
+  .stats li:nth-child(n+3){border-top:1px solid currentColor;margin-top:14px}
+  .stats.three li:nth-child(3){grid-column:1/-1}
+  .skills{grid-template-columns:minmax(0,1fr)}
+  .skills li{font-size:clamp(19px,5.6vw,30px);overflow-wrap:anywhere}
+}
+@media (max-width:420px){
+  body{font-size:16px}
+  .pts li{padding-left:24px}
+}
+@media print{
+  *{animation:none!important}
+  .band{-webkit-print-color-adjust:exact;print-color-adjust:exact;break-inside:avoid;padding:28px 32px}
+  .back{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="band b0 top">
+  <a class="back" href="../">← All versions</a>
+  <h1>Savannah<br>Bakes</h1>
+  <div class="head-grid">
+    <p class="headline"><b>#1</b> Ranked Enterprise Sales in Washington and Alaska</p>
+    <ul class="focus" aria-label="Focus">
+      <li>Consultative Selling</li><li>Relationship Development</li><li>Technology Solutions</li>
+    </ul>
+    <div class="contact">
+      <h2>Contact</h2>
+      <ul>
+        <li><a href="mailto:savannahpbakes@gmail.com">savannahpbakes@gmail.com</a></li>
+        <li><a href="https://www.linkedin.com/in/savannah-bakes">linkedin.com/in/savannah-bakes</a></li>
+        <li><a class="pdf" href="../Savannah-Bakes-Resume.pdf" download>Résumé PDF ↓</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="key" aria-hidden="true">
+    <span style="--k:var(--c0)"></span><span style="--k:var(--c1)"></span><span style="--k:var(--c2)"></span><span style="--k:var(--c3)"></span><span style="--k:var(--c4)"></span><span style="--k:var(--c5)"></span><span style="--k:var(--c6)"></span><span style="--k:var(--c7)"></span>
+  </div>
+</header>
+
+<main>
+<section aria-labelledby="exp">
+
+  <article class="band b1">
+    <div class="strip"><h2 id="exp">Experience</h2><span class="idx">01 / 2026</span></div>
+    <div class="entry">
+      <p class="fig"><span class="big">#1</span><span class="cap">in sales, all of Washington and Alaska</span></p>
+      <div class="txt">
+        <h3>Sales Manager Trainee</h3>
+        <p class="org">Enterprise Mobility <span>· Seattle Airport · 2026</span></p>
+        <ul class="pts">
+          <li>Received several #1 in sales awards across all of Washington and Alaska (500 employees, ~110 branches) three months after joining, then relocated to the “best of the best” airport operations program</li>
+          <li>Supports branch sales goals: conversion, revenue per transaction, upselling and satisfaction KPIs</li>
+          <li>Measurable results in high-volume environments: identified customer needs, built trust, overcame objections</li>
+          <li>On a team of 3, raised the satisfaction score from 86% to 89% within 2 months</li>
+        </ul>
+      </div>
+      <ul class="stats">
+        <li><b>500</b><span>employees</span></li>
+        <li><b>~110</b><span>branches</span></li>
+        <li><b>3</b><span>months after joining</span></li>
+        <li><b>86→89%</b><span>satisfaction, within 2 months</span>
+          <div class="meter" role="img" aria-label="Satisfaction score from 86% to 89% on a 0 to 100 scale"><i class="a"></i><i class="b"></i></div>
+          <div class="meter-l" aria-hidden="true"><span>0</span><span>100%</span></div>
+        </li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="band b2">
+    <div class="strip"><span>Experience</span><span class="idx">02 / 2024</span></div>
+    <div class="entry">
+      <p class="fig"><span class="big" style="--n:3.6">+30<small>%</small></span><span class="cap">engagement</span></p>
+      <div class="txt">
+        <h3>Indigenous Relations Program Manager</h3>
+        <p class="org">British Columbia Utilities Commission <span>· 2024</span></p>
+        <ul class="pts">
+          <li>Translated complex policy research and stakeholder analysis on Indigenous energy-sector participation into structured materials, improving engagement by 30% and enabling a broader rollout with clear success metrics</li>
+          <li>Engagement strategy, event coordination, regulatory communications</li>
+          <li>Planned and facilitated multi-stakeholder workshops and follow-ups (100+ staff and senior leaders) supporting regulatory understanding and Indigenous participation in new energy products and programs</li>
+        </ul>
+      </div>
+      <ul class="stats three">
+        <li><b>+30%</b><span>engagement</span></li>
+        <li><b>100+</b><span>staff and senior leaders</span></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="band b3">
+    <div class="strip"><span>Experience</span><span class="idx">03 / 2023–2024</span></div>
+    <div class="entry">
+      <p class="fig"><span class="big" style="--n:3.3">AWS</span><span class="cap">+ GoPro-powered product that measures fish populations and disease</span></p>
+      <div class="txt">
+        <h3>Product Enablement Lead</h3>
+        <p class="org">AidMe <span>· Technology startup · 2023–2024</span></p>
+        <ul class="pts">
+          <li>Drove adoption of an Amazon Web Services and GoPro-powered product that measures fish populations and disease</li>
+          <li>Partnered with engineering and leadership to turn user feedback, especially from Indigenous community stakeholders, into workflow and enablement improvements that informed prioritization</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="band b4">
+    <div class="strip"><span>Experience</span><span class="idx">04 / 2025–2026</span></div>
+    <div class="entry">
+      <p class="fig"><span class="big" style="--n:6">1,000+</span><span class="cap">learners</span></p>
+      <div class="txt">
+        <h3>High School Science Teacher</h3>
+        <p class="org">SD33 Chilliwack School District <span>· 2025–2026</span></p>
+        <ul class="pts">
+          <li>Designed and delivered Grade 12 science and technology curricula for 1,000+ learners: simplified complex topics, defined success criteria, communicated clearly across diverse audiences</li>
+          <li>Faculty observed GPA improvements of 10 to 20 percent and higher attendance and engagement</li>
+        </ul>
+      </div>
+      <ul class="stats three">
+        <li><b>1,000+</b><span>learners</span></li>
+        <li><b>+10–20%</b><span>GPA, observed by faculty</span></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="band b5">
+    <div class="strip"><span>Experience</span><span class="idx">05 / 2025</span></div>
+    <div class="entry">
+      <p class="fig"><span class="big" style="--n:5.4">9 &amp; 12</span><span class="cap">Grade 9 and 12 science courses</span></p>
+      <div class="txt">
+        <h3>Student Teacher</h3>
+        <p class="org">SD38 Richmond School District <span>· 2025</span></p>
+        <ul class="pts">
+          <li>Designed and delivered Grade 9 and 12 science courses in an inquiry-driven, place-based curriculum</li>
+          <li>Built a website on Medicine Wheel-based curricula, featured by her university and adopted by educators across British Columbia</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="band b6" aria-labelledby="edu">
+  <div class="strip"><h2 id="edu">Education</h2><span class="idx">06 / 2020–2025</span></div>
+  <div class="entry">
+    <p class="fig"><span class="big" style="--n:5.4">1 of 8</span><span class="cap">students in Canada to receive the Centennial full scholarship award</span></p>
+    <div class="txt">
+      <h3>Bachelor of Education</h3>
+      <p class="org">University of British Columbia <span>· 2020–2025</span></p>
+      <p class="detail">Biology and Earth Science double minor, Indigenous Specialization</p>
+      <ul class="pts">
+        <li>One of 8 students in Canada to receive the Centennial full scholarship award for high achievement</li>
+        <li>Specialization in Indigenous Education with an Outstanding Practicum award, and 2× Indigenous Alumni Scholarship</li>
+        <li>Represented 750 Bachelor of Education students; as graduation coordinator, organized a grad gala for 300 people (vendors, logistics, permits, project management)</li>
+        <li>Coordinated activities, tours and outreach to onboard hundreds of Indigenous students during orientation week, as a primary point of contact</li>
+      </ul>
+    </div>
+    <ul class="stats">
+      <li><b>1 of 8</b><span>in Canada</span></li>
+      <li><b>750</b><span>students represented</span></li>
+      <li><b>300</b><span>person grad gala</span></li>
+      <li><b>2×</b><span>Indigenous Alumni Scholarship</span></li>
+    </ul>
+  </div>
+</section>
+
+<section class="band b7" aria-labelledby="sk">
+  <div class="strip"><h2 id="sk">Skills</h2><span class="idx">10</span></div>
+  <ul class="skills">
+    <li>Sales OKRs/KPIs</li><li>Program and Product Management</li><li>Instructional Design</li><li>Office M365 Suite</li><li>User research</li><li>Enablement/<wbr>documentation</li><li>Presentations</li><li>Public speaking</li><li>Educational outreach</li><li>AI tools</li>
+  </ul>
+  <footer class="foot">
+    <span>Savannah Bakes</span>
+    <a href="mailto:savannahpbakes@gmail.com">savannahpbakes@gmail.com</a>
+    <a href="https://www.linkedin.com/in/savannah-bakes">linkedin.com/in/savannah-bakes</a>
+    <a class="pdf" href="../Savannah-Bakes-Resume.pdf" download>Résumé PDF ↓</a>
+  </footer>
+</section>
+</main>
+</body>
+</html>
