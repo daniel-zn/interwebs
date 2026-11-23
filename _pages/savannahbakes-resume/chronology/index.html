@@ -37,7 +37,9 @@ h1{grid-column:1/5;margin:0;font:600 clamp(44px,6.2vw,88px)/.92 var(--disp);lett
 .headline{grid-column:1/5;margin:22px 0 0;font:500 clamp(18px,1.8vw,24px)/1.25 var(--disp);letter-spacing:-.01em;max-width:24ch}
 .headline b{color:var(--accent);font-weight:600}
 .focus{grid-column:1/5;margin:14px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:4px 0;color:var(--ink2)}
-.focus li+li::before{content:"·";margin:0 .6em;color:var(--mute)}
+.focus{margin-left:-1.4em;clip-path:inset(0 0 0 1.4em)}
+.focus li::before{content:"·";display:inline-block;width:1.4em;text-align:center;color:var(--mute)}
+@media (max-width:640px){.focus{flex-direction:column;margin-left:0;clip-path:none}.focus li::before{content:none}}
 .contact{grid-column:6/8;grid-row:1/4;align-self:end;padding-left:14px;border-left:1px solid var(--rule)}
 .contact h2{margin:0 0 10px}
 .contact a{display:block;text-decoration:none;font-size:14px;line-height:1.7;overflow-wrap:anywhere}
@@ -82,7 +84,8 @@ figure{margin:0;display:flex;flex-direction:column;gap:8px}
 figure svg{display:block;overflow:visible}
 figcaption{font:400 11px/1.35 var(--mono);color:var(--ink2);max-width:24ch;letter-spacing:.01em}
 figcaption b{font-weight:500;color:var(--ink)}
-.big{font:600 64px/.8 var(--disp);letter-spacing:-.04em;color:var(--accent)}
+.big{font:600 36px/.9 var(--disp);letter-spacing:-.03em;color:var(--accent)}
+.pts strong{font-weight:600;color:var(--ink)}
 svg text{font-family:var(--mono);font-size:10px;fill:var(--ink2)}
 svg .v{fill:var(--ink);font-weight:500;font-size:11px}
 svg .va{fill:var(--accent);font-weight:500;font-size:11px}
@@ -175,7 +178,7 @@ svg .va{fill:var(--accent);font-weight:500;font-size:11px}
     <h3>Sales Manager Trainee</h3>
     <p class="org">Enterprise Mobility · Seattle Airport <span class="when">2026</span></p>
     <ul class="pts">
-      <li>Received several #1 in sales awards across all of Washington and Alaska (500 employees, ~110 branches) three months after joining, then relocated to the “best of the best” airport operations program</li>
+      <li>Received several <strong>#1 in sales awards</strong> across all of Washington and Alaska (500 employees, ~110 branches) three months after joining, then relocated to the “best of the best” airport operations program</li>
       <li>Supports branch sales goals: conversion, revenue per transaction, upselling and satisfaction KPIs</li>
       <li>Measurable results in high-volume environments: identified customer needs, built trust, overcame objections</li>
       <li>On a team of 3, raised the satisfaction score from 86% to 89% within 2 months</li>
@@ -183,7 +186,7 @@ svg .va{fill:var(--accent);font-weight:500;font-size:11px}
     <div class="figs">
       <figure>
         <div class="big">#1</div>
-        <figcaption><b>#1 in sales</b><br>WA + AK</figcaption>
+        <figcaption><b>in sales</b><br>WA + AK</figcaption>
       </figure>
       <figure>
         <svg width="77" height="70" viewBox="0 0 77 70" role="img" aria-label="About 110 branches, drawn as 110 squares">
@@ -215,8 +218,8 @@ svg .va{fill:var(--accent);font-weight:500;font-size:11px}
     <h3>High School Science Teacher</h3>
     <p class="org">SD33 Chilliwack School District <span class="when">2025–2026</span></p>
     <ul class="pts">
-      <li>Designed and delivered Grade 12 science and technology curricula for 1,000+ learners: simplified complex topics, defined success criteria, communicated clearly across diverse audiences</li>
-      <li>Faculty observed GPA improvements of 10 to 20 percent and higher attendance and engagement</li>
+      <li>Designed and delivered Grade 12 science and technology curricula for <strong>1,000+ learners</strong>: simplified complex topics, defined success criteria, communicated clearly across diverse audiences</li>
+      <li>Faculty observed <strong>GPA improvements of 10 to 20 percent</strong> and <strong>higher attendance and engagement</strong></li>
     </ul>
     <div class="figs">
       <figure>
@@ -246,7 +249,7 @@ svg .va{fill:var(--accent);font-weight:500;font-size:11px}
     <h3>Student Teacher</h3>
     <p class="org">SD38 Richmond School District <span class="when">2025</span></p>
     <ul class="pts">
-      <li>Designed and delivered Grade 9 and 12 science courses in an inquiry-driven, place-based curriculum</li>
+      <li>Designed and delivered <strong>Grade 9 and 12 science</strong> courses in an inquiry-driven, place-based curriculum</li>
       <li>Built a website on Medicine Wheel-based curricula, featured by her university and adopted by educators across British Columbia</li>
     </ul>
     <div class="figs">
@@ -270,8 +273,8 @@ svg .va{fill:var(--accent);font-weight:500;font-size:11px}
     <h3>Indigenous Relations Program Manager</h3>
     <p class="org">British Columbia Utilities Commission <span class="when">2024</span></p>
     <ul class="pts">
-      <li>Translated complex policy research and stakeholder analysis on Indigenous energy-sector participation into structured materials, improving engagement by 30% and enabling a broader rollout with clear success metrics</li>
-      <li>Engagement strategy, event coordination, regulatory communications</li>
+      <li>Translated complex <strong>policy research and stakeholder analysis</strong> on Indigenous energy-sector participation into structured materials, improving engagement by 30% and enabling a broader rollout with clear success metrics</li>
+      <li><strong>Engagement strategy</strong>, event coordination, <strong>regulatory communications</strong></li>
       <li>Planned and facilitated multi-stakeholder workshops and follow-ups (100+ staff and senior leaders) supporting regulatory understanding and Indigenous participation in new energy products and programs</li>
     </ul>
     <div class="figs">
@@ -304,8 +307,8 @@ svg .va{fill:var(--accent);font-weight:500;font-size:11px}
     <h3>Product Enablement Lead</h3>
     <p class="org">AidMe · Technology startup <span class="when">2023–2024</span></p>
     <ul class="pts">
-      <li>Drove adoption of an Amazon Web Services and GoPro-powered product that measures fish populations and disease</li>
-      <li>Partnered with engineering and leadership to turn user feedback, especially from Indigenous community stakeholders, into workflow and enablement improvements that informed prioritization</li>
+      <li>Drove <strong>adoption</strong> of an <strong>Amazon Web Services</strong> and <strong>GoPro-powered product</strong> that measures fish populations and disease</li>
+      <li>Partnered with <strong>engineering and leadership</strong> to turn user feedback, especially from Indigenous community stakeholders, into <strong>workflow and enablement improvements that informed prioritization</strong></li>
     </ul>
   </div>
 </li>
@@ -323,9 +326,9 @@ svg .va{fill:var(--accent);font-weight:500;font-size:11px}
     <p class="org">University of British Columbia <span class="when">2020–2025</span></p>
     <p class="detail">Biology and Earth Science double minor, Indigenous Specialization</p>
     <ul class="pts">
-      <li>One of 8 students in Canada to receive the Centennial full scholarship award for high achievement</li>
+      <li><strong>One of 8 students in Canada</strong> to receive the <strong>Centennial full scholarship award</strong> for high achievement</li>
       <li>Specialization in Indigenous Education with an Outstanding Practicum award, and 2× Indigenous Alumni Scholarship</li>
-      <li>Represented 750 Bachelor of Education students; as graduation coordinator, organized a grad gala for 300 people (vendors, logistics, permits, project management)</li>
+      <li><strong>Represented 750 Bachelor of Education students</strong>; as graduation coordinator, organized a grad gala for <strong>300 people</strong> (<strong>vendors, logistics, permits</strong>, project management)</li>
       <li>Coordinated activities, tours and outreach to onboard hundreds of Indigenous students during orientation week, as a primary point of contact</li>
     </ul>
     <div class="figs">

@@ -64,9 +64,8 @@ canvas.ht.o{transform:translate(var(--mis-x),var(--mis-y)) rotate(.12deg)}
 .mast{position:relative;display:grid;grid-template-columns:repeat(12,1fr);column-gap:24px;padding-top:clamp(28px,5vw,72px);min-height:clamp(520px,58vw,760px)}
 .mast .art{position:absolute;top:clamp(20px,3vw,44px);bottom:0;right:calc(var(--gut)*-1);width:62%;pointer-events:none}
 .mast .art canvas{inset:0;width:100%;height:100%}
-.mega{position:absolute;right:.02em;top:calc(clamp(20px,3vw,44px) + .02em);margin:0;font-weight:900;font-variation-settings:"wdth" 62;font-size:clamp(300px,52vw,760px);line-height:.8;letter-spacing:-.04em;pointer-events:none;user-select:none}
 .mast-text{grid-column:1 / span 9;position:relative;z-index:3;align-self:end}
-h1{mix-blend-mode:multiply;margin:0;font-weight:850;font-variation-settings:"wdth" 75;font-size:clamp(76px,13.2vw,196px);line-height:.82;letter-spacing:-.025em;color:var(--blue)}
+h1{mix-blend-mode:multiply;margin:0;font-weight:850;font-variation-settings:"wdth" 75;font-size:clamp(76px,15.4vw,224px);line-height:.82;letter-spacing:-.025em;color:var(--blue)}
 h1 span{display:block}
 .headline{margin:clamp(20px,2.6vw,36px) 0 0;max-width:15ch;font-weight:700;font-variation-settings:"wdth" 88;font-size:clamp(28px,3.9vw,56px);line-height:.98;letter-spacing:-.01em;color:var(--over)}
 .headline b{font-weight:900;color:var(--over)}
@@ -142,8 +141,7 @@ svg .big{font-family:var(--sans);font-weight:800;font-size:22px;fill:var(--over)
 @media (max-width:680px){
   .mast{min-height:0;padding-top:28px;padding-bottom:0}
   .mast .art{width:auto;height:240px;left:0;right:0;top:16px;bottom:auto}
-  .mega{font-size:232px;top:30px;right:14px}
-  .mast-text{grid-column:1 / -1;padding-top:252px}
+  .mast-text{grid-column:1 / -1;padding-top:150px}
   .focus{flex-direction:column}.focus li,.focus li:last-child{border:0;margin:0;padding:0 0 0 14px;position:relative}.focus li::before{content:"";position:absolute;left:0;top:.3em;width:6px;height:6px;background:var(--orange)}
   .contact .label,.contact ul{grid-column:1 / -1}
   .contact ul{margin-top:10px;flex-direction:column;gap:8px;font-size:17px}
@@ -180,7 +178,6 @@ svg .big{font-family:var(--sans);font-weight:800;font-size:22px;fill:var(--over)
       <canvas class="ht b" data-ht="hero-b"></canvas>
       <canvas class="ht o" data-ht="hero-o"></canvas>
     </div>
-    <p class="mega ink-o" aria-hidden="true">#1</p>
     <div class="mast-text">
       <h1><span>Savannah</span><span>Bakes</span></h1>
       <p class="headline"><b>#1</b> Ranked Enterprise Sales in Washington and Alaska</p>
@@ -215,10 +212,10 @@ svg .big{font-family:var(--sans);font-weight:800;font-size:22px;fill:var(--over)
         <h3>Sales Manager Trainee</h3>
         <p class="org">Enterprise Mobility <span>Seattle Airport</span></p>
         <ul class="pts">
-          <li>Received several <strong>#1 in sales</strong> awards across all of Washington and Alaska (<strong>500 employees, ~110 branches</strong>) three months after joining, then relocated to the “best of the best” airport operations program</li>
+          <li>Received several <strong>#1 in sales awards</strong> across all of Washington and Alaska (500 employees, ~110 branches) three months after joining, then relocated to the “best of the best” airport operations program</li>
           <li>Supports branch sales goals: conversion, revenue per transaction, upselling and satisfaction KPIs</li>
           <li>Measurable results in high-volume environments: identified customer needs, built trust, overcame objections</li>
-          <li>On a team of 3, raised the satisfaction score from <strong>86% to 89%</strong> within 2 months</li>
+          <li>On a team of 3, raised the satisfaction score from 86% to 89% within 2 months</li>
         </ul>
         <div class="charts">
           <figure class="chart">
@@ -258,9 +255,9 @@ svg .big{font-family:var(--sans);font-weight:800;font-size:22px;fill:var(--over)
         <h3>Indigenous Relations Program Manager</h3>
         <p class="org">British Columbia Utilities Commission</p>
         <ul class="pts">
-          <li>Translated complex policy research and stakeholder analysis on Indigenous energy-sector participation into structured materials, improving engagement by <strong>30%</strong> and enabling a broader rollout with clear success metrics</li>
-          <li>Engagement strategy, event coordination, regulatory communications</li>
-          <li>Planned and facilitated multi-stakeholder workshops and follow-ups (<strong>100+ staff and senior leaders</strong>) supporting regulatory understanding and Indigenous participation in new energy products and programs</li>
+          <li>Translated complex <strong>policy research and stakeholder analysis</strong> on Indigenous energy-sector participation into structured materials, improving engagement by 30% and enabling a broader rollout with clear success metrics</li>
+          <li><strong>Engagement strategy</strong>, event coordination, <strong>regulatory communications</strong></li>
+          <li>Planned and facilitated multi-stakeholder workshops and follow-ups (100+ staff and senior leaders) supporting regulatory understanding and Indigenous participation in new energy products and programs</li>
         </ul>
         <div class="charts">
           <figure class="chart">
@@ -292,8 +289,8 @@ svg .big{font-family:var(--sans);font-weight:800;font-size:22px;fill:var(--over)
         <h3>Product Enablement Lead</h3>
         <p class="org">AidMe <span>Technology startup</span></p>
         <ul class="pts">
-          <li>Drove adoption of an <strong>Amazon Web Services and GoPro</strong>-powered product that measures fish populations and disease</li>
-          <li>Partnered with engineering and leadership to turn user feedback, especially from Indigenous community stakeholders, into workflow and enablement improvements that informed prioritization</li>
+          <li>Drove <strong>adoption</strong> of an <strong>Amazon Web Services</strong> and <strong>GoPro-powered product</strong> that measures fish populations and disease</li>
+          <li>Partnered with <strong>engineering and leadership</strong> to turn user feedback, especially from Indigenous community stakeholders, into <strong>workflow and enablement improvements that informed prioritization</strong></li>
         </ul>
       </div>
     </article>
@@ -310,7 +307,7 @@ svg .big{font-family:var(--sans);font-weight:800;font-size:22px;fill:var(--over)
         <p class="org">SD33 Chilliwack School District</p>
         <ul class="pts">
           <li>Designed and delivered Grade 12 science and technology curricula for <strong>1,000+ learners</strong>: simplified complex topics, defined success criteria, communicated clearly across diverse audiences</li>
-          <li>Faculty observed GPA improvements of <strong>10 to 20 percent</strong> and higher attendance and engagement</li>
+          <li>Faculty observed <strong>GPA improvements of 10 to 20 percent</strong> and <strong>higher attendance and engagement</strong></li>
         </ul>
         <div class="charts">
           <figure class="chart">
@@ -340,8 +337,8 @@ svg .big{font-family:var(--sans);font-weight:800;font-size:22px;fill:var(--over)
         <h3>Student Teacher</h3>
         <p class="org">SD38 Richmond School District</p>
         <ul class="pts">
-          <li>Designed and delivered <strong>Grade 9 and 12</strong> science courses in an inquiry-driven, place-based curriculum</li>
-          <li>Built a website on Medicine Wheel-based curricula, featured by her university and <strong>adopted by educators across British Columbia</strong></li>
+          <li>Designed and delivered <strong>Grade 9 and 12 science</strong> courses in an inquiry-driven, place-based curriculum</li>
+          <li>Built a website on Medicine Wheel-based curricula, featured by her university and adopted by educators across British Columbia</li>
         </ul>
       </div>
     </article>
@@ -361,9 +358,9 @@ svg .big{font-family:var(--sans);font-weight:800;font-size:22px;fill:var(--over)
         <p class="org">University of British Columbia</p>
         <p class="detail">Biology and Earth Science double minor, Indigenous Specialization</p>
         <ul class="pts">
-          <li><strong>One of 8 students in Canada</strong> to receive the Centennial full scholarship award for high achievement</li>
-          <li>Specialization in Indigenous Education with an Outstanding Practicum award, and <strong>2× Indigenous Alumni Scholarship</strong></li>
-          <li>Represented <strong>750</strong> Bachelor of Education students; as graduation coordinator, organized a grad gala for <strong>300 people</strong> (vendors, logistics, permits, project management)</li>
+          <li><strong>One of 8 students in Canada</strong> to receive the <strong>Centennial full scholarship award</strong> for high achievement</li>
+          <li>Specialization in Indigenous Education with an Outstanding Practicum award, and 2× Indigenous Alumni Scholarship</li>
+          <li><strong>Represented 750 Bachelor of Education students</strong>; as graduation coordinator, organized a grad gala for <strong>300 people</strong> (<strong>vendors, logistics, permits</strong>, project management)</li>
           <li>Coordinated activities, tours and outreach to onboard hundreds of Indigenous students during orientation week, as a primary point of contact</li>
         </ul>
         <div class="charts">
@@ -439,7 +436,7 @@ svg .big{font-family:var(--sans);font-weight:800;font-size:22px;fill:var(--over)
   /* ---- halftone fields ---- */
   var fields={
     'hero-b':{ink:BLUE, ang:15, cell:9, f:function(x,y,w,h){ var m=Math.min(w,h); return Math.max(0, .9 - Math.hypot((x-.55)*w,(y-.46)*h)/(m*.46)); }},
-    'hero-o':{ink:ORANGE, ang:75, cell:10, f:function(x,y){ return (y>.86&&y<.97&&x>.06) ? Math.min(.9,Math.max(0,(x-.06)*1.1)) : 0; }},
+    'hero-o':{ink:ORANGE, ang:75, cell:10, f:function(x,y,w,h){ var m=Math.min(w,h); var d=Math.max(0, .95 - Math.hypot((x-.34)*w,(y-.62)*h)/(m*.40)); var band=(w>500&&y>.88&&y<.97&&x>.06) ? Math.min(.9,Math.max(0,(x-.06)*1.1)) : 0; return Math.max(d,band); }},
     'lin-b': {ink:BLUE, ang:15, cell:7, f:function(x,y){ return Math.max(0, .95 - x*1.05) * (y<.8?1:0); }},
     'rad-b': {ink:BLUE, ang:15, cell:7, f:function(x,y){ return Math.max(0, 1 - Math.hypot(x-.72,y-.42)/.5); }},
     'diag-b':{ink:BLUE, ang:15, cell:7, f:function(x,y){ return Math.max(0, Math.min(1,(x+y)*.75-.25)) * (y<.9?1:0); }},

@@ -64,10 +64,13 @@ h1 .last{font-style:italic;font-weight:400;padding-left:.62em}
 .plate{grid-column:9 / 13;grid-row:1 / 3;align-self:stretch;background:var(--blue);color:var(--blue-ink);
   display:flex;flex-direction:column;justify-content:space-between;padding:clamp(18px,2vw,30px);min-height:clamp(420px,46vw,660px);position:relative;overflow:hidden}
 .plate .label{opacity:.85}
-.plate .big{font-family:var(--display);font-weight:600;font-variation-settings:"opsz" 96;font-size:clamp(150px,19vw,300px);line-height:.78;letter-spacing:-.05em;margin-left:-.05em}
-.plate .big sup{font-size:.36em;vertical-align:top;position:relative;top:.18em;letter-spacing:0;margin-right:.02em}
-.plate .cap{font-family:var(--display);font-style:italic;font-size:clamp(20px,1.7vw,26px);line-height:1.15;margin-top:14px;max-width:14ch}
-.plate .stripe{position:absolute;left:0;right:0;bottom:0;height:34%;background:var(--ink);opacity:.0}
+.plate .nums{display:grid;gap:clamp(14px,1.6vw,22px)}
+.plate .nums li{border-top:1px solid #E8ECEF77;padding-top:8px}
+.plate .nums b{display:block;white-space:nowrap;font-family:var(--display);font-weight:600;font-variation-settings:"opsz" 96;font-size:clamp(44px,4.4vw,68px);line-height:.92;letter-spacing:-.04em}
+.plate .nums b i{font-family:var(--label);font-style:normal;font-weight:700;font-size:.62em;vertical-align:.18em;margin-right:.04em}
+.plate .nums b em{font-style:italic;font-weight:400;font-size:.6em;letter-spacing:0}
+.plate .nums small{display:block;font-family:var(--label);font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin-top:6px;opacity:.9}
+.plate .nums li.lead{border-top:3px solid var(--blue-ink)}
 
 /* section heads */
 .sec{border-top:1px solid var(--ink);padding-top:14px}
@@ -100,7 +103,6 @@ h2 em{color:var(--blue)}
 .fig b.sm{font-size:clamp(34px,3.3vw,54px)}
 .fig b i.s,.hash{font-family:var(--label);font-weight:700;font-size:.72em;vertical-align:.12em;margin-right:.04em}
 .hash{color:var(--blue);font-size:.8em;font-style:normal;vertical-align:.04em}
-.plate .big sup{font-family:var(--label);font-weight:700}
 .fig small{display:block;font-family:var(--label);font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin-top:6px;color:var(--ink-2)}
 .body{grid-column:4 / 13}
 h3{font-family:var(--display);font-weight:500;font-variation-settings:"opsz" 72;font-size:clamp(30px,3vw,46px);line-height:1.02;letter-spacing:-.02em;max-width:22ch}
@@ -108,9 +110,10 @@ h3{font-family:var(--display);font-weight:500;font-variation-settings:"opsz" 72;
 .org strong{color:var(--ink);font-weight:700}
 .org .sep{color:var(--blue);margin:0 .5em}
 .points{margin-top:22px;column-count:2;column-gap:var(--gut);column-rule:1px solid var(--rule)}
-.points li{break-inside:avoid;margin-bottom:.9em;hyphens:auto;text-wrap:pretty}
+.points li{break-inside:avoid;margin-bottom:.9em;hyphens:auto;text-wrap:pretty;position:relative;padding-left:1.35em}
+.points li::before{content:"";position:absolute;left:.1em;top:.62em;width:.42em;height:.42em;background:var(--blue);transform:rotate(45deg)}
+.points strong{font-weight:600;color:var(--ink)}
 .points.one{column-count:1;max-width:38em}
-.drop li:first-child::first-letter{font-family:var(--display);font-weight:500;float:left;font-size:5.1em;line-height:.8;margin:.06em .1em 0 -.02em;color:var(--blue);font-variation-settings:"opsz" 96}
 
 /* slope chart */
 .slope{margin-top:6px}
@@ -180,8 +183,9 @@ h3{font-family:var(--display);font-weight:500;font-variation-settings:"opsz" 72;
   .focus{display:block}
   .focus li{display:block;margin-bottom:6px}
   .focus li+li::before{content:none}
-  .plate{grid-row:auto;min-height:0;margin-top:36px;aspect-ratio:4/5}
-  .plate .big{font-size:58vw}
+  .plate{grid-row:auto;min-height:0;margin-top:36px;gap:28px}
+  .plate .nums{grid-template-columns:1fr 1fr;gap:18px 16px}
+  .plate .nums b{font-size:44px}
   .runhead .mid{display:none}
   .sechead .label{margin-bottom:10px}
   h2{font-size:clamp(48px,15vw,80px)}
@@ -227,12 +231,14 @@ h3{font-family:var(--display);font-weight:500;font-variation-settings:"opsz" 72;
         <a href="../Savannah-Bakes-Resume.pdf" download>Résumé PDF ↓</a>
       </p>
     </div>
-    <aside class="plate" aria-label="#1 in sales, WA + AK">
-      <span class="label">Enterprise Mobility · 2026</span>
-      <div>
-        <div class="big" aria-hidden="true"><sup>#</sup>1</div>
-        <p class="cap">in sales, Washington + Alaska</p>
-      </div>
+    <aside class="plate" aria-label="Selected figures">
+      <span class="label">2020 — 2026</span>
+      <ul class="nums">
+        <li class="lead"><b><i>#</i>1</b><small>in sales, WA + AK</small></li>
+        <li><b><i>+</i>30%</b><small>engagement, BCUC</small></li>
+        <li><b>1,000<i>+</i></b><small>learners</small></li>
+        <li><b>1 <em>of</em> 8</b><small>in Canada, Centennial scholarship</small></li>
+      </ul>
     </aside>
   </div>
 </header>
@@ -286,8 +292,8 @@ h3{font-family:var(--display);font-weight:500;font-variation-settings:"opsz" 72;
       <div class="body">
         <h3>Sales Manager Trainee</h3>
         <p class="org"><strong>Enterprise Mobility</strong><span class="sep">/</span>Seattle Airport</p>
-        <ul class="points drop">
-          <li>Received several #1 in sales awards across all of Washington and Alaska (500 employees, ~110 branches) three months after joining, then relocated to the “best of the best” airport operations program.</li>
+        <ul class="points">
+          <li>Received several <strong>#1 in sales awards</strong> across all of Washington and Alaska (500 employees, ~110 branches) three months after joining, then relocated to the “best of the best” airport operations program.</li>
           <li>Supports branch sales goals: conversion, revenue per transaction, upselling and satisfaction KPIs.</li>
           <li>Measurable results in high-volume environments: identified customer needs, built trust, overcame objections.</li>
           <li>On a team of 3, raised the satisfaction score from 86% to 89% within 2 months.</li>
@@ -307,8 +313,8 @@ h3{font-family:var(--display);font-weight:500;font-variation-settings:"opsz" 72;
         <h3>Indigenous Relations Program Manager</h3>
         <p class="org"><strong>British Columbia Utilities Commission</strong></p>
         <ul class="points">
-          <li>Translated complex policy research and stakeholder analysis on Indigenous energy-sector participation into structured materials, improving engagement by 30% and enabling a broader rollout with clear success metrics.</li>
-          <li>Engagement strategy, event coordination, regulatory communications.</li>
+          <li>Translated complex <strong>policy research and stakeholder analysis</strong> on Indigenous energy-sector participation into structured materials, improving engagement by 30% and enabling a broader rollout with clear success metrics.</li>
+          <li><strong>Engagement strategy</strong>, event coordination, <strong>regulatory communications</strong>.</li>
           <li>Planned and facilitated multi-stakeholder workshops and follow-ups (100+ staff and senior leaders) supporting regulatory understanding and Indigenous participation in new energy products and programs.</li>
         </ul>
       </div>
@@ -325,8 +331,8 @@ h3{font-family:var(--display);font-weight:500;font-variation-settings:"opsz" 72;
         <h3>Product Enablement Lead</h3>
         <p class="org"><strong>AidMe</strong><span class="sep">/</span>Technology startup</p>
         <ul class="points">
-          <li>Drove adoption of an Amazon Web Services and GoPro-powered product that measures fish populations and disease.</li>
-          <li>Partnered with engineering and leadership to turn user feedback, especially from Indigenous community stakeholders, into workflow and enablement improvements that informed prioritization.</li>
+          <li>Drove <strong>adoption</strong> of an <strong>Amazon Web Services</strong> and <strong>GoPro-powered product</strong> that measures fish populations and disease.</li>
+          <li>Partnered with <strong>engineering and leadership</strong> to turn user feedback, especially from Indigenous community stakeholders, into <strong>workflow and enablement improvements that informed prioritization</strong>.</li>
         </ul>
       </div>
     </article>
@@ -343,8 +349,8 @@ h3{font-family:var(--display);font-weight:500;font-variation-settings:"opsz" 72;
         <h3>High School Science Teacher</h3>
         <p class="org"><strong>SD33 Chilliwack School District</strong></p>
         <ul class="points">
-          <li>Designed and delivered Grade 12 science and technology curricula for 1,000+ learners: simplified complex topics, defined success criteria, communicated clearly across diverse audiences.</li>
-          <li>Faculty observed GPA improvements of 10 to 20 percent and higher attendance and engagement.</li>
+          <li>Designed and delivered Grade 12 science and technology curricula for <strong>1,000+ learners</strong>: simplified complex topics, defined success criteria, communicated clearly across diverse audiences.</li>
+          <li>Faculty observed <strong>GPA improvements of 10 to 20 percent</strong> and <strong>higher attendance and engagement</strong>.</li>
         </ul>
       </div>
     </article>
@@ -361,7 +367,7 @@ h3{font-family:var(--display);font-weight:500;font-variation-settings:"opsz" 72;
         <h3>Student Teacher</h3>
         <p class="org"><strong>SD38 Richmond School District</strong></p>
         <ul class="points">
-          <li>Designed and delivered Grade 9 and 12 science courses in an inquiry-driven, place-based curriculum.</li>
+          <li>Designed and delivered <strong>Grade 9 and 12 science</strong> courses in an inquiry-driven, place-based curriculum.</li>
           <li>Built a website on Medicine Wheel-based curricula, featured by her university and adopted by educators across British Columbia.</li>
         </ul>
       </div>
@@ -393,9 +399,9 @@ h3{font-family:var(--display);font-weight:500;font-variation-settings:"opsz" 72;
         <p class="org"><strong>University of British Columbia</strong></p>
         <p class="detail">Biology and Earth Science double minor, Indigenous Specialization</p>
         <ul class="points">
-          <li>One of 8 students in Canada to receive the Centennial full scholarship award for high achievement.</li>
+          <li><strong>One of 8 students in Canada</strong> to receive the <strong>Centennial full scholarship award</strong> for high achievement.</li>
           <li>Specialization in Indigenous Education with an Outstanding Practicum award, and 2× Indigenous Alumni Scholarship.</li>
-          <li>Represented 750 Bachelor of Education students; as graduation coordinator, organized a grad gala for 300 people (vendors, logistics, permits, project management).</li>
+          <li><strong>Represented 750 Bachelor of Education students</strong>; as graduation coordinator, organized a grad gala for <strong>300 people</strong> (<strong>vendors, logistics, permits</strong>, project management).</li>
           <li>Coordinated activities, tours and outreach to onboard hundreds of Indigenous students during orientation week, as a primary point of contact.</li>
         </ul>
       </div>

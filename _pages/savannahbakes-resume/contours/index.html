@@ -119,10 +119,9 @@ h1 {
   font-family: var(--serif); font-weight: 400; font-size: clamp(44px, 5.4vw, 74px);
   line-height: .95; letter-spacing: -.015em; font-variation-settings: "opsz" 60;
 }
-.headline { margin-top: 20px; display: flex; gap: 16px; align-items: flex-start; }
-.headline .bm { font-family: var(--cond); font-weight: 300; font-size: 64px; line-height: .8; color: var(--earth); letter-spacing: -.02em; position: relative; padding-top: 14px; }
-.headline .bm::before { content: ""; position: absolute; left: 2px; top: 0; border: 5px solid transparent; border-bottom: 8px solid var(--earth); border-top: 0; }
-.headline .ht { font-family: var(--sans); font-size: 17px; line-height: 1.35; font-weight: 500; padding-top: 8px; max-width: 18em; }
+.headline { margin-top: 18px; }
+.headline .ht { display: block; font-family: var(--serif); font-size: 22px; line-height: 1.3; font-weight: 400; max-width: 20em; font-variation-settings: "opsz" 24; }
+.headline .hn { color: var(--earth); font-weight: 500; }
 /* separators sit before each item; any that start a wrapped line fall into the clipped gutter */
 .focus-wrap { margin-top: 18px; overflow: hidden; }
 .focus { display: flex; flex-wrap: wrap; margin-left: -1.5em; font-family: var(--serif); font-style: italic; font-size: 16px; color: var(--ink-2); }
@@ -167,7 +166,8 @@ h1 {
 .body .detail { margin-top: 6px; font-family: var(--serif); font-style: italic; font-size: 15.5px; color: var(--ink-2); }
 .body ul { margin-top: 14px; display: grid; gap: 8px; }
 .body li { position: relative; padding-left: 18px; color: var(--ink-2); max-width: 64ch; }
-.body li::before { content: ""; position: absolute; left: 1px; top: .72em; width: 8px; height: 1px; background: var(--earth); }
+.body li::before { content: ""; position: absolute; left: 1px; top: .5em; border: 4.5px solid transparent; border-bottom: 7px solid var(--earth); border-top: 0; }
+.body li strong { font-weight: 600; color: var(--ink); }
 
 /* spot heights */
 .heights { display: grid; gap: 18px; align-content: start; }
@@ -216,8 +216,7 @@ h1 {
   body { font-size: 14.5px; }
   .tb-cell { padding: 18px 18px; }
   h1 { font-size: 46px; }
-  .headline .bm { font-size: 52px; }
-  .headline .ht { font-size: 16px; }
+  .headline .ht { font-size: 19px; }
   .focus { display: grid; gap: 2px; margin-left: 0; }
   .focus li::before { content: none; }
   .part { margin-top: 88px; }
@@ -270,7 +269,7 @@ h1 {
     <div class="title-block">
       <div class="tb-cell" data-calm>
         <h1>Savannah Bakes</h1>
-        <p class="headline"><span class="bm">#1</span><span class="ht">Ranked Enterprise Sales in Washington and Alaska</span></p>
+        <p class="headline"><span class="ht"><span class="hn">#1</span> Ranked Enterprise Sales in Washington and Alaska</span></p>
         <div class="focus-wrap"><ul class="focus">
           <li>Consultative Selling</li>
           <li>Relationship Development</li>
@@ -306,7 +305,7 @@ h1 {
           <h3>Sales Manager Trainee</h3>
           <p class="org">Enterprise Mobility</p>
           <ul>
-            <li>Received several #1 in sales awards across all of Washington and Alaska (500 employees, ~110 branches) three months after joining, then relocated to the “best of the best” airport operations program</li>
+            <li>Received several <strong>#1 in sales awards</strong> across all of Washington and Alaska (500 employees, ~110 branches) three months after joining, then relocated to the “best of the best” airport operations program</li>
             <li>Supports branch sales goals: conversion, revenue per transaction, upselling and satisfaction KPIs</li>
             <li>Measurable results in high-volume environments: identified customer needs, built trust, overcame objections</li>
             <li>On a team of 3, raised the satisfaction score from 86% to 89% within 2 months</li>
@@ -354,8 +353,8 @@ h1 {
           <h3>Indigenous Relations Program Manager</h3>
           <p class="org">British Columbia Utilities Commission</p>
           <ul>
-            <li>Translated complex policy research and stakeholder analysis on Indigenous energy-sector participation into structured materials, improving engagement by 30% and enabling a broader rollout with clear success metrics</li>
-            <li>Engagement strategy, event coordination, regulatory communications</li>
+            <li>Translated complex <strong>policy research and stakeholder analysis</strong> on Indigenous energy-sector participation into structured materials, improving engagement by 30% and enabling a broader rollout with clear success metrics</li>
+            <li><strong>Engagement strategy</strong>, event coordination, <strong>regulatory communications</strong></li>
             <li>Planned and facilitated multi-stakeholder workshops and follow-ups (100+ staff and senior leaders) supporting regulatory understanding and Indigenous participation in new energy products and programs</li>
           </ul>
         </div>
@@ -371,8 +370,8 @@ h1 {
           <h3>Product Enablement Lead</h3>
           <p class="org">AidMe</p>
           <ul>
-            <li>Drove adoption of an Amazon Web Services and GoPro-powered product that measures fish populations and disease</li>
-            <li>Partnered with engineering and leadership to turn user feedback, especially from Indigenous community stakeholders, into workflow and enablement improvements that informed prioritization</li>
+            <li>Drove <strong>adoption</strong> of an <strong>Amazon Web Services</strong> and <strong>GoPro-powered product</strong> that measures fish populations and disease</li>
+            <li>Partnered with <strong>engineering and leadership</strong> to turn user feedback, especially from Indigenous community stakeholders, into <strong>workflow and enablement improvements that informed prioritization</strong></li>
           </ul>
         </div>
         <div class="heights">
@@ -386,8 +385,8 @@ h1 {
           <h3>High School Science Teacher</h3>
           <p class="org">SD33 Chilliwack School District</p>
           <ul>
-            <li>Designed and delivered Grade 12 science and technology curricula for 1,000+ learners: simplified complex topics, defined success criteria, communicated clearly across diverse audiences</li>
-            <li>Faculty observed GPA improvements of 10 to 20 percent and higher attendance and engagement</li>
+            <li>Designed and delivered Grade 12 science and technology curricula for <strong>1,000+ learners</strong>: simplified complex topics, defined success criteria, communicated clearly across diverse audiences</li>
+            <li>Faculty observed <strong>GPA improvements of 10 to 20 percent</strong> and <strong>higher attendance and engagement</strong></li>
           </ul>
         </div>
         <div class="heights">
@@ -412,7 +411,7 @@ h1 {
           <h3>Student Teacher</h3>
           <p class="org">SD38 Richmond School District</p>
           <ul>
-            <li>Designed and delivered Grade 9 and 12 science courses in an inquiry-driven, place-based curriculum</li>
+            <li>Designed and delivered <strong>Grade 9 and 12 science</strong> courses in an inquiry-driven, place-based curriculum</li>
             <li>Built a website on Medicine Wheel-based curricula, featured by her university and adopted by educators across British Columbia</li>
           </ul>
         </div>
@@ -432,9 +431,9 @@ h1 {
           <p class="org">University of British Columbia</p>
           <p class="detail">Biology and Earth Science double minor, Indigenous Specialization</p>
           <ul>
-            <li>One of 8 students in Canada to receive the Centennial full scholarship award for high achievement</li>
+            <li><strong>One of 8 students in Canada</strong> to receive the <strong>Centennial full scholarship award</strong> for high achievement</li>
             <li>Specialization in Indigenous Education with an Outstanding Practicum award, and 2× Indigenous Alumni Scholarship</li>
-            <li>Represented 750 Bachelor of Education students; as graduation coordinator, organized a grad gala for 300 people (vendors, logistics, permits, project management)</li>
+            <li><strong>Represented 750 Bachelor of Education students</strong>; as graduation coordinator, organized a grad gala for <strong>300 people</strong> (<strong>vendors, logistics, permits</strong>, project management)</li>
             <li>Coordinated activities, tours and outreach to onboard hundreds of Indigenous students during orientation week, as a primary point of contact</li>
           </ul>
         </div>
