@@ -122,7 +122,7 @@ a{color:inherit}
 #bar #prev,#bar #next{font-size:18px;padding:0}
 #foldbtn{right:max(14px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));background:var(--P);color:#fff;padding:9px 14px 8px;font-size:12px;font-weight:700;letter-spacing:.08em;display:none;transform:rotate(1.5deg)}
 #foldbtn:hover,#foldbtn:focus-visible{background:var(--T);outline:none}
-#hint{left:50%;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 48px);transform:translateX(-50%) rotate(-1.5deg);font-family:'Permanent Marker',cursive;color:var(--Y);font-size:17px;white-space:nowrap;pointer-events:none;transition:opacity .6s;text-shadow:0 1px 0 rgba(0,0,0,.3)}
+#hint{left:50%;top:max(14px,env(safe-area-inset-top));transform:translateX(-50%) rotate(-1.5deg);font-family:'Permanent Marker',cursive;color:var(--Y);font-size:17px;white-space:nowrap;pointer-events:none;transition:opacity .6s;text-shadow:0 1px 0 rgba(0,0,0,.3)}
 #hint.gone{opacity:0}
 #idx{position:fixed;inset:0;z-index:40;background:rgba(18,40,33,.72);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:max(16px,env(safe-area-inset-top)) 16px 40px}
 #idx.open{display:flex}
@@ -244,7 +244,7 @@ function tlPanel(j){
     const up=i%2===0;
     h+=`<i class="a fT m" style="left:${x-.75}px;top:${up?372:404}px;width:1.5px;height:25px"></i>`;
     h+=dot(x,400.5,it.k,7);
-    if(it.newYr&&it.yr!=='9999')h+=`<div class="a mono b fP m cK" style="left:${x-60}px;top:${up?406:376}px;font-size:11px;padding:3px 5px 2px;letter-spacing:.08em">${it.yr}</div>`;
+    if(it.newYr&&it.yr!=='9999')h+=`<div class="a mono b fP m cK" style="left:${x-46}px;top:${up?408:374}px;font-size:10px;padding:3px 5px 2px;letter-spacing:.08em">${it.yr}</div>`;
     h+=`<button class="tl ${up?'up':'dn'}" data-page="${it.pg}" style="left:${x-20}px;${up?'bottom:'+(707-368)+'px;flex-direction:column-reverse':'top:432px'}" aria-label="${esc(it.t)}, ${it.dt}. Go to page ${it.pg+1}">
       <span class="lab">${esc(it.t)}</span><span class="dt ${it.k==='games'?'cT':'cP'}">${it.dt}</span></button>`;
   });
@@ -370,7 +370,7 @@ ${tape(330,458,-5)}
 {const s=proj('shoot-from-the-hip'),h=proj('starhaul');
 pages[8]={cls:'',html:`
 <div class="a mono b up cT" style="left:24px;top:40px;font-size:11px">Exhibit A ·  ${meta(s)}</div>
-${ht('shoot-from-the-hip',24,64,452,218,{inks:['T','P'],cell:4.2,ang:30,c:1.25,b:-.05})}
+${ht('shoot-from-the-hip',24,64,452,218,{inks:['T','P'],cell:4.2,ang:30,c:1.1,b:-.3})}
 <div class="a D cP m" style="left:22px;top:292px;font-size:76px;font-stretch:54%;line-height:.82">SHOOT FROM<br>THE HIP</div>
 <div class="a ser" style="left:24px;top:428px;width:270px;font-size:24px;line-height:1.05">${s.line}</div>
 <div class="stamp D cT" style="left:300px;top:414px;font-size:34px;font-stretch:62%;transform:rotate(-9deg)">OBJECTION!</div>
@@ -489,14 +489,14 @@ ${ht('two-way-surround-speakers',214,526,262,140,{inks:['T'],cell:3.8,ang:15,c:1
 
 // 17 KITCHEN
 {const ids=['spicy-sausage-pasta','mushroom-steak','salmon','omelet'];
-const pl=[[24,150,210],[262,118,214],[34,400,186],[258,382,200]];
+const pl=[[24,128,210],[262,112,214],[36,398,176],[262,392,190]];
 pages[17]={cls:'',html:`
-<div class="a fP m" style="left:0;top:560px;width:500px;height:147px"></div>
-<div class="a D cT m" style="left:20px;top:22px;font-size:104px;font-stretch:58%;line-height:.82">A FEW<br>PLATES</div>
-<div class="a mono b up cP" style="left:300px;top:36px;width:170px;font-size:10px;line-height:1.5">§5 · Kitchen</div>
-${ids.map((id,i)=>{const p=PR[id],[x,y,d]=pl[i];return ht(id,x,y,d,d,{inks:i%2?['T','P']:['P','T'],cell:3.6,ang:15+i*20,c:1.25,b:-.05},'border-radius:50%')+
-  `<div class="a hand ${i%2?'cP':'cT'}" style="left:${x+(i%2?-6:d-40)}px;top:${y+d-14}px;width:170px;font-size:14px;line-height:1.05;transform:rotate(${i%2?4:-4}deg)">${p.title}</div>`}).join('')}
-<div class="a ser cK" style="left:24px;top:604px;width:300px;font-size:17px;line-height:1.05">${PR['spicy-sausage-pasta'].line} <span class="mono" style="font-size:9.5px">(${when(PR['spicy-sausage-pasta'])})</span></div>`}}
+<div class="a fP m" style="left:0;top:634px;width:500px;height:73px"></div>
+<div class="a D cT m" style="left:20px;top:26px;font-size:92px;font-stretch:52%">A FEW PLATES</div>
+<div class="a mono b up cP" style="left:24px;top:102px;font-size:10px">§5 · Kitchen</div>
+${ids.map((id,i)=>{const p=PR[id],[x,y,d]=pl[i];return ht(id,x,y,d,d,{inks:i%2?['T','P']:['P','T'],cell:3.6,ang:15+i*20,c:1.1,b:-.32},'border-radius:50%')+
+  `<div class="a hand ${i%2?'cP':'cT'}" style="left:${x}px;top:${y+d+4}px;width:${d}px;font-size:14px;line-height:1.05;transform:rotate(${i%2?4:-4}deg)">${p.title}</div>`}).join('')}
+<div class="a ser cK" style="left:24px;top:648px;width:400px;font-size:17px;line-height:1.05">${PR['spicy-sausage-pasta'].line} <span class="mono" style="font-size:9.5px">(${when(PR['spicy-sausage-pasta'])})</span></div>`}}
 
 // 18 WORK / CV
 pages[18]={cls:'cv',html:`
@@ -508,16 +508,16 @@ ${D.experience.map(e=>`<div style="margin-bottom:9px;padding-top:6px;border-top:
 <div class="mono b up cP" style="font-size:9.5px;margin:2px 0 2px">${e.role}</div>
 ${e.did.map(x=>`<div class="ser" style="font-size:14.5px;line-height:1.08;padding-left:10px;text-indent:-10px">— ${x}</div>`).join('')}</div>`).join('')}
 </div>
-<div class="a" style="left:24px;top:518px;width:452px">${D.skills.map(s=>`<span class="chip mono">${s}</span>`).join('')}</div>
-<div class="a mono" style="left:24px;top:578px;width:452px;font-size:8.6px;line-height:1.28;columns:2;column-gap:16px"><div class="b up cP" style="font-size:9px;margin-bottom:2px">Coursework, UBC</div>${D.courses.map(c=>`<div><b>${c.code}</b> ${c.title}</div>`).join('')}</div>`};
+<div class="a" style="left:24px;top:468px;width:452px">${D.skills.map(s=>`<span class="chip mono">${s}</span>`).join('')}</div>
+<div class="a mono" style="left:24px;top:530px;width:452px;font-size:8.8px;line-height:1.3;columns:2;column-gap:16px"><div class="b up cP" style="font-size:9px;margin-bottom:2px">Coursework, UBC</div>${D.courses.map(c=>`<div><b>${c.code}</b> ${c.title}</div>`).join('')}</div>`};
 
 // 19 BACK COVER
 pages[19]={cls:'backc nogut',nofolio:1,html:`
 <div class="a fT m" style="left:0;top:0;width:500px;height:707px"></div>
 <div class="a D cP m" style="left:22px;top:26px;font-size:96px;font-stretch:56%">ELSEWHERE</div>
 <div class="a" style="left:22px;top:118px;width:456px">${D.links.map((l,i)=>`<a href="${l.href}" target="_blank" rel="noopener" class="D cK" style="display:block;font-size:${i%2?62:74}px;font-stretch:${i%2?80:56}%;line-height:.92;text-decoration:none;transform:translateX(${[0,40,10,60,0][i]}px)">${l.label} <span class="mono" style="font-size:13px;font-weight:700;letter-spacing:.1em">↗</span></a>`).join('')}</div>
-<div class="a fY m" style="left:22px;top:520px;width:250px;height:120px"></div>
-<div class="a mono cT" style="left:32px;top:530px;width:232px;font-size:9.5px;line-height:1.45;translate:0 0">Printed in Fluorescent Pink, Teal &amp; Yellow. Every halftone is screened live in your browser, so no two copies register quite the same. Saddle-stitched, two staples.</div>
+<div class="a" style="left:22px;top:520px;width:252px;height:124px;background:var(--paper);transform:rotate(-1.5deg)"></div>
+<div class="a mono cT" style="left:34px;top:532px;width:230px;font-size:9.5px;line-height:1.45;transform:rotate(-1.5deg)">Printed in Fluorescent Pink, Teal &amp; Yellow. Every halftone is screened live in your browser, so no two copies register quite the same. Saddle-stitched, two staples.</div>
 <div class="a D cK" style="left:300px;top:540px;font-size:40px;font-stretch:62%;line-height:.9">${D.site.toUpperCase()}</div>
 <div class="a mono cK" style="left:300px;top:584px;font-size:10px;letter-spacing:.12em">ISSUE 01 · NOV 2026</div>
 <div class="a" style="left:300px;top:610px;width:170px;height:40px;background:repeating-linear-gradient(90deg,var(--paper) 0 2px,transparent 2px 4px,var(--paper) 4px 5px,transparent 5px 9px,var(--paper) 9px 12px,transparent 12px 14px)"></div>`};
@@ -728,11 +728,11 @@ function buildTurner(k){
   const pairs=[],strips=[];let parent=root;
   for(let i=0;i<N;i++){
     const st=document.createElement('div');st.className='strip';st.style.left=(i?w:0)+'px';st.style.width=w+'px';
-    const ff=document.createElement('div');ff.className='sface';ff.style.width=(w+.7)+'px';
+    const ff=document.createElement('div');ff.className='sface';ff.style.width=(w+1.4)+'px';
     const fc=clonePage(fsrc,pairs);fc.style.left=(-i*w)+'px';
     const fsh=document.createElement('div');fsh.className='sshade';ff.append(fc,fsh);
-    const bf=document.createElement('div');bf.className='sface back';bf.style.width=(w+.7)+'px';bf.style.left='-.7px';
-    const bc=clonePage(bsrc,pairs);bc.style.left=(-(PW-(i+1)*w)-.7)+'px';
+    const bf=document.createElement('div');bf.className='sface back';bf.style.width=(w+1.4)+'px';bf.style.left='-1.4px';
+    const bc=clonePage(bsrc,pairs);bc.style.left=(-(PW-(i+1)*w)-1.4)+'px';
     const bsh=document.createElement('div');bsh.className='sshade';bf.append(bc,bsh);
     st.append(ff,bf);parent.append(st);parent=st;
     strips.push({st,fsh,bsh});
@@ -798,7 +798,7 @@ function render(){
   }else{castL.style.display=castR.style.display='none'}
   // paper thickness: stacks of leaf edges on each side
   const nl=sp?pos:pos/2,nr=L-nl;
-  const key=Math.round(nl*4)+'|'+mode;
+  const key=Math.round(nl*4)+'|'+mode+(nl<.02)+(nr<.02);
   if(key!==lastStack){lastStack=key;
     const edges=(n,dir)=>{let sh=[];const m=Math.round(n*1.1);for(let j=1;j<=m;j++)sh.push(`${dir*j*.85}px ${j*.55}px 0 ${j%2?'#d6ccb8':'#efe8d8'}`);
       sh.push(`${dir*(m*.85+.6)}px ${m*.55+.6}px 0 rgba(0,0,0,.25)`);sh.push(`${dir*8}px 26px 40px rgba(0,0,0,.45)`);return sh.join(',')};
