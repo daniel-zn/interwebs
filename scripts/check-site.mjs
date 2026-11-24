@@ -197,7 +197,7 @@ const watch = (page) => {
   await page.goto(base + '/');
   const href = await page.getAttribute('.card', 'href');
   const t0 = Date.now();
-  await Promise.all([page.waitForURL(`**${href}`), page.click('.card')]);
+  await Promise.all([page.waitForURL(`**${href}`, { waitUntil: 'commit' }), page.click('.card')]);
   check(Date.now() - t0 < 450, 'reduced motion skips the launch animation', `${Date.now() - t0} ms`);
   await ctx.close();
 }
