@@ -1,12 +1,75 @@
 {
   "keep": [
-    "node_modules"
+    "node_modules",
+    "aerie-drakes/node_modules",
+    "black-hole-slots/node_modules",
+    "pac-man/node_modules",
+    "reentry-surf/node_modules",
+    "solar-kite/node_modules",
+    "space-lake-fishing/node_modules",
+    "supernova-pinball/node_modules"
   ],
   "workspaces": 1,
   "checks": [
     {
-      "name": "check",
+      "name": "npm-check",
       "run": "npm ci --no-audit --no-fund --loglevel=error && npm run check",
+      "timeout": 15
+    },
+    {
+      "name": "npm-test-aerie-drakes",
+      "run": "cd aerie-drakes && npm ci --no-audit --no-fund --loglevel=error && npm test",
+      "inputs": [
+        "aerie-drakes/**"
+      ],
+      "timeout": 15
+    },
+    {
+      "name": "npm-test-black-hole-slots",
+      "run": "cd black-hole-slots && npm install --no-audit --no-fund --loglevel=error && npm test",
+      "inputs": [
+        "black-hole-slots/**"
+      ],
+      "timeout": 15
+    },
+    {
+      "name": "npm-test-pac-man",
+      "run": "cd pac-man && npm install --no-audit --no-fund --loglevel=error && npm test",
+      "inputs": [
+        "pac-man/**"
+      ],
+      "timeout": 15
+    },
+    {
+      "name": "npm-test-reentry-surf",
+      "run": "cd reentry-surf && npm install --no-audit --no-fund --loglevel=error && npm test",
+      "inputs": [
+        "reentry-surf/**"
+      ],
+      "timeout": 15
+    },
+    {
+      "name": "npm-test-solar-kite",
+      "run": "cd solar-kite && npm install --no-audit --no-fund --loglevel=error && npm test",
+      "inputs": [
+        "solar-kite/**"
+      ],
+      "timeout": 15
+    },
+    {
+      "name": "npm-test-space-lake-fishing",
+      "run": "cd space-lake-fishing && npm ci --no-audit --no-fund --loglevel=error && npm test",
+      "inputs": [
+        "space-lake-fishing/**"
+      ],
+      "timeout": 15
+    },
+    {
+      "name": "npm-test-supernova-pinball",
+      "run": "cd supernova-pinball && npm install --no-audit --no-fund --loglevel=error && npm test",
+      "inputs": [
+        "supernova-pinball/**"
+      ],
       "timeout": 15
     }
   ],
