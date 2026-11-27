@@ -59,5 +59,27 @@ export async function findProjects() {
       cover,
     });
   }
-  return projects.sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
+  return sortProjects(projects);
+}
+
+// Projects first by order (lower first), then the rest by title.
+export const sortProjects = (list) => list.sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
+
+/**
+ * Mounted projects: they live in their own repo and Worker and are served at /<folder>/ through a service
+ * binding (see worker.js). _mounts/mounts.json describes their cards; _mounts/<folder>.<ext> is the cover.
+ */
+export async function findMounts() {
+  const table = JSON.parse(await readFile(join(ROOT, '_mounts', 'mounts.json'), 'utf8'));
+  const files = await readdir(join(ROOT, '_mounts'));
+  return Object.entries(table).map(([slug, m]) => ({
+    slug,
+    binding: m.binding,
+    title: m.title || slug,
+    description: m.description || '',
+    kind: m.kind || 'Experience',
+    accent: m.accent || '',
+    order: Number.isFinite(m.order) ? m.order : Infinity,
+    coverFile: COVER_NAMES.map((n) => n.replace('cover', slug)).find((n) => files.includes(n)) ?? null,
+  }));
 }

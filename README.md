@@ -76,12 +76,41 @@ Folders in `_pages/` are published as plain pages at `/<folder>/` (for example
 Folders starting with `_` or `.`, plus `scripts`, `dist` and `node_modules`,
 are never treated as projects.
 
+## Mounting another repo
+
+A project can also live in its own repository and Cloudflare Worker and still be
+served at `interwebs.danielzn.com/<folder>/` with a card on the home page. For
+example, `/surprise-me/` is the `surprise-me` Worker. The site's `worker.js`
+forwards that folder's requests to the Worker through a service binding. Only
+mounted paths run it (`assets.run_worker_first`); everything else is served as
+plain static assets.
+
+To mount another one:
+
+1. In the other repo's `wrangler.jsonc`, set `"assets": { …, "base_path": "/<folder>/" }`
+   and `"workers_dev": false` (it needs no public URL of its own), then deploy it.
+   Its pages should use relative asset paths.
+2. Here, add an entry to `_mounts/mounts.json`:
+   `"<folder>": { "binding": "<BINDING>", "title": "…", "description": "…" }`
+   (optional `kind`, `accent`, `order`, as for cards). Add a 16:9 cover as
+   `_mounts/<folder>.jpg` (or `.png`, `.webp`, `.svg`).
+3. In `wrangler.jsonc`, add `{ "binding": "<BINDING>", "service": "<worker name>" }`
+   to `services`, and add `"/<folder>"` and `"/<folder>/*"` to `assets.run_worker_first`.
+
+`npm run check` makes sure every mount has its binding, its `run_worker_first`
+paths, a cover and a card, that `/<folder>` redirects to `/<folder>/`, and that
+its paths reach its Worker unchanged. To try both Workers together locally, run
+`npx wrangler dev -c wrangler.jsonc -c ../<other repo>/wrangler.jsonc` (the other
+repo checked out next to this one, without its `node_modules`, which wrangler
+would otherwise watch as site files).
+
 ## How it works
 
 - `build.mjs` copies each project into `dist/` and generates the home page, a 404
   page, and placeholder covers. The home page's style and script live in `_site/`.
 - `wrangler.jsonc` deploys `dist/` as a Cloudflare Worker with static assets, bound
-  to `interwebs.danielzn.com`. `scripts/deploy.sh` deploys it from the Mac
+  to `interwebs.danielzn.com`. Its `worker.js` only runs for mounted projects
+  (see "Mounting another repo"). `scripts/deploy.sh` deploys it from the Mac
   (`mercurius-agent integrate` runs it after a push to `main`); Cloudflare doesn't
   build the repository.
 

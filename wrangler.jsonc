@@ -2,14 +2,24 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "interwebs",
   "compatibility_date": "2026-09-01",
-  // Wrangler runs this before every deploy/dev, so dist/ is always fresh.
+  // Runs only for mounted projects (see run_worker_first); everything else is served straight from dist/.
+  "main": "worker.js",
+  // Wrangler runs this before every deploy/dev, so dist/ always exists even
+  // when the Cloudflare project has no separate build command configured.
   "build": { "command": "npm run build" },
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     // /reentry-surf redirects to /reentry-surf/ so relative asset paths resolve.
     "html_handling": "auto-trailing-slash",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    // Mounted projects (_mounts/mounts.json): their paths go to worker.js, which passes them to their Worker.
+    "run_worker_first": ["/surprise-me", "/surprise-me/*"]
   },
+  // One service binding per mounted project's Worker.
+  "services": [
+    { "binding": "SURPRISE_ME", "service": "surprise-me" }
+  ],
   "routes": [
     { "pattern": "interwebs.danielzn.com", "custom_domain": true }
   ]

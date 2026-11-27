@@ -14,10 +14,11 @@
 //                                    Without it the card gets a generated pixel cover.
 //
 // Folders in _pages/ are published as-is at /<folder>/ without a card.
+// Projects mounted from their own repo and Worker (_mounts/mounts.json) get a card too.
 
 import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { basename, join, relative, sep } from 'node:path';
-import { findProjects, ROOT } from './scripts/lib.mjs';
+import { findMounts, findProjects, ROOT, sortProjects } from './scripts/lib.mjs';
 import { iconIco, iconPng, iconSvgDataUri } from './scripts/icons.mjs';
 import { pixelText } from './scripts/pixelfont.mjs';
 
@@ -123,6 +124,8 @@ ${body}
 
 // ------------------------------------------------------------------ build
 const projects = await findProjects();
+const mounts = await findMounts();
+const cardProjects = sortProjects([...projects, ...mounts]);
 
 await rm(OUT, { recursive: true, force: true });
 // Bookmarks to the retired game keep working without a second arcade card.
@@ -151,9 +154,13 @@ await writeFile(join(OUT, 'apple-touch-icon.png'), iconPng(180));
 await writeFile(join(OUT, 'apple-touch-icon-precomposed.png'), iconPng(180));
 
 const cards = [];
-for (const [i, p] of projects.entries()) {
+for (const [i, p] of cardProjects.entries()) {
   const accent = accentFor(p, i);
   let cover = p.cover ? `/${p.slug}/${p.cover}` : null;
+  if (p.coverFile) {
+    await cp(join(ROOT, '_mounts', p.coverFile), join(OUT, '_home', p.coverFile));
+    cover = `/_home/${p.coverFile}`;
+  }
   if (!cover) {
     await writeFile(join(OUT, '_home', `${p.slug}.svg`), placeholderCover(p, accent));
     cover = `/_home/${p.slug}.svg`;
@@ -171,7 +178,7 @@ for (const [i, p] of projects.entries()) {
       </li>`);
 }
 
-const count = `${projects.length} ${projects.length === 1 ? 'experience' : 'experiences'}`;
+const count = `${cardProjects.length} ${cardProjects.length === 1 ? 'experience' : 'experiences'}`;
 const firstCover = projects.find((p) => p.cover);
 const home = page({
   title: 'interwebs',
@@ -184,8 +191,8 @@ ${firstCover ? `  <meta property="og:image" content="https://${SITE}/${firstCove
     <p class="tagline">Select an experience<span class="cursor" aria-hidden="true">_</span></p>
   </header>
   <main>
-${projects.length
-    ? `    <ul class="grid${projects.length < 3 ? ' few' : ''}" aria-label="Experiences">
+${cardProjects.length
+    ? `    <ul class="grid${cardProjects.length < 3 ? ' few' : ''}" aria-label="Experiences">
 ${cards.join('\n')}
     </ul>`
     : '    <p class="empty">Nothing here yet. Add a folder with an index.html.</p>'}
@@ -215,4 +222,4 @@ for (const { slug } of projects) {
   if (rootRefs.length) console.warn(`warning: ${slug}/index.html uses root paths (${rootRefs.join(', ')}); use relative paths.`);
 }
 
-console.log(`Built ${projects.length} project(s): ${projects.map((p) => p.slug).join(', ')}`);
+console.log(`Built ${projects.length} project(s): ${projects.map((p) => p.slug).join(', ')}; mounted: ${mounts.map((m) => m.slug).join(', ') || 'none'}`);

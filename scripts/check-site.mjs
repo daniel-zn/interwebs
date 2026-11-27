@@ -11,7 +11,8 @@ import { createServer } from 'node:http';
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { chromium } from 'playwright-core';
-import { ROOT, findProjects } from './lib.mjs';
+import { ROOT, findMounts, findProjects } from './lib.mjs';
+import worker from '../worker.js';
 
 const shotsAt = process.argv.indexOf('--shots');
 const SHOTS = shotsAt > 0 ? process.argv[shotsAt + 1] : null;
@@ -32,9 +33,49 @@ try {
   await rm(TEMP, { recursive: true, force: true });
 }
 
+// ------------------------------------------------------------------ mounts
+// Projects from other repos, served through worker.js and a service binding (README "Mounting another repo").
+const mounts = await findMounts();
+{
+  const config = JSON.parse((await readFile(join(ROOT, 'wrangler.jsonc'), 'utf8')).replace(/^\s*\/\/.*$/gm, ''));
+  const home = await readFile(join(DIST, 'index.html'), 'utf8');
+  const calls = [];
+  const fake = (name) => ({ fetch: (req) => (calls.push([name, new URL(req.url).pathname]), new Response(name)) });
+  const env = { ASSETS: fake('ASSETS'), ...Object.fromEntries(mounts.map((m) => [m.binding, fake(m.binding)])) };
+  const get = (path) => worker.fetch(new Request(`https://interwebs.test${path}`), env);
+  for (const m of mounts) {
+    check(config.services?.some((s) => s.binding === m.binding && s.service), `${m.slug}: wrangler.jsonc binds ${m.binding}`);
+    const first = config.assets?.run_worker_first || [];
+    check(first.includes(`/${m.slug}`) && first.includes(`/${m.slug}/*`), `${m.slug}: its paths run worker.js first`);
+    check(home.includes(`href="/${m.slug}/"`), `${m.slug}: has a card on the home page`);
+    check(!!m.coverFile, `${m.slug}: has a cover in _mounts/`);
+    const r = await get(`/${m.slug}?x=1`);
+    check(r.status === 307 && r.headers.get('location') === `/${m.slug}/?x=1`, `${m.slug}: /${m.slug} redirects to /${m.slug}/`, r.headers.get('location'));
+    calls.length = 0;
+    await get(`/${m.slug}/`);
+    await get(`/${m.slug}/js/main.js`);
+    check(calls.every(([b]) => b === m.binding) && calls[1]?.[1] === `/${m.slug}/js/main.js`, `${m.slug}: its paths go to its Worker unchanged`, JSON.stringify(calls));
+    calls.length = 0;
+    await get(`/${m.slug}x/`);
+    check(calls[0]?.[0] === 'ASSETS', `${m.slug}: neighbouring paths stay with the site's assets`);
+  }
+  const extra = (config.services || []).filter((s) => !mounts.some((m) => m.binding === s.binding));
+  check(extra.length === 0, 'every service binding is a mount in _mounts/mounts.json', extra.map((s) => s.binding).join(' '));
+}
+
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
 const server = createServer(async (req, res) => {
   const path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+  // Mounted projects live in another Worker: stand in for it with a page of the card's title.
+  const mount = mounts.find((m) => path === `/${m.slug}/` || path === `/${m.slug}`);
+  if (mount && !path.endsWith('/')) {
+    res.writeHead(307, { location: `${path}/` }).end();
+    return;
+  }
+  if (mount) {
+    res.writeHead(200, { 'content-type': 'text/html' }).end(`<!doctype html><title>${mount.title}</title><p>${mount.slug}`);
+    return;
+  }
   let file = normalize(join(DIST, path));
   try {
     if (!file.startsWith(DIST)) throw new Error('outside');
@@ -74,7 +115,7 @@ const watch = (page) => {
     img: a.querySelector('img').complete && a.querySelector('img').naturalWidth > 0,
   })));
   // Every real project, plus the placeholder added for this run.
-  const expected = (await findProjects()).length + 1;
+  const expected = (await findProjects()).length + mounts.length + 1;
   check(cards.length === expected, 'one card per project folder', cards.map((c) => c.href).join(' '));
   check(cards.every((c) => /^\/[\w-]+\/$/.test(c.href)), 'cards link to /<folder>/');
   // Covers further down load lazily: ask for them all now, then wait.
