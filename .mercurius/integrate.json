@@ -1,0 +1,17 @@
+{
+  "keep": [
+    "node_modules"
+  ],
+  "workspaces": 1,
+  "checks": [
+    {
+      "name": "check",
+      "run": "npm ci --no-audit --no-fund --loglevel=error && npm run check",
+      "timeout": 15
+    }
+  ],
+  "release": {
+    "run": "sh scripts/deploy.sh",
+    "timeout": 20
+  }
+}

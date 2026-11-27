@@ -81,7 +81,9 @@ are never treated as projects.
 - `build.mjs` copies each project into `dist/` and generates the home page, a 404
   page, and placeholder covers. The home page's style and script live in `_site/`.
 - `wrangler.jsonc` deploys `dist/` as a Cloudflare Worker with static assets, bound
-  to `interwebs.danielzn.com`. Every push to `main` redeploys.
+  to `interwebs.danielzn.com`. `scripts/deploy.sh` deploys it from the Mac
+  (`mercurius-agent integrate` runs it after a push to `main`); Cloudflare doesn't
+  build the repository.
 
 ```sh
 npm install
@@ -89,20 +91,8 @@ npm run build     # build dist/
 npm run check     # build, then test the site in headless Chromium
 npm run covers    # capture missing cover.png files
 npm run preview   # serve with wrangler at http://localhost:8787 (builds first)
-npm run deploy    # deploy from your machine (builds first; needs `npx wrangler login`)
 ```
 
 `check` and `covers` use `playwright-core`, which needs a Chromium. After installing the dependencies, run
 `npx playwright-core install --only-shell chromium` to install the pinned browser for checks. Set
 `CHROMIUM_PATH=/path/to/chromium` if Playwright's browsers aren't installed.
-
-## Cloudflare setup (one time, already done)
-
-Workers & Pages → Import a repository → `daniel-zn/interwebs`, with project name
-`interwebs` (must match `wrangler.jsonc`), deploy command `npx wrangler deploy`,
-and production branch `main`.
-
-A separate build command isn't needed. `wrangler.jsonc` has
-`"build": { "command": "npm run build" }`, so `wrangler deploy` (and
-`wrangler dev`) always builds `dist/` first. Setting a build command in the
-dashboard as well is harmless; the site just builds twice.

@@ -2,8 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "interwebs",
   "compatibility_date": "2026-09-01",
-  // Wrangler runs this before every deploy/dev, so dist/ always exists even
-  // when the Cloudflare project has no separate build command configured.
+  // Wrangler runs this before every deploy/dev, so dist/ is always fresh.
   "build": { "command": "npm run build" },
   "assets": {
     "directory": "./dist",
