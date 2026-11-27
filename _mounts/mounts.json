@@ -5,5 +5,9 @@
     "description": "A descent into the black hole at the centre of our galaxy, ray-traced live in your browser.",
     "kind": "Experience",
     "accent": "#f3c252"
+  },
+  "kalumkari": {
+    "binding": "KALUMKARI",
+    "card": false
   }
 }

@@ -68,6 +68,7 @@ export const sortProjects = (list) => list.sort((a, b) => a.order - b.order || a
 /**
  * Mounted projects: they live in their own repo and Worker and are served at /<folder>/ through a service
  * binding (see worker.js). _mounts/mounts.json describes their cards; _mounts/<folder>.<ext> is the cover.
+ * An entry with "card": false is served without a card.
  */
 export async function findMounts() {
   const table = JSON.parse(await readFile(join(ROOT, '_mounts', 'mounts.json'), 'utf8'));
@@ -75,6 +76,8 @@ export async function findMounts() {
   return Object.entries(table).map(([slug, m]) => ({
     slug,
     binding: m.binding,
+    // "card": false serves the folder without a home-page card (an unlisted page).
+    card: m.card !== false,
     title: m.title || slug,
     description: m.description || '',
     kind: m.kind || 'Experience',

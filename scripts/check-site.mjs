@@ -47,8 +47,12 @@ const mounts = await findMounts();
     check(config.services?.some((s) => s.binding === m.binding && s.service), `${m.slug}: wrangler.jsonc binds ${m.binding}`);
     const first = config.assets?.run_worker_first || [];
     check(first.includes(`/${m.slug}`) && first.includes(`/${m.slug}/*`), `${m.slug}: its paths run worker.js first`);
-    check(home.includes(`href="/${m.slug}/"`), `${m.slug}: has a card on the home page`);
-    check(!!m.coverFile, `${m.slug}: has a cover in _mounts/`);
+    if (m.card) {
+      check(home.includes(`href="/${m.slug}/"`), `${m.slug}: has a card on the home page`);
+      check(!!m.coverFile, `${m.slug}: has a cover in _mounts/`);
+    } else {
+      check(!home.includes(`href="/${m.slug}/"`), `${m.slug}: unlisted, no card on the home page`);
+    }
     const r = await get(`/${m.slug}?x=1`);
     check(r.status === 307 && r.headers.get('location') === `/${m.slug}/?x=1`, `${m.slug}: /${m.slug} redirects to /${m.slug}/`, r.headers.get('location'));
     calls.length = 0;
@@ -115,7 +119,7 @@ const watch = (page) => {
     img: a.querySelector('img').complete && a.querySelector('img').naturalWidth > 0,
   })));
   // Every real project, plus the placeholder added for this run.
-  const expected = (await findProjects()).length + mounts.length + 1;
+  const expected = (await findProjects()).length + mounts.filter((m) => m.card).length + 1;
   check(cards.length === expected, 'one card per project folder', cards.map((c) => c.href).join(' '));
   check(cards.every((c) => /^\/[\w-]+\/$/.test(c.href)), 'cards link to /<folder>/');
   // Covers further down load lazily: ask for them all now, then wait.
