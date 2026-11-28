@@ -78,7 +78,7 @@ are never treated as projects.
 
 A project can also live in its own repository and Cloudflare Worker and still be
 served at `interwebs.danielzn.com/<folder>/` with a card on the home page. For
-example, `/surprise-me/` is the `surprise-me` Worker, and `/kalumkari/` (unlisted,
+example, `/infall/` is the `surprise-me` Worker (Infall), and `/kalumkari/` (unlisted,
 no card) is the `kalumkari-site` Worker. The site's `worker.js`
 forwards that folder's requests to the Worker through a service binding. Only
 mounted paths run it (`assets.run_worker_first`); everything else is served as
@@ -94,11 +94,13 @@ To mount another one:
    (optional `kind`, `accent`, `order`, as for cards). Add a 16:9 cover as
    `_mounts/<folder>.jpg` (or `.png`, `.webp`, `.svg`). For an unlisted page with
    no card, the entry is just `"<folder>": { "binding": "<BINDING>", "card": false }`.
+   To move a mount to a new folder, rename its entry and cover and list the folders it was served at
+   before as `"old": ["<old folder>"]`: `/<old folder>/…` then redirects (301) to `/<folder>/…`.
 3. In `wrangler.jsonc`, add `{ "binding": "<BINDING>", "service": "<worker name>" }`
-   to `services`, and add `"/<folder>"` and `"/<folder>/*"` to `assets.run_worker_first`.
+   to `services`, and add `"/<folder>"` and `"/<folder>/*"` (and the same for each old folder) to `assets.run_worker_first`.
 
 `npm run check` makes sure every mount has its binding, its `run_worker_first`
-paths, a cover and a card (or no card, if it has `"card": false`), that `/<folder>` redirects to `/<folder>/`, and that
+paths, a cover and a card (or no card, if it has `"card": false`), that `/<folder>` redirects to `/<folder>/`, that old folders redirect to it, and that
 its paths reach its Worker unchanged. To try both Workers together locally, run
 `npx wrangler dev -c wrangler.jsonc -c ../<other repo>/wrangler.jsonc` (the other
 repo checked out next to this one, without its `node_modules`, which wrangler

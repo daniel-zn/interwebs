@@ -59,6 +59,13 @@ const mounts = await findMounts();
     await get(`/${m.slug}/`);
     await get(`/${m.slug}/js/main.js`);
     check(calls.every(([b]) => b === m.binding) && calls[1]?.[1] === `/${m.slug}/js/main.js`, `${m.slug}: its paths go to its Worker unchanged`, JSON.stringify(calls));
+    for (const was of m.old) {
+      check(first.includes(`/${was}`) && first.includes(`/${was}/*`), `${m.slug}: its old folder /${was}/ runs worker.js first`);
+      for (const [from, to] of [[`/${was}`, `/${m.slug}/`], [`/${was}/`, `/${m.slug}/`], [`/${was}/js/main.js?x=1`, `/${m.slug}/js/main.js?x=1`]]) {
+        const o = await get(from);
+        check(o.status === 301 && o.headers.get('location') === to, `${m.slug}: ${from} redirects (301) to ${to}`, `${o.status} ${o.headers.get('location')}`);
+      }
+    }
     calls.length = 0;
     await get(`/${m.slug}x/`);
     check(calls[0]?.[0] === 'ASSETS', `${m.slug}: neighbouring paths stay with the site's assets`);
