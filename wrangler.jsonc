@@ -14,8 +14,7 @@
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",
     // Mounted projects (_mounts/mounts.json): their paths go to worker.js, which passes them to their Worker.
-    // Their old folders ("old") come here too, to be redirected.
-    "run_worker_first": ["/infall", "/infall/*", "/surprise-me", "/surprise-me/*", "/kalumkari", "/kalumkari/*"]
+    "run_worker_first": ["/infall", "/infall/*", "/kalumkari", "/kalumkari/*"]
   },
   // One service binding per mounted project's Worker.
   "services": [

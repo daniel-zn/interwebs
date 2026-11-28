@@ -94,13 +94,12 @@ To mount another one:
    (optional `kind`, `accent`, `order`, as for cards). Add a 16:9 cover as
    `_mounts/<folder>.jpg` (or `.png`, `.webp`, `.svg`). For an unlisted page with
    no card, the entry is just `"<folder>": { "binding": "<BINDING>", "card": false }`.
-   To move a mount to a new folder, rename its entry and cover and list the folders it was served at
-   before as `"old": ["<old folder>"]`: `/<old folder>/…` then redirects (301) to `/<folder>/…`.
+   Moving a mount to a new folder just changes its folder (entry, cover, `run_worker_first` and the Worker's `base_path`); the old one isn't redirected.
 3. In `wrangler.jsonc`, add `{ "binding": "<BINDING>", "service": "<worker name>" }`
-   to `services`, and add `"/<folder>"` and `"/<folder>/*"` (and the same for each old folder) to `assets.run_worker_first`.
+   to `services`, and add `"/<folder>"` and `"/<folder>/*"` to `assets.run_worker_first`.
 
 `npm run check` makes sure every mount has its binding, its `run_worker_first`
-paths, a cover and a card (or no card, if it has `"card": false`), that `/<folder>` redirects to `/<folder>/`, that old folders redirect to it, and that
+paths, a cover and a card (or no card, if it has `"card": false`), that `/<folder>` redirects to `/<folder>/` and that
 its paths reach its Worker unchanged. To try both Workers together locally, run
 `npx wrangler dev -c wrangler.jsonc -c ../<other repo>/wrangler.jsonc` (the other
 repo checked out next to this one, without its `node_modules`, which wrangler

@@ -1,7 +1,6 @@
 {
   "infall": {
     "binding": "INFALL",
-    "old": ["surprise-me"],
     "title": "Infall",
     "description": "A descent into the black hole at the centre of our galaxy, ray-traced live in your browser.",
     "kind": "Experience",
