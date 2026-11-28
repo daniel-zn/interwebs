@@ -6,21 +6,14 @@
 import mounts from './_mounts/mounts.json' with { type: 'json' };
 
 export default {
-  async fetch(request, env) {
+  fetch(request, env) {
     const url = new URL(request.url);
     for (const [folder, { binding, old = [] }] of Object.entries(mounts)) {
       // /<folder> -> /<folder>/, so the mounted site's relative asset paths resolve.
       if (url.pathname === `/${folder}`) {
         return new Response(null, { status: 307, headers: { location: `/${folder}/${url.search}` } });
       }
-      if (url.pathname.startsWith(`/${folder}/`)) {
-        const response = await env[binding].fetch(request);
-        // TEMPORARY (Infall's move from /surprise-me/, 2026-11-27): until its Worker serves /infall/, ask it at the old folder.
-        if (response.status < 400 || !old.length) return response;
-        const before = new URL(request.url);
-        before.pathname = `/${old[0]}/${url.pathname.slice(folder.length + 2)}`;
-        return env[binding].fetch(new Request(before, request));
-      }
+      if (url.pathname.startsWith(`/${folder}/`)) return env[binding].fetch(request);
       for (const was of old) {
         if (url.pathname === `/${was}` || url.pathname.startsWith(`/${was}/`)) {
           const rest = url.pathname.slice(was.length + 1) || '/';
